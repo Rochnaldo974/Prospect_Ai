@@ -6,6 +6,7 @@ import {
   pruneEventKeysHandler,
   reclaimStalledHandler,
 } from './handlers/maintenance';
+import { discoverOsmHandler, syncBodaccHandler } from './handlers/sources';
 
 const HANDLERS: JobHandler<never>[] = [
   expireOpportunitiesHandler,
@@ -13,6 +14,8 @@ const HANDLERS: JobHandler<never>[] = [
   ensurePartitionsHandler,
   reclaimStalledHandler,
   pruneEventKeysHandler,
+  discoverOsmHandler,
+  syncBodaccHandler,
 ] as JobHandler<never>[];
 
 const byType = new Map<string, JobHandler<never>>(HANDLERS.map((h) => [h.type, h]));

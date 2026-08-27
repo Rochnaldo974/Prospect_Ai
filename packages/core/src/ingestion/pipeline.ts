@@ -65,17 +65,6 @@ async function findExistingCompany(
     if (data) return { id: data.id, key: 'siret' };
 
     // Pas de repli sur le SIREN : un SIRET différent est un autre établissement.
-    // On tente néanmoins le domaine, qui reste propre à un site donné.
-    if (candidate.domain) {
-      const { data: byDomain } = await db
-        .from('companies')
-        .select('id, siret')
-        .eq('domain', candidate.domain)
-        .maybeSingle();
-      // …sauf si ce domaine appartient déjà à un autre établissement identifié.
-      if (byDomain && byDomain.siret === null) return { id: byDomain.id, key: 'domain' };
-    }
-
     return null;
   }
 
@@ -96,8 +85,17 @@ async function findExistingCompany(
   }
 
   if (candidate.domain) {
-    const { data } = await db.from('companies').select('id').eq('domain', candidate.domain).maybeSingle();
-    if (data) return { id: data.id, key: 'domain' };
+    // Le domaine n'est pas unique : les enseignes de réseau partagent le site
+    // de la marque. On ne rapproche que s'il désigne une seule entreprise —
+    // au-delà, le domaine n'identifie plus rien et rapprocher au hasard
+    // fusionnerait deux magasins sans lien.
+    const { data } = await db
+      .from('companies')
+      .select('id')
+      .eq('domain', candidate.domain)
+      .limit(2);
+
+    if (data?.length === 1 && data[0]) return { id: data[0].id, key: 'domain' };
   }
 
   return null;

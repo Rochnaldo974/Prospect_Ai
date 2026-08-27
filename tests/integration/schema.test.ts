@@ -51,12 +51,22 @@ describe.skipIf(!reachable)('schéma du moteur', () => {
       expect(error?.code).toBe('23505');
     });
 
-    it('interdit deux entreprises sur le même domaine', async () => {
-      await createCompany(admin, { domain: 'restaurantdupont.fr' });
-      const { error } = await admin
-        .from('companies')
-        .insert({ legal_name: 'Doublon domaine', domain: 'restaurantdupont.fr' });
-      expect(error?.code).toBe('23505');
+    it('autorise plusieurs établissements sur le même domaine', async () => {
+      // Les enseignes de réseau renvoient toutes vers le site de la marque :
+      // cinq magasins Carrefour partagent carrefour.fr tout en étant cinq
+      // établissements distincts. Constaté sur une découverte OSM réelle.
+      await createCompany(admin, {
+        domain: 'carrefour.fr',
+        siren: '552100554',
+        siret: '55210055400005',
+      });
+      const { error } = await admin.from('companies').insert({
+        legal_name: 'CARREFOUR CITY ANGERS',
+        domain: 'carrefour.fr',
+        siren: '380129866',
+        siret: '38012986600006',
+      });
+      expect(error).toBeNull();
     });
 
     it('refuse un SIRET incohérent avec son SIREN', async () => {

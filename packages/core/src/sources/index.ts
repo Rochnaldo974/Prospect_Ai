@@ -3,3 +3,6 @@ export * from './csv/parser';
 export * from './csv/mapping';
 export * from './csv/sirene-codes';
 export * from './csv/adapter';
+export * from './http/client';
+export * from './osm/adapter';
+export * from './bodacc/adapter';

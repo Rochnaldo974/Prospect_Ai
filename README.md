@@ -70,6 +70,8 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
 | `pnpm seed:dev` | (re)crée les comptes de développement |
 | `pnpm seed:companies [n]` | génère n commerces locaux fictifs avec signaux et opportunités |
 | `pnpm ingest:csv <fichier>` | ingère un CSV depuis le disque (`--sirene`, `--local-commerce`, `--dry-run`) |
+| `pnpm discover osm <ville>…` | découverte OpenStreetMap (téléphone, site, SIRET) |
+| `pnpm discover bodacc` | événements datés BODACC (`--days n`, `--dept 49,75`) |
 
 ---
 
@@ -115,6 +117,40 @@ complète.
 Pour un fichier de quelques milliers de lignes, `/admin/import` fait la même
 chose avec un aperçu des colonnes reconnues.
 
+### Sources de données
+
+| Source | Apporte | Coût | Clé |
+|---|---|---|---|
+| **SIRENE** (open data) | identité, NAF, effectif, date de création, statut de diffusion | gratuit | non |
+| **OpenStreetMap** (Overpass) | **téléphone, site, e-mail** + `ref:FR:SIRET` | gratuit | non |
+| **BODACC** | événements datés : créations, cessions, procédures collectives | gratuit | non |
+| Recherche d'entreprises (DINUM) | SIRENE + **coordonnées géographiques**, filtrable NAF × code postal | gratuit | non |
+| Base Adresse Nationale | géocodage, normalisation d'adresse | gratuit | non |
+
+**OpenStreetMap est la source qui résout le problème central.** SIRENE dit
+qui existe mais ne donne aucun moyen de joindre l'entreprise. OSM apporte le
+contact — et pour une part importante des commerces français, un
+`ref:FR:SIRET` qui rattache le point de vente au répertoire de façon
+déterministe, sans aucun rapprochement approché.
+
+Mesuré sur une découverte réelle (Angers, 891 commerces) :
+
+```
+géolocalisées      100 %
+avec SIRET          54 %   ← rattachement déterministe à SIRENE
+avec téléphone      33 %   ← gate de contact du V1
+avec site web       27 %
+SIRET + joignable   19 %
+```
+
+La couverture varie fortement selon la densité de contribution locale :
+Lyon et Bordeaux dépassent 40 % de sites, La Réunion plafonne à 13 %.
+
+**BODACC est le flux d'événements datés** qui permet au moteur de répondre
+« pourquoi maintenant ». Il produit aussi des **exclusions** : une entreprise
+en redressement judiciaire ou radiée est retirée de la prospection — c'est
+inefficace de la démarcher, et c'est déplacé.
+
 ### SIREN, SIRET, et ce que le produit prospecte
 
 Le **SIREN** identifie l'unité légale, le **SIRET** l'établissement. Une chaîne
@@ -123,7 +159,10 @@ de trois boulangeries a un SIREN et trois SIRET. Le produit prospecte des
 
 - `siret` est unique, `siren` ne l'est pas ;
 - un candidat portant un SIRET ne se rapproche jamais par SIREN, sous peine de
-  fusionner un magasin avec le siège.
+  fusionner un magasin avec le siège ;
+- le **domaine n'est pas unique** non plus : les enseignes de réseau renvoient
+  toutes vers le site de la marque. Le rapprochement par domaine n'est retenu
+  que s'il désigne une seule entreprise.
 
 ### Partitions dans un schéma dédié
 
@@ -147,6 +186,7 @@ ligne le jour où l'écosystème suit.
 - [x] **Phase 2** — console admin : entreprises, fiche détaillée, débogueur de scoring, jobs
 - [x] **Phase 3** — worker, exécution des jobs, planification pg_cron
 - [x] **Phase 4** — normalisation, ingestion CSV et SIRENE
+- [x] **Phase 4b** — sources externes : OpenStreetMap et BODACC
 - [ ] Phase 5 — déduplication approchée
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
 

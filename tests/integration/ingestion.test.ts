@@ -150,6 +150,23 @@ describe.skipIf(!reachable)('ingestion CSV', () => {
       expect(data?.[0]).toMatchObject({ domain: 'moreau.fr', phone: '+33123456789' });
     });
 
+    it('ne rapproche pas par domaine quand celui-ci est ambigu', async () => {
+      // Deux établissements d'une enseigne partagent le site de la marque.
+      // Le domaine n'identifie alors plus rien : rapprocher au hasard
+      // fusionnerait deux magasins sans lien.
+      await ingest([
+        'nom,siret,site',
+        'CARREFOUR CITY GARE,55210055400013,carrefour.fr',
+        'CARREFOUR CITY CENTRE,55210055400021,carrefour.fr',
+      ].join('\n'));
+
+      const report = await ingest('nom,site\nCarrefour,carrefour.fr');
+
+      expect(report).toMatchObject({ created: 1, merged: 0 });
+      const { count } = await admin.from('companies').select('id', { count: 'exact', head: true });
+      expect(count).toBe(3);
+    });
+
     it('n’écrase jamais une donnée déjà acquise', async () => {
       await ingest('nom,siret,telephone,site\nMOREAU,55210055400013,0123456789,moreau.fr');
       await ingest('nom,siret,telephone,site\nMOREAU,55210055400013,0987654321,autre.fr');

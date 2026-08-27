@@ -79,16 +79,35 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
   describe('registre', () => {
     it('expose les handlers de maintenance', () => {
       expect(registeredJobTypes()).toEqual([
+        'discover_osm',
         'ensure_partitions',
         'expire_assignments',
         'expire_opportunities',
         'prune_event_keys',
         'reclaim_stalled_jobs',
+        'sync_bodacc',
       ]);
     });
 
     it('ne connaît pas les types non enregistrés', () => {
       expect(getHandler('cheap_web_scan')).toBeUndefined();
+    });
+
+    it('refuse un payload de découverte sans périmètre', async () => {
+      // Une découverte OSM sans ville interrogerait le monde entier.
+      await enqueueJob(db, 'discover_osm', { cities: [] });
+      const job = await claimOne();
+
+      const outcome = await executeJob(job, options());
+      expect(outcome.status).toBe('abandoned');
+
+      const { data } = await admin
+        .from('job_queue')
+        .select('status, last_error')
+        .eq('id', job.id)
+        .single();
+      expect(data?.status).toBe('dead');
+      expect(data?.last_error).toMatch(/Payload invalide/);
     });
   });
 
