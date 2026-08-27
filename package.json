@@ -29,6 +29,7 @@
     "@types/node": "^24.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11",
-    "@supabase/supabase-js": "^2.112.4"
+    "@supabase/supabase-js": "^2.112.4",
+    "zod": "^4.4.3"
   }
 }

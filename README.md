@@ -47,6 +47,10 @@ Le pipeline ne tourne **pas** sur Vercel : les jobs de crawl dépassent largemen
 limites du serverless. Le worker est un processus séparé qui parle à la même base ;
 la file de jobs est une table Postgres exploitée avec `FOR UPDATE SKIP LOCKED`.
 
+`pg_cron` **planifie** — chaque entrée se contente d'insérer un job. Il n'exécute
+jamais de logique métier, ce qui permettra de le remplacer sans toucher au moteur.
+Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
+
 ---
 
 ## Commandes
@@ -54,7 +58,7 @@ la file de jobs est une table Postgres exploitée avec `FOR UPDATE SKIP LOCKED`.
 | Commande | Effet |
 |---|---|
 | `pnpm dev` | serveur de développement Next.js |
-| `pnpm dev:worker` | worker en mode watch |
+| `pnpm dev:worker` | worker en mode watch — **à arrêter avant de lancer les tests**, sinon il consomme leurs jobs |
 | `pnpm typecheck` | vérification des types sur tout le workspace |
 | `pnpm lint` | ESLint |
 | `pnpm test` | tous les tests |
@@ -105,7 +109,8 @@ ligne le jour où l'écosystème suit.
 - [x] **Phase 0** — monorepo, Next.js, Supabase, authentification, migrations, CI
 - [x] **Phase 1** — schéma métier complet, invariants d'attribution, file de jobs
 - [x] **Phase 2** — console admin : entreprises, fiche détaillée, débogueur de scoring, jobs
-- [ ] Phase 3 — worker et exécution des jobs
+- [x] **Phase 3** — worker, exécution des jobs, planification pg_cron
+- [ ] Phase 4 — ingestion SIRENE et CSV
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
 
 ### Surface exposée aux utilisateurs

@@ -148,3 +148,30 @@ export function relativeDays(value: string | null): string {
   if (days < 0) return `dans ${-days} j`;
   return `il y a ${days} j`;
 }
+
+/**
+ * Nombre en colonne. Une valeur nulle reste neutre : colorer les zéros en
+ * rouge crée un bruit visuel qui masque les vrais problèmes.
+ */
+export function Count({
+  value,
+  tone = 'neutral',
+}: {
+  value: number | null;
+  tone?: 'neutral' | 'muted' | 'success' | 'danger';
+}) {
+  const n = value ?? 0;
+  return (
+    <span
+      className={cn(
+        'tabular-nums',
+        n === 0 && 'text-muted-foreground',
+        n > 0 && tone === 'success' && 'text-success',
+        n > 0 && tone === 'danger' && 'font-medium text-destructive',
+        n > 0 && tone === 'muted' && 'text-muted-foreground',
+      )}
+    >
+      {n}
+    </span>
+  );
+}

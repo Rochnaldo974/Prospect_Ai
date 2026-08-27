@@ -1163,6 +1163,30 @@ export type Database = {
           },
         ]
       }
+      admin_cron_schedule: {
+        Row: {
+          active: boolean | null
+          command: string | null
+          jobid: number | null
+          jobname: string | null
+          schedule: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          command?: string | null
+          jobid?: number | null
+          jobname?: string | null
+          schedule?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          command?: string | null
+          jobid?: number | null
+          jobname?: string | null
+          schedule?: string | null
+        }
+        Relationships: []
+      }
       admin_inventory: {
         Row: {
           assigned: number | null
@@ -1232,17 +1256,44 @@ export type Database = {
         Returns: boolean
       }
       complete_job: { Args: { job_id: number }; Returns: undefined }
+      enqueue_job: {
+        Args: {
+          p_dedupe_key?: string
+          p_job_type: string
+          p_max_attempts?: number
+          p_payload?: Json
+          p_priority?: number
+          p_run_after?: string
+        }
+        Returns: number
+      }
       ensure_month_partitions: {
         Args: { months_ahead?: number; months_back?: number }
         Returns: number
       }
+      expire_stale_assignments: { Args: never; Returns: number }
+      expire_stale_opportunities: { Args: never; Returns: number }
       fail_job: {
         Args: { error_message: string; job_id: number }
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
+      kill_job: {
+        Args: { error_message: string; job_id: number }
+        Returns: undefined
+      }
+      prune_event_keys: { Args: { older_than?: string }; Returns: number }
       reclaim_stalled_jobs: {
         Args: { stalled_after?: string }
+        Returns: number
+      }
+      schedule_recurring_job: {
+        Args: {
+          p_job_type: string
+          p_payload?: Json
+          p_priority?: number
+          p_window?: string
+        }
         Returns: number
       }
     }

@@ -4,3 +4,4 @@ export { getServiceClient, type Db } from './db/client';
 export type { Database, Json } from './db/database.types';
 export * from './domain';
 export * from './companies';
+export * from './jobs';

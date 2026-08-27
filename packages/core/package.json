@@ -10,7 +10,8 @@
     "./db": "./src/db/index.ts",
     "./config": "./src/config/index.ts",
     "./domain": "./src/domain/index.ts",
-    "./companies": "./src/companies/index.ts"
+    "./companies": "./src/companies/index.ts",
+    "./jobs": "./src/jobs/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
