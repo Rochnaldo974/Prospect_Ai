@@ -27,6 +27,9 @@ describe.skipIf(!reachable)('file de jobs', () => {
     if (error) throw new Error(error.message);
   };
 
+  /** Horodatage franchement passé, insensible à la dérive d'horloge. */
+  const past = () => new Date(Date.now() - 60_000).toISOString();
+
   const claim = async (client: SupabaseClient, worker: string, batch = 10): Promise<Job[]> => {
     const { data, error } = await client.rpc('claim_jobs', {
       worker,
@@ -91,7 +94,7 @@ describe.skipIf(!reachable)('file de jobs', () => {
     // d'une ligne mais présentes dans une autre, il faut donc les expliciter.
     await enqueue([
       { job_type: 'plus_tard', run_after: new Date(Date.now() + 3_600_000).toISOString() },
-      { job_type: 'maintenant', run_after: new Date().toISOString() },
+      { job_type: 'maintenant', run_after: past() },
     ]);
 
     const claimed = await claim(admin, 'worker-1');
@@ -151,9 +154,14 @@ describe.skipIf(!reachable)('file de jobs', () => {
     await enqueue([{ job_type: 'cheap_web_scan', max_attempts: 2 }]);
 
     for (let attempt = 1; attempt <= 2; attempt += 1) {
-      // Ramène le job en file immédiatement pour enchaîner les tentatives.
-      await admin.from('job_queue').update({ run_after: new Date().toISOString() }).neq('id', 0);
+      // Daté franchement dans le passé, pas à `now()` : claim_jobs compare à
+      // l'horloge de la base, et quelques millisecondes de dérive entre le
+      // client et Postgres suffiraient à rendre le job non réclamable.
+      await admin.from('job_queue').update({ run_after: past() }).neq('id', 0);
+
       const [job] = await claim(admin, 'worker-1');
+      expect(job, `tentative ${attempt} : aucun job réclamé`).toBeDefined();
+
       await admin.rpc('fail_job', { job_id: job!.id, error_message: `échec ${attempt}` });
     }
 
