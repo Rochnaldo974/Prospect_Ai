@@ -1,0 +1,9 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Scripts d'installation autorisés (pnpm 11 : allowBuilds)
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+  sharp: true

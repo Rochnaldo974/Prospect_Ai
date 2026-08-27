@@ -1,0 +1,22 @@
+{
+  "name": "@prospect/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env.local src/runner.ts",
+    "start": "tsx src/runner.ts",
+    "build": "echo 'worker: exécuté via tsx, pas de build'",
+    "lint": "echo 'lint: worker (via typecheck)'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prospect/core": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  }
+}
