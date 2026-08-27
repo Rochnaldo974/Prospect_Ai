@@ -5,3 +5,6 @@ export type { Database, Json } from './db/database.types';
 export * from './domain';
 export * from './companies';
 export * from './jobs';
+export * from './normalization';
+export * from './sources';
+export * from './ingestion';

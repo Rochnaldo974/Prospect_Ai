@@ -11,7 +11,10 @@
     "./config": "./src/config/index.ts",
     "./domain": "./src/domain/index.ts",
     "./companies": "./src/companies/index.ts",
-    "./jobs": "./src/jobs/index.ts"
+    "./jobs": "./src/jobs/index.ts",
+    "./normalization": "./src/normalization/index.ts",
+    "./sources": "./src/sources/index.ts",
+    "./ingestion": "./src/ingestion/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

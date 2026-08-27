@@ -7,6 +7,7 @@ import { signOut } from '@/app/(auth)/actions';
 const NAV = [
   { href: '/admin', label: 'Vue d’ensemble' },
   { href: '/admin/companies', label: 'Entreprises' },
+  { href: '/admin/import', label: 'Import' },
   { href: '/admin/jobs', label: 'Jobs' },
 ] as const;
 

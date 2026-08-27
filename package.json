@@ -23,13 +23,16 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "seed:dev": "node scripts/seed-dev.mjs",
-    "seed:companies": "node scripts/seed-companies.mjs"
+    "seed:companies": "node scripts/seed-companies.mjs",
+    "ingest:csv": "node --import tsx scripts/ingest-csv.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11",
     "@supabase/supabase-js": "^2.112.4",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "tsx": "^4.23.12",
+    "@prospect/core": "workspace:*"
   }
 }

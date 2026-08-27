@@ -69,6 +69,7 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
 | `pnpm db:types` | régénère les types TypeScript depuis la base |
 | `pnpm seed:dev` | (re)crée les comptes de développement |
 | `pnpm seed:companies [n]` | génère n commerces locaux fictifs avec signaux et opportunités |
+| `pnpm ingest:csv <fichier>` | ingère un CSV depuis le disque (`--sirene`, `--local-commerce`, `--dry-run`) |
 
 ---
 
@@ -88,6 +89,41 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
   client `service_role` — il est donc impossible d'obtenir ce client dans une page
   admin sans que le contrôle du rôle ait eu lieu. Le module est marqué `server-only`.
 - La clé `service_role` ne quitte jamais le serveur et n'est jamais préfixée `NEXT_PUBLIC_`.
+
+### Ingérer le répertoire SIRENE
+
+L'API Sirene de l'INSEE est limitée à quelques dizaines de requêtes par minute :
+elle ne permet pas de constituer un socle national. Le chemin retenu est le
+**fichier open data** publié sur data.gouv.fr, gratuit et sans clé.
+
+```bash
+# Toujours mesurer d'abord
+pnpm ingest:csv StockEtablissement.csv --sirene --local-commerce --dry-run
+
+# Puis ingérer
+pnpm ingest:csv StockEtablissement.csv --sirene --local-commerce
+```
+
+L'API reste pertinente pour l'incrémental quotidien, pas pour le stock.
+
+Le préréglage SIRENE applique le statut de diffusion : **seul le statut « O »
+(diffusible) est marqué prospectable**. Les statuts « P » (diffusion partielle)
+et « N » sont ingérés mais exclus de la prospection — c'est le choix prudent,
+une part importante des entrepreneurs individuels n'étant pas en diffusion
+complète.
+
+Pour un fichier de quelques milliers de lignes, `/admin/import` fait la même
+chose avec un aperçu des colonnes reconnues.
+
+### SIREN, SIRET, et ce que le produit prospecte
+
+Le **SIREN** identifie l'unité légale, le **SIRET** l'établissement. Une chaîne
+de trois boulangeries a un SIREN et trois SIRET. Le produit prospecte des
+établissements — c'est le point de vente qu'on appelle. En conséquence :
+
+- `siret` est unique, `siren` ne l'est pas ;
+- un candidat portant un SIRET ne se rapproche jamais par SIREN, sous peine de
+  fusionner un magasin avec le siège.
 
 ### Partitions dans un schéma dédié
 
@@ -110,7 +146,8 @@ ligne le jour où l'écosystème suit.
 - [x] **Phase 1** — schéma métier complet, invariants d'attribution, file de jobs
 - [x] **Phase 2** — console admin : entreprises, fiche détaillée, débogueur de scoring, jobs
 - [x] **Phase 3** — worker, exécution des jobs, planification pg_cron
-- [ ] Phase 4 — ingestion SIRENE et CSV
+- [x] **Phase 4** — normalisation, ingestion CSV et SIRENE
+- [ ] Phase 5 — déduplication approchée
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
 
 ### Surface exposée aux utilisateurs

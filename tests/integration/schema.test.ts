@@ -28,11 +28,26 @@ describe.skipIf(!reachable)('schéma du moteur', () => {
   });
 
   describe('identité des entreprises', () => {
-    it('interdit deux entreprises sur le même SIREN', async () => {
-      await createCompany(admin, { siren: '123456789' });
-      const { error } = await admin
-        .from('companies')
-        .insert({ legal_name: 'Doublon', siren: '123456789' });
+    it('autorise plusieurs établissements sur le même SIREN', async () => {
+      // Le SIREN identifie l'unité légale, le SIRET l'établissement. Une chaîne
+      // partage un SIREN entre tous ses points de vente ; le produit prospecte
+      // les points de vente.
+      await createCompany(admin, { siren: '552100554', siret: '55210055400013' });
+      const { error } = await admin.from('companies').insert({
+        legal_name: 'Second établissement',
+        siren: '552100554',
+        siret: '55210055400021',
+      });
+      expect(error).toBeNull();
+    });
+
+    it('interdit deux entreprises sur le même SIRET', async () => {
+      await createCompany(admin, { siret: '38012986600014', siren: '380129866' });
+      const { error } = await admin.from('companies').insert({
+        legal_name: 'Doublon établissement',
+        siren: '380129866',
+        siret: '38012986600014',
+      });
       expect(error?.code).toBe('23505');
     });
 
