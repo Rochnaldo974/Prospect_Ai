@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { detectDuplicates } from '../../dedup/engine';
 import { ingestFromSource } from '../../ingestion/pipeline';
 import { syncBodacc } from '../../ingestion/bodacc-sync';
 import { OsmCompanySource } from '../../sources/osm/adapter';
@@ -91,6 +92,53 @@ export const syncBodaccHandler: JobHandler<z.infer<typeof bodaccPayload>> = {
         excluded: report.excluded,
         duplicates: report.duplicates,
         by_family: report.byFamily,
+      },
+    };
+  },
+};
+
+const dedupPayload = z.object({
+  limit: z.number().int().min(1).max(20_000).default(2000),
+  sinceHours: z.number().int().min(1).max(720).optional(),
+  /** Ne rien fusionner, tout mettre en revue. Pour calibrer sur des données neuves. */
+  reviewOnly: z.boolean().default(false),
+});
+
+/**
+ * Déduplication approchée.
+ *
+ * N'examine que les entreprises sans SIRET : les autres sont déjà traitées par
+ * les clés exactes au moment de l'ingestion. Fusionne au-dessus de 0,90, met
+ * en revue entre 0,70 et 0,90.
+ */
+export const detectDuplicatesHandler: JobHandler<z.infer<typeof dedupPayload>> = {
+  type: 'detect_duplicates',
+  schema: dedupPayload,
+  defaultPriority: 55,
+  maxAttempts: 2,
+
+  async run(payload, { db, logger, signal }) {
+    const report = await detectDuplicates(db, {
+      limit: payload.limit,
+      reviewOnly: payload.reviewOnly,
+      logger,
+      ...(payload.sinceHours
+        ? { since: new Date(Date.now() - payload.sinceHours * 3_600_000) }
+        : {}),
+      ...(signal ? { signal } : {}),
+    });
+
+    return {
+      processed: report.examined,
+      succeeded: report.merged + report.queued,
+      failed: report.errors,
+      metadata: {
+        merged: report.merged,
+        queued: report.queued,
+        skipped: report.skipped,
+        // Distribution des scores : sert à recalibrer les seuils sur des
+        // données réelles plutôt que sur des cas construits.
+        score_buckets: report.scoreBuckets,
       },
     };
   },

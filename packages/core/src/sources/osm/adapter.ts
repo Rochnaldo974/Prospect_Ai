@@ -239,7 +239,13 @@ export class OsmCompanySource implements CompanySourceAdapter {
       // nom légal faute de mieux : la fusion sur SIRET récupérera la raison
       // sociale de SIRENE quand elle existe.
       legalName: name.slice(0, 300),
-      commercialName: tags['brand'] ?? tags['operator'] ?? null,
+
+      // `brand` et `operator` désignent le RÉSEAU, pas l'établissement. Les
+      // placer en nom commercial faussait la clé de comparaison : trois
+      // échoppes d'un même food court partageant leur exploitant se voyaient
+      // attribuer une similarité de nom de 1. Ces étiquettes restent dans le
+      // payload brut, qui est conservé.
+      commercialName: null,
 
       domain: websiteResult.domain,
       websiteUrl: websiteResult.domain ? `https://${websiteResult.domain}` : null,

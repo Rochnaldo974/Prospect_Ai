@@ -1,5 +1,5 @@
 import type { Db } from '../db/client';
-import type { Database } from '../db/database.types';
+import type { Database, Json } from '../db/database.types';
 import { hasActiveFilters, PAGE_SIZE, type CompanyFilters } from './filters';
 
 export type CompanyOverviewRow = Database['public']['Views']['admin_company_overview']['Row'];
@@ -237,4 +237,140 @@ export async function getInventory(db: Db): Promise<InventoryRow[]> {
     .order('available', { ascending: false });
   if (error) throw new Error(`getInventory : ${error.message}`);
   return data ?? [];
+}
+
+// ─── Doublons en attente d'arbitrage ────────────────────────────────────────
+
+export interface DuplicatePair {
+  id: string;
+  score: number;
+  evidence: Record<string, Json>;
+  createdAt: string;
+  a: CompanySide;
+  b: CompanySide;
+}
+
+export interface CompanySide {
+  id: string;
+  legalName: string;
+  commercialName: string | null;
+  siret: string | null;
+  siren: string | null;
+  domain: string | null;
+  phone: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  industryLabel: string | null;
+  identityConfidence: number;
+  sourceCount: number;
+  createdAt: string;
+}
+
+/**
+ * Paires à arbitrer, avec les deux fiches côte à côte.
+ *
+ * Tout est chargé d'un coup : décider demande de comparer, et une console qui
+ * oblige à ouvrir deux onglets par paire ne sera pas utilisée.
+ */
+export async function listPendingDuplicates(
+  db: Db,
+  limit = 50,
+): Promise<DuplicatePair[]> {
+  const { data: pairs, error } = await db
+    .from('company_duplicate_candidates')
+    .select('id, score, evidence, created_at, company_a_id, company_b_id')
+    .eq('status', 'pending')
+    .order('score', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`listPendingDuplicates : ${error.message}`);
+  if (!pairs || pairs.length === 0) return [];
+
+  const ids = [...new Set(pairs.flatMap((p) => [p.company_a_id, p.company_b_id]))];
+
+  const [companies, sources] = await Promise.all([
+    db
+      .from('companies')
+      .select('id, legal_name, commercial_name, siret, siren, domain, phone, address, postal_code, city, industry_label, identity_confidence, created_at')
+      .in('id', ids),
+    db.from('company_sources').select('company_id').in('company_id', ids),
+  ]);
+
+  if (companies.error) throw new Error(`listPendingDuplicates : ${companies.error.message}`);
+
+  const sourceCounts = new Map<string, number>();
+  for (const row of sources.data ?? []) {
+    sourceCounts.set(row.company_id, (sourceCounts.get(row.company_id) ?? 0) + 1);
+  }
+
+  const byId = new Map(
+    (companies.data ?? []).map((c) => [
+      c.id,
+      {
+        id: c.id,
+        legalName: c.legal_name,
+        commercialName: c.commercial_name,
+        siret: c.siret,
+        siren: c.siren,
+        domain: c.domain,
+        phone: c.phone,
+        address: c.address,
+        postalCode: c.postal_code,
+        city: c.city,
+        industryLabel: c.industry_label,
+        identityConfidence: c.identity_confidence,
+        sourceCount: sourceCounts.get(c.id) ?? 0,
+        createdAt: c.created_at,
+      } satisfies CompanySide,
+    ]),
+  );
+
+  return pairs
+    .map((pair) => {
+      const a = byId.get(pair.company_a_id);
+      const b = byId.get(pair.company_b_id);
+      if (!a || !b) return null;
+      return {
+        id: pair.id,
+        score: Number(pair.score),
+        evidence: (pair.evidence ?? {}) as Record<string, Json>,
+        createdAt: pair.created_at,
+        a,
+        b,
+      };
+    })
+    .filter((p): p is DuplicatePair => p !== null);
+}
+
+export interface DuplicateCounts {
+  pending: number;
+  merged: number;
+  rejected: number;
+  autoMerges: number;
+}
+
+/**
+ * Compteurs de la file d'arbitrage.
+ *
+ * Les fusions se comptent depuis company_merges, pas depuis le statut des
+ * paires : merge_companies supprime les paires impliquant l'entreprise
+ * absorbée — par cascade sur sa suppression — donc la ligne arbitrée n'existe
+ * plus au moment où l'on voudrait la marquer. Le journal des fusions est de
+ * toute façon la source de vérité : c'est lui qui garde la trace.
+ */
+export async function getDuplicateCounts(db: Db): Promise<DuplicateCounts> {
+  const [pending, merged, rejected, autoMerges] = await Promise.all([
+    db.from('company_duplicate_candidates').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    db.from('company_merges').select('id', { count: 'exact', head: true }).neq('decided_by', 'auto'),
+    db.from('company_duplicate_candidates').select('id', { count: 'exact', head: true }).eq('status', 'rejected'),
+    db.from('company_merges').select('id', { count: 'exact', head: true }).eq('decided_by', 'auto'),
+  ]);
+
+  return {
+    pending: pending.count ?? 0,
+    merged: merged.count ?? 0,
+    rejected: rejected.count ?? 0,
+    autoMerges: autoMerges.count ?? 0,
+  };
 }

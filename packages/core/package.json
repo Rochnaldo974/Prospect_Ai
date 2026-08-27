@@ -14,7 +14,8 @@
     "./jobs": "./src/jobs/index.ts",
     "./normalization": "./src/normalization/index.ts",
     "./sources": "./src/sources/index.ts",
-    "./ingestion": "./src/ingestion/index.ts"
+    "./ingestion": "./src/ingestion/index.ts",
+    "./dedup": "./src/dedup/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

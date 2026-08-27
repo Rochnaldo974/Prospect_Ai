@@ -196,6 +196,7 @@ export type Database = {
           lat: number | null
           legal_name: string
           lon: number | null
+          name_key: string | null
           next_scan_at: string | null
           opportunity_count: number
           phone: string | null
@@ -245,6 +246,7 @@ export type Database = {
           lat?: number | null
           legal_name: string
           lon?: number | null
+          name_key?: string | null
           next_scan_at?: string | null
           opportunity_count?: number
           phone?: string | null
@@ -294,6 +296,7 @@ export type Database = {
           lat?: number | null
           legal_name?: string
           lon?: number | null
+          name_key?: string | null
           next_scan_at?: string | null
           opportunity_count?: number
           phone?: string | null
@@ -360,6 +363,71 @@ export type Database = {
           {
             foreignKeyName: "company_cooldowns_company_id_fkey"
             columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_duplicate_candidates: {
+        Row: {
+          company_a_id: string
+          company_b_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          evidence: Json
+          id: string
+          score: number
+          status: Database["public"]["Enums"]["duplicate_status"]
+        }
+        Insert: {
+          company_a_id: string
+          company_b_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          evidence?: Json
+          id?: string
+          score: number
+          status?: Database["public"]["Enums"]["duplicate_status"]
+        }
+        Update: {
+          company_a_id?: string
+          company_b_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          evidence?: Json
+          id?: string
+          score?: number
+          status?: Database["public"]["Enums"]["duplicate_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_duplicate_candidates_company_a_id_fkey"
+            columns: ["company_a_id"]
+            isOneToOne: false
+            referencedRelation: "admin_company_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_duplicate_candidates_company_a_id_fkey"
+            columns: ["company_a_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_duplicate_candidates_company_b_id_fkey"
+            columns: ["company_b_id"]
+            isOneToOne: false
+            referencedRelation: "admin_company_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_duplicate_candidates_company_b_id_fkey"
+            columns: ["company_b_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
@@ -492,6 +560,54 @@ export type Database = {
           {
             foreignKeyName: "company_field_provenance_company_id_fkey"
             columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_merges: {
+        Row: {
+          absorbed_id: string
+          absorbed_snapshot: Json
+          decided_by: string
+          evidence: Json
+          id: string
+          merged_at: string
+          score: number
+          survivor_id: string
+        }
+        Insert: {
+          absorbed_id: string
+          absorbed_snapshot: Json
+          decided_by: string
+          evidence?: Json
+          id?: string
+          merged_at?: string
+          score: number
+          survivor_id: string
+        }
+        Update: {
+          absorbed_id?: string
+          absorbed_snapshot?: Json
+          decided_by?: string
+          evidence?: Json
+          id?: string
+          merged_at?: string
+          score?: number
+          survivor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_merges_survivor_id_fkey"
+            columns: ["survivor_id"]
+            isOneToOne: false
+            referencedRelation: "admin_company_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_merges_survivor_id_fkey"
+            columns: ["survivor_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
@@ -1341,10 +1457,38 @@ export type Database = {
         Args: { error_message: string; job_id: number }
         Returns: undefined
       }
+      find_duplicate_candidates: {
+        Args: { max_results?: number; min_score?: number; target_id: string }
+        Returns: {
+          candidate_id: string
+          evidence: Json
+          score: number
+        }[]
+      }
+      geo_distance_m: {
+        Args: { lat1: number; lat2: number; lon1: number; lon2: number }
+        Returns: number
+      }
       is_admin: { Args: never; Returns: boolean }
+      is_end_user_request: { Args: never; Returns: boolean }
       kill_job: {
         Args: { error_message: string; job_id: number }
         Returns: undefined
+      }
+      merge_companies: {
+        Args: {
+          p_absorbed_id: string
+          p_decided_by?: string
+          p_evidence?: Json
+          p_score?: number
+          p_survivor_id: string
+        }
+        Returns: string
+      }
+      normalize_name_key: { Args: { input: string }; Returns: string }
+      pick_merge_survivor: {
+        Args: { a_id: string; b_id: string }
+        Returns: string
       }
       prune_event_keys: { Args: { older_than?: string }; Returns: number }
       reclaim_stalled_jobs: {
@@ -1401,6 +1545,7 @@ export type Database = {
         | "expired_unused"
         | "manual"
         | "opt_out"
+      duplicate_status: "pending" | "merged" | "rejected"
       job_status: "pending" | "running" | "done" | "failed" | "dead"
       location_mode: "france" | "region" | "city" | "france_remote"
       opportunity_status: "available" | "assigned" | "expired" | "rejected"
@@ -1575,6 +1720,7 @@ export const Constants = {
         "manual",
         "opt_out",
       ],
+      duplicate_status: ["pending", "merged", "rejected"],
       job_status: ["pending", "running", "done", "failed", "dead"],
       location_mode: ["france", "region", "city", "france_remote"],
       opportunity_status: ["available", "assigned", "expired", "rejected"],

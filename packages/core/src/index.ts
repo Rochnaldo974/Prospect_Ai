@@ -8,3 +8,4 @@ export * from './jobs';
 export * from './normalization';
 export * from './sources';
 export * from './ingestion';
+export * from './dedup';

@@ -611,7 +611,7 @@ tests/
 | 2 | **admin `/admin/companies`** (liste, filtres, détail) ✅ | on voit les données |
 | 3 | file de jobs + worker + `job_runs` ✅ | jobs observables |
 | 4 | ingestion SIRENE + CSV + normalisation ✅ | entreprises réelles en base |
-| 5 | résolution d'identité (dedupe) | doublons fusionnés |
+| 5 | résolution d'identité (dedupe) ✅ | doublons fusionnés |
 | 6 | découverte POI + résolution de site | domaines rattachés |
 | 7 | cheap scanner + snapshots + hash | observation du web |
 | 8 | détection d'événements + signaux | timeline par entreprise |

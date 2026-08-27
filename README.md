@@ -164,6 +164,52 @@ de trois boulangeries a un SIREN et trois SIRET. Le produit prospecte des
   toutes vers le site de la marque. Le rapprochement par domaine n'est retenu
   que s'il désigne une seule entreprise.
 
+### Déduplication
+
+Les clés exactes — SIRET, SIREN, domaine — traitent la majorité des cas à
+l'ingestion. Le reste passe par un rapprochement approché : nom, téléphone,
+adresse, proximité géographique.
+
+Le rapprochement se fait **en base**, jamais en mémoire. Comparer chaque
+entreprise à toutes les autres est en O(n²) : à trois millions de lignes, c'est
+4,5 × 10¹² comparaisons. Quatre voisinages indexés restreignent les candidats
+avant toute comparaison.
+
+```
+≥ 0,90   fusion automatique
+≥ 0,70   mise en revue dans /admin/duplicates
+<  0,70  entreprises distinctes
+```
+
+Le seuil de fusion est volontairement haut. **Une fusion abusive détruit de la
+donnée et fait disparaître un prospect ; un doublon subsistant ne coûte qu'une
+ligne** — et sera repéré plus tard, quand une source aura apporté un SIRET.
+
+**Deux SIRET différents ne fusionnent jamais**, quel que soit le faisceau
+d'indices : ce sont deux établissements. Un centre commercial en aligne des
+dizaines à la même adresse, avec des noms voisins. La règle est dans la
+fonction de fusion elle-même, pas seulement dans le scoring.
+
+La pondération du nom est **quadratique**, calibrée sur des similarités
+mesurées :
+
+| Paire | Similarité |
+|---|---|
+| « BOULANGERIE MOREAU » / « Boulangerie Moreau SARL » | 1,000 |
+| « Le Fournil de la Gare » / « Fournil de la Gare » | 0,905 |
+| « GARAGE DUBOIS » / « GARAGE DUBOIS ET FILS » | 0,636 |
+| « Carrefour City » / « Carrefour Market » | 0,476 |
+
+La zone 0,40 – 0,70 est celle des enseignes d'un même réseau. Le carré l'écrase
+tout en préservant le haut de l'échelle.
+
+Le poids du domaine est **dégressif** : porté par trois entreprises ou plus, il
+désigne un réseau et ne prouve aucune identité. Deux Biocoop distants de deux
+kilomètres partagent biocoop.fr sans être le même magasin.
+
+Sur 898 commerces angevins réels : 413 examinés en 0,8 s, **4 paires signalées**,
+aucune fusion automatique. Un taux de revue de 0,4 % reste tenable par un humain.
+
 ### Choix de performance
 
 Mesures relevées sur la base locale, à l'échelle indiquée.
@@ -216,7 +262,8 @@ ligne le jour où l'écosystème suit.
 - [x] **Phase 3** — worker, exécution des jobs, planification pg_cron
 - [x] **Phase 4** — normalisation, ingestion CSV et SIRENE
 - [x] **Phase 4b** — sources externes : OpenStreetMap et BODACC
-- [ ] Phase 5 — déduplication approchée
+- [x] **Phase 5** — déduplication approchée
+- [ ] Phase 6 — résolution des sites web
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
 
 ### Surface exposée aux utilisateurs

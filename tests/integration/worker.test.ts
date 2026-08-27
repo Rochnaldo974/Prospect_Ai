@@ -81,6 +81,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
   describe('registre', () => {
     it('expose les handlers de maintenance', () => {
       expect(registeredJobTypes()).toEqual([
+        'detect_duplicates',
         'discover_osm',
         'ensure_partitions',
         'expire_assignments',
