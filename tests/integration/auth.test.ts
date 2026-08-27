@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
+import { deleteTestUsers } from './helpers';
 
 /**
  * Tests d'intégration de la fondation d'authentification.
@@ -34,11 +35,10 @@ describe.skipIf(!reachable)('fondation auth', () => {
   beforeAll(async () => {
     admin = createClient(URL, SERVICE, { auth: { persistSession: false } });
 
-    const { data: existing } = await admin.auth.admin.listUsers();
-    for (const u of existing.users) await admin.auth.admin.deleteUser(u.id);
+    await deleteTestUsers(admin, 'auth.test');
 
     const { data: paul, error } = await admin.auth.admin.createUser({
-      email: 'paul@test.local',
+      email: 'paul@auth.test',
       password: PASSWORD,
       email_confirm: true,
       user_metadata: { full_name: 'Paul Freelance' },
@@ -47,7 +47,7 @@ describe.skipIf(!reachable)('fondation auth', () => {
     paulId = paul.user.id;
 
     const { data: thomas } = await admin.auth.admin.createUser({
-      email: 'thomas@test.local',
+      email: 'thomas@auth.test',
       password: PASSWORD,
       email_confirm: true,
       user_metadata: { full_name: 'Thomas Dev' },
@@ -55,12 +55,11 @@ describe.skipIf(!reachable)('fondation auth', () => {
     thomasId = thomas.user!.id;
 
     asPaul = createClient(URL, ANON, { auth: { persistSession: false } });
-    await asPaul.auth.signInWithPassword({ email: 'paul@test.local', password: PASSWORD });
+    await asPaul.auth.signInWithPassword({ email: 'paul@auth.test', password: PASSWORD });
   });
 
   afterAll(async () => {
-    const { data } = await admin.auth.admin.listUsers();
-    for (const u of data.users) await admin.auth.admin.deleteUser(u.id);
+    await deleteTestUsers(admin, 'auth.test');
   });
 
   it('crée automatiquement le profil à l’inscription', async () => {

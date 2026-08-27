@@ -92,7 +92,23 @@ ligne le jour où l'écosystème suit.
 ## Avancement
 
 - [x] **Phase 0** — monorepo, Next.js, Supabase, authentification, migrations, CI
-- [ ] Phase 1 — schéma métier complet
+- [x] **Phase 1** — schéma métier complet, invariants d'attribution, file de jobs
 - [ ] Phase 2 — console admin des entreprises
-- [ ] Phase 3 — file de jobs et worker
+- [ ] Phase 3 — worker et exécution des jobs
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
+
+### Surface exposée aux utilisateurs
+
+Cinq tables seulement sont accessibles au rôle `authenticated`, et aucune à `anon` :
+
+| Table | Droits |
+|---|---|
+| `profiles` | SELECT, UPDATE (hors colonnes privilégiées) |
+| `user_preferences` | SELECT, UPDATE |
+| `daily_batches` | SELECT |
+| `assignment_cards` | SELECT |
+| `assignments` | SELECT, UPDATE (suivi de contact uniquement) |
+
+`companies`, `signals`, `opportunities` et le reste du moteur ne sont accessibles
+qu'au rôle `service_role`. Les privilèges par défaut du schéma `public` ont été
+inversés : une nouvelle table est invisible tant qu'un GRANT explicite ne l'ouvre pas.

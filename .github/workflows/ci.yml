@@ -34,7 +34,7 @@ jobs:
         run: pnpm lint
 
       - name: Tests unitaires
-        run: pnpm test
+        run: pnpm test:unit
 
       - name: Build
         run: pnpm build
@@ -43,17 +43,52 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
 
-  migrations:
+  database:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.12.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
 
       - uses: supabase/setup-cli@v1
         with:
           version: latest
 
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
       - name: Démarrer Supabase et appliquer les migrations
-        run: supabase db start
+        run: supabase start
 
       - name: Contrôle du schéma
         run: supabase db lint --level warning
+
+      - name: Exposer les clés locales
+        run: |
+          # `supabase status -o env` produit des valeurs entre guillemets,
+          # que GITHUB_ENV prendrait littéralement.
+          supabase status -o env | sed 's/="/=/; s/"$//' >> "$GITHUB_ENV"
+
+      - name: Tests d'intégration
+        run: pnpm test:integration
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.API_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
+
+      - name: Vérifier que les types générés sont à jour
+        run: |
+          supabase gen types typescript --local > /tmp/generated.types.ts
+          # On compare à partir de la première déclaration : le fichier commité
+          # porte un en-tête de rappel que le générateur ne produit pas.
+          sed -n '/^export type Json/,$p' packages/core/src/db/database.types.ts > /tmp/committed.types.ts
+          sed -n '/^export type Json/,$p' /tmp/generated.types.ts > /tmp/fresh.types.ts
+          diff -u /tmp/committed.types.ts /tmp/fresh.types.ts \
+            || { echo "::error::Types désynchronisés du schéma — lance 'pnpm db:types'"; exit 1; }
