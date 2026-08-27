@@ -6,9 +6,22 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 
 const credentialsSchema = z.object({
-  email: z.email("Adresse e-mail invalide"),
+  email: z.email('Adresse e-mail invalide'),
   password: z.string().min(8, 'Le mot de passe doit faire au moins 8 caractères'),
 });
+
+/**
+ * Destination après connexion.
+ *
+ * N'accepte qu'un chemin interne : un `next` contrôlé par l'URL est une
+ * redirection ouverte si on ne vérifie pas qu'il reste sur le site. `//evil.com`
+ * est un chemin absolu de protocole, d'où le double contrôle.
+ */
+function safeRedirect(next: FormDataEntryValue | null): string {
+  if (typeof next !== 'string') return '/dashboard';
+  if (!next.startsWith('/') || next.startsWith('//')) return '/dashboard';
+  return next;
+}
 
 const signUpSchema = credentialsSchema.extend({
   fullName: z.string().trim().min(1, 'Le nom est requis').max(120),
@@ -42,7 +55,7 @@ export async function signIn(
   }
 
   revalidatePath('/', 'layout');
-  redirect('/dashboard');
+  redirect(safeRedirect(formData.get('next')));
 }
 
 export async function signUp(

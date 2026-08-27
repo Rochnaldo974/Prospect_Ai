@@ -606,9 +606,9 @@ tests/
 
 | Phase | Contenu | Sortie observable |
 |---|---|---|
-| 0 | monorepo, Next.js, Supabase, auth, migrations, CI | app qui démarre |
-| 1 | schéma complet + RLS + seed | tables en place |
-| 2 | **admin `/admin/companies`** (liste, filtres, détail) | on voit les données |
+| 0 | monorepo, Next.js, Supabase, auth, migrations, CI ✅ | app qui démarre |
+| 1 | schéma complet + RLS + seed ✅ | tables en place |
+| 2 | **admin `/admin/companies`** (liste, filtres, détail) ✅ | on voit les données |
 | 3 | file de jobs + worker + `job_runs` | jobs observables |
 | 4 | ingestion SIRENE + CSV + normalisation | entreprises réelles en base |
 | 5 | résolution d'identité (dedupe) | doublons fusionnés |
@@ -616,7 +616,7 @@ tests/
 | 7 | cheap scanner + snapshots + hash | observation du web |
 | 8 | détection d'événements + signaux | timeline par entreprise |
 | 9 | moteur d'opportunités + quality gate | stock d'opportunités |
-| 10 | **admin debug scoring** (décomposition complète) | on comprend le moteur |
+| 10 | **admin debug scoring** (décomposition complète) — livré en avance avec la phase 2 ✅ | on comprend le moteur |
 | 11 | onboarding minimal + préférences | premiers utilisateurs |
 | 12 | matching + allocation + groupe contrôle | 5/jour attribuées |
 | 13 | dashboard utilisateur + feedback | produit utilisable |

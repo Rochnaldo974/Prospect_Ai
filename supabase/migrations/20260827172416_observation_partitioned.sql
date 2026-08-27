@@ -6,6 +6,12 @@
 -- rétro-partitionner à 50 M de lignes est un chantier qu'on ne veut pas.
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- Les partitions vivent dans un schéma dédié : elles n'ont pas à apparaître
+-- dans les types générés, ni dans Studio, ni à être interrogeables directement.
+-- Les requêtes passent toujours par la table parente dans `public`.
+create schema if not exists partitions;
+grant usage on schema partitions to service_role;
+
 -- ═══ website_snapshots ════════════════════════════════════════════════════
 --
 -- On n'écrase jamais une analyse : c'est la comparaison entre deux snapshots
@@ -185,10 +191,10 @@ begin
       if not exists (
         select 1 from pg_class c
         join pg_namespace n on n.oid = c.relnamespace
-        where c.relname = partition_name and n.nspname = 'public'
+        where c.relname = partition_name and n.nspname = 'partitions'
       ) then
         execute format(
-          'create table public.%I partition of public.%I for values from (%L) to (%L)',
+          'create table partitions.%I partition of public.%I for values from (%L) to (%L)',
           partition_name,
           parent_table,
           target_month,
@@ -196,10 +202,9 @@ begin
         );
 
         -- Les privilèges par défaut de Supabase accordent TRUNCATE, REFERENCES,
-        -- TRIGGER et MAINTAIN à anon et authenticated sur toute table créée dans
-        -- public. Le REVOKE du parent ne protège pas les partitions créées
-        -- ensuite : il faut le refaire ici, à chaque création.
-        execute format('revoke all on public.%I from anon, authenticated', partition_name);
+        -- TRIGGER et MAINTAIN à anon et authenticated sur toute table créée.
+        -- Le REVOKE du parent ne protège pas les partitions créées ensuite.
+        execute format('revoke all on partitions.%I from anon, authenticated', partition_name);
 
         created := created + 1;
       end if;

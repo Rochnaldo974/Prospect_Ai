@@ -19,19 +19,23 @@ alter default privileges for role postgres in schema public
 alter default privileges for role postgres in schema public
   revoke all on functions from anon, authenticated;
 
+alter default privileges for role postgres in schema partitions
+  revoke all on tables from anon, authenticated;
+
 -- Nettoyage des partitions déjà créées avec les anciens privilèges.
 do $$
 declare
-  partition_name text;
+  part record;
   cleaned integer := 0;
 begin
-  for partition_name in
-    select c.relname
+  for part in
+    select n.nspname, c.relname
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public' and c.relispartition and c.relkind = 'r'
+    where c.relispartition and c.relkind = 'r'
+      and n.nspname in ('public', 'partitions')
   loop
-    execute format('revoke all on public.%I from anon, authenticated', partition_name);
+    execute format('revoke all on %I.%I from anon, authenticated', part.nspname, part.relname);
     cleaned := cleaned + 1;
   end loop;
 
@@ -48,7 +52,7 @@ begin
     into leaked
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
-  where n.nspname = 'public'
+  where n.nspname in ('public', 'partitions')
     and c.relkind in ('r', 'p')
     and c.relacl is not null
     and array_to_string(c.relacl, ' ') like '%anon=%';

@@ -64,6 +64,7 @@ la file de jobs est une table Postgres exploitée avec `FOR UPDATE SKIP LOCKED`.
 | `pnpm db:diff <nom>` | génère une migration depuis les changements du schéma |
 | `pnpm db:types` | régénère les types TypeScript depuis la base |
 | `pnpm seed:dev` | (re)crée les comptes de développement |
+| `pnpm seed:companies [n]` | génère n commerces locaux fictifs avec signaux et opportunités |
 
 ---
 
@@ -78,8 +79,18 @@ la file de jobs est une table Postgres exploitée avec `FOR UPDATE SKIP LOCKED`.
 - **Deux couches d'autorisation distinctes**, à ne jamais confondre : les `GRANT`
   décident quelles tables un rôle peut toucher, les policies RLS décident quelles lignes
   il voit. Les tables du moteur ne reçoivent jamais de grant pour `authenticated`.
-- **Le rôle admin se vérifie côté serveur**, via `requireAdmin()`, jamais depuis le client.
+- **Le rôle admin se vérifie côté serveur.** L'accès à la base admin passe
+  exclusivement par `getAdminDb()`, qui appelle `requireAdmin()` avant de rendre le
+  client `service_role` — il est donc impossible d'obtenir ce client dans une page
+  admin sans que le contrôle du rôle ait eu lieu. Le module est marqué `server-only`.
 - La clé `service_role` ne quitte jamais le serveur et n'est jamais préfixée `NEXT_PUBLIC_`.
+
+### Partitions dans un schéma dédié
+
+`website_snapshots` et `company_events` sont partitionnées par mois, et leurs
+partitions vivent dans le schéma `partitions`. Elles disparaissent ainsi des types
+générés, de Studio et de la surface interrogeable, sans changer la moindre requête :
+tout passe par la table parente dans `public`.
 
 ### TypeScript 5.9 et non 7
 
@@ -93,7 +104,7 @@ ligne le jour où l'écosystème suit.
 
 - [x] **Phase 0** — monorepo, Next.js, Supabase, authentification, migrations, CI
 - [x] **Phase 1** — schéma métier complet, invariants d'attribution, file de jobs
-- [ ] Phase 2 — console admin des entreprises
+- [x] **Phase 2** — console admin : entreprises, fiche détaillée, débogueur de scoring, jobs
 - [ ] Phase 3 — worker et exécution des jobs
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
 

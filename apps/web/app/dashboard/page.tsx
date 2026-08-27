@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { requireUser } from '@/lib/auth/session';
+import { signOut } from '@/app/(auth)/actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -25,7 +26,9 @@ export default async function DashboardPage() {
               Admin
             </a>
           ) : null}
-          <form action="/auth/signout" method="post">
+          {/* Server action plutôt qu'un route handler : un seul chemin de
+              déconnexion, et pas d'URL POST exposée sans usage. */}
+          <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm">
               Déconnexion
             </Button>

@@ -22,7 +22,8 @@
     "db:types": "supabase gen types typescript --local > packages/core/src/db/database.types.ts",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "seed:dev": "node scripts/seed-dev.mjs"
+    "seed:dev": "node scripts/seed-dev.mjs",
+    "seed:companies": "node scripts/seed-companies.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

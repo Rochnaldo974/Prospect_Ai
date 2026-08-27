@@ -115,8 +115,10 @@ describe.skipIf(!reachable)('fondation auth', () => {
     const { data: after } = await asPaul.rpc('is_admin');
     expect(after).toBe(true);
 
+    // Assertion sur ce que l'admin peut voir en plus, pas sur un total global :
+    // d'autres comptes (développement, autres fichiers de tests) coexistent.
     const { data: all } = await asPaul.from('profiles').select('id');
-    expect(all).toHaveLength(2);
+    expect(all?.map((r) => r.id)).toContain(thomasId);
 
     await admin.from('profiles').update({ role: 'user' }).eq('id', paulId);
   });
