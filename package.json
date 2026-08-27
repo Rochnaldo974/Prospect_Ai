@@ -25,7 +25,8 @@
     "seed:dev": "node scripts/seed-dev.mjs",
     "seed:companies": "node scripts/seed-companies.mjs",
     "ingest:csv": "node --import tsx scripts/ingest-csv.mjs",
-    "discover": "node --import tsx scripts/discover.mjs"
+    "discover": "node --import tsx scripts/discover.mjs",
+    "scan:domains": "node --import tsx scripts/scan-domains.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

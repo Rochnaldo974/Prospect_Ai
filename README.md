@@ -72,6 +72,7 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
 | `pnpm ingest:csv <fichier>` | ingère un CSV depuis le disque (`--sirene`, `--local-commerce`, `--dry-run`) |
 | `pnpm discover osm <ville>…` | découverte OpenStreetMap (téléphone, site, SIRET) |
 | `pnpm discover bodacc` | événements datés BODACC (`--days n`, `--dept 49,75`) |
+| `pnpm scan:domains` | scan des sites connus (`--limit n`, `--all`) |
 
 ---
 
@@ -163,6 +164,45 @@ de trois boulangeries a un SIREN et trois SIRET. Le produit prospecte des
 - le **domaine n'est pas unique** non plus : les enseignes de réseau renvoient
   toutes vers le site de la marque. Le rapprochement par domaine n'est retenu
   que s'il désigne une seule entreprise.
+
+### Sites web
+
+Le domaine est une **entité à part entière**, scannée une fois quel que soit le
+nombre d'entreprises qui la revendiquent. Les enseignes de réseau partagent le
+site de la marque : scanner par entreprise ferait cinq fois le même travail et
+produirait cinq opportunités de refonte pour un seul site.
+
+**Le rattachement se fait dans le sens site → entreprise.** En France, un site
+professionnel doit afficher son SIREN dans ses mentions légales : on l'extrait
+et on le joint au répertoire. C'est déterministe, là où la correspondance par
+nom n'est jamais qu'une inférence.
+
+Deux pièges rencontrés sur des scans réels :
+
+- **Le SIREN des mentions légales n'est pas toujours celui du commerçant.**
+  Un même SIREN figurait sur deux commerces sans lien — celui de l'agence qui
+  avait réalisé les deux sites. Un SIREN présent sur plus de deux domaines est
+  donc écarté.
+- **Un site déjà attribué dont les mentions légales confirment le SIREN n'est
+  pas une découverte mais une confirmation.** Elle fait passer la confiance de
+  0,85 (POI) à 0,99 (obligation légale d'affichage).
+
+Le récupérateur respecte `robots.txt`, s'identifie, et n'envoie **qu'une requête
+par seconde et par hôte**. Un scan qui ferait tomber le site d'une boulangerie
+serait un échec, quelle que soit la qualité des données récoltées.
+
+#### Ce qui ne marche pas : deviner un domaine depuis un nom
+
+Mesuré sur 25 entreprises sans site : **87 candidats sondés, 522 secondes,
+zéro attribution**. Le résolveur exige une preuve d'appartenance — SIREN dans
+les mentions légales ou téléphone connu — et le nom seul plafonne sous le seuil.
+Onze domaines existaient mais aucun n'a pu être rattaché.
+
+Le refus est le bon comportement : un site attribué à tort envoie le freelance
+démarcher le mauvais interlocuteur. Mais le rendement de cette stratégie est
+nul, et le chemin productif est l'inverse — partir des domaines `.fr` (open data
+AFNIC, Certificate Transparency) et remonter au répertoire par les mentions
+légales.
 
 ### Déduplication
 
@@ -263,7 +303,8 @@ ligne le jour où l'écosystème suit.
 - [x] **Phase 4** — normalisation, ingestion CSV et SIRENE
 - [x] **Phase 4b** — sources externes : OpenStreetMap et BODACC
 - [x] **Phase 5** — déduplication approchée
-- [ ] Phase 6 — résolution des sites web
+- [x] **Phase 6** — scan des sites, rattachement par les mentions légales
+- [ ] Phase 7 — moteur de signaux
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
 
 ### Surface exposée aux utilisateurs

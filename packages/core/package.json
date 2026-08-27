@@ -15,7 +15,8 @@
     "./normalization": "./src/normalization/index.ts",
     "./sources": "./src/sources/index.ts",
     "./ingestion": "./src/ingestion/index.ts",
-    "./dedup": "./src/dedup/index.ts"
+    "./dedup": "./src/dedup/index.ts",
+    "./enrichment": "./src/enrichment/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

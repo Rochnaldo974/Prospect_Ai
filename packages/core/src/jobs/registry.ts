@@ -9,6 +9,7 @@ import {
   refreshFilterOptionsHandler,
 } from './handlers/maintenance';
 import { detectDuplicatesHandler, discoverOsmHandler, syncBodaccHandler } from './handlers/sources';
+import { resolveWebsitesHandler, scanDomainsHandler } from './handlers/websites';
 
 const HANDLERS: JobHandler<never>[] = [
   expireOpportunitiesHandler,
@@ -21,6 +22,8 @@ const HANDLERS: JobHandler<never>[] = [
   discoverOsmHandler,
   syncBodaccHandler,
   detectDuplicatesHandler,
+  scanDomainsHandler,
+  resolveWebsitesHandler,
 ] as JobHandler<never>[];
 
 const byType = new Map<string, JobHandler<never>>(HANDLERS.map((h) => [h.type, h]));

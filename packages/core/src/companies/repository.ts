@@ -114,6 +114,10 @@ export async function listCompanies(
 
 export interface CompanyDetail {
   company: Database['public']['Tables']['companies']['Row'];
+  /** Analyse du site, partagée entre toutes les entreprises qui le revendiquent. */
+  domain: Database['public']['Tables']['domains']['Row'] | null;
+  /** Autres entreprises revendiquant le même domaine — enseignes de réseau. */
+  domainSiblings: { id: string; legal_name: string; city: string | null }[];
   overview: CompanyOverviewRow | null;
   sources: Database['public']['Tables']['company_sources']['Row'][];
   provenance: Database['public']['Tables']['company_field_provenance']['Row'][];
@@ -151,8 +155,25 @@ export async function getCompanyDetail(db: Db, id: string): Promise<CompanyDetai
   if (company.error) throw new Error(`getCompanyDetail : ${company.error.message}`);
   if (!company.data) return null;
 
+  // Le domaine est une entité partagée : on le lit une fois, et on montre qui
+  // d'autre le revendique. Un site partagé par cinq magasins d'une enseigne
+  // ne doit pas produire cinq opportunités de refonte.
+  const [domain, siblings] = company.data.domain
+    ? await Promise.all([
+        db.from('domains').select('*').eq('domain', company.data.domain).maybeSingle(),
+        db
+          .from('companies')
+          .select('id, legal_name, city')
+          .eq('domain', company.data.domain)
+          .neq('id', id)
+          .limit(20),
+      ])
+    : [{ data: null }, { data: [] }];
+
   return {
     company: company.data,
+    domain: domain.data ?? null,
+    domainSiblings: siblings.data ?? [],
     overview: overview.data,
     sources: sources.data ?? [],
     provenance: provenance.data ?? [],

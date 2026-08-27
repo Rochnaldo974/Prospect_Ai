@@ -25,9 +25,10 @@ export default async function CompanyDetailPage({
   const detail = await getCompanyDetail(db, id);
   if (!detail) notFound();
 
-  const { company, overview, sources, snapshots, events, signals, opportunities, assignments, cooldowns } =
-    detail;
-  const latestSnapshot = snapshots[0];
+  const {
+    company, overview, sources, snapshots, events, signals,
+    opportunities, assignments, cooldowns, domain, domainSiblings,
+  } = detail;
 
   return (
     <div className="space-y-5">
@@ -104,23 +105,90 @@ export default async function CompanyDetailPage({
                 ) : null}
               </Field>
               <Field label="Confiance du rattachement">
-                {company.website_confidence !== null ? company.website_confidence.toFixed(2) : null}
+                {company.website_confidence !== null ? (
+                  <span className="flex items-center gap-1.5">
+                    {company.website_confidence.toFixed(2)}
+                    {company.website_confidence >= 0.99 ? (
+                      <Pill tone="success">mentions légales</Pill>
+                    ) : null}
+                  </span>
+                ) : null}
               </Field>
               <Field label="Tentatives de résolution">{company.website_resolution_attempts}</Field>
-              <Field label="CMS">{latestSnapshot?.cms}</Field>
-              <Field label="Framework">{latestSnapshot?.framework}</Field>
+
+              <Field label="État">
+                {domain ? (
+                  <Pill
+                    tone={
+                      domain.status === 'reachable' ? 'success'
+                      : domain.status === 'placeholder' ? 'warning'
+                      : domain.status === 'unknown' ? 'neutral' : 'danger'
+                    }
+                  >
+                    {domain.status}
+                  </Pill>
+                ) : null}
+              </Field>
+              <Field label="Statut HTTP">{domain?.http_status}</Field>
+              <Field label="TTFB">{domain?.ttfb_ms ? `${domain.ttfb_ms} ms` : null}</Field>
+
+              <Field label="CMS">{domain?.cms}</Field>
+              <Field label="Framework">{domain?.framework}</Field>
               <Field label="Technologies">
-                {Array.isArray(latestSnapshot?.technologies)
-                  ? (latestSnapshot.technologies as string[]).join(', ')
+                {Array.isArray(domain?.technologies) && domain.technologies.length > 0
+                  ? (domain.technologies as string[]).join(', ')
                   : null}
               </Field>
-              <Field label="Statut HTTP">{latestSnapshot?.http_status}</Field>
-              <Field label="TTFB">{latestSnapshot?.ttfb_ms ? `${latestSnapshot.ttfb_ms} ms` : null}</Field>
-              <Field label="SSL">{latestSnapshot ? (latestSnapshot.has_ssl ? 'oui' : 'non') : null}</Field>
-              <Field label="Performance">{latestSnapshot?.performance_score}</Field>
-              <Field label="Mobile">{latestSnapshot?.mobile_score}</Field>
-              <Field label="SEO">{latestSnapshot?.seo_score}</Field>
+
+              <Field label="SSL">{domain ? (domain.has_ssl ? 'oui' : 'non') : null}</Field>
+              <Field label="Responsive">
+                {domain?.has_viewport_meta !== null && domain?.has_viewport_meta !== undefined
+                  ? domain.has_viewport_meta ? 'viewport présent' : 'pas de viewport'
+                  : null}
+              </Field>
+              <Field label="Copyright">{domain?.copyright_year}</Field>
+
+              <Field label="E-commerce">{domain?.ecommerce_detected ? 'détecté' : null}</Field>
+              <Field label="Réservation">{domain?.booking_detected ? 'détectée' : null}</Field>
+              <Field label="Dernier scan">{formatDateTime(domain?.last_checked_at ?? null)}</Field>
             </dl>
+
+            {domain && domain.sirens_found.length > 0 ? (
+              <p className="mt-3 text-xs">
+                <span className="text-muted-foreground">SIREN dans les mentions légales : </span>
+                <span className="font-mono">{domain.sirens_found.join(', ')}</span>
+                {domain.sirens_found.includes(company.siren ?? '') ? (
+                  <span className="ml-2">
+                    <Pill tone="success">rattachement confirmé</Pill>
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+
+            {domain?.check_error ? (
+              <p className="mt-2 text-xs text-destructive">{domain.check_error}</p>
+            ) : null}
+
+            {domainSiblings.length > 0 ? (
+              <div className="mt-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
+                <p className="font-medium text-warning">
+                  Ce site est partagé par {domainSiblings.length + 1} établissements.
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  Enseigne de réseau : le domaine n&apos;identifie pas cet établissement, et une
+                  refonte ne se propose qu&apos;une fois pour l&apos;ensemble.
+                </p>
+                <ul className="mt-1 flex flex-wrap gap-1.5">
+                  {domainSiblings.slice(0, 8).map((sibling) => (
+                    <li key={sibling.id}>
+                      <Link href={`/admin/companies/${sibling.id}`} className="hover:underline">
+                        <Pill>{sibling.legal_name}</Pill>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </Section>
 
           <Section title="Opportunités" count={opportunities.length} empty="Aucune opportunité générée. Le moteur exige un événement daté pour en créer une.">

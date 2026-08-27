@@ -612,8 +612,8 @@ tests/
 | 3 | file de jobs + worker + `job_runs` ✅ | jobs observables |
 | 4 | ingestion SIRENE + CSV + normalisation ✅ | entreprises réelles en base |
 | 5 | résolution d'identité (dedupe) ✅ | doublons fusionnés |
-| 6 | découverte POI + résolution de site | domaines rattachés |
-| 7 | cheap scanner + snapshots + hash | observation du web |
+| 6 | découverte POI + résolution de site ✅ | domaines rattachés |
+| 7 | cheap scanner + snapshots + hash ✅ (fait en phase 6) | observation du web |
 | 8 | détection d'événements + signaux | timeline par entreprise |
 | 9 | moteur d'opportunités + quality gate | stock d'opportunités |
 | 10 | **admin debug scoring** (décomposition complète) — livré en avance avec la phase 2 ✅ | on comprend le moteur |

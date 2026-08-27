@@ -754,6 +754,117 @@ export type Database = {
           },
         ]
       }
+      domains: {
+        Row: {
+          booking_detected: boolean
+          check_attempts: number
+          check_error: string | null
+          cms: string | null
+          contact_form_detected: boolean
+          contact_form_url: string | null
+          content_hash: string | null
+          copyright_year: number | null
+          created_at: string
+          domain: string
+          ecommerce_detected: boolean
+          emails_found: string[]
+          final_url: string | null
+          first_seen_at: string
+          framework: string | null
+          has_media_queries: boolean | null
+          has_ssl: boolean | null
+          has_viewport_meta: boolean | null
+          html_bytes: number | null
+          http_status: number | null
+          last_checked_at: string | null
+          legal_page_checked_at: string | null
+          legal_page_url: string | null
+          meta_description: string | null
+          next_check_at: string
+          phones_found: string[]
+          redirect_chain: Json
+          sirens_found: string[]
+          status: Database["public"]["Enums"]["domain_status"]
+          tech_hash: string | null
+          technologies: Json
+          title: string | null
+          ttfb_ms: number | null
+          updated_at: string
+        }
+        Insert: {
+          booking_detected?: boolean
+          check_attempts?: number
+          check_error?: string | null
+          cms?: string | null
+          contact_form_detected?: boolean
+          contact_form_url?: string | null
+          content_hash?: string | null
+          copyright_year?: number | null
+          created_at?: string
+          domain: string
+          ecommerce_detected?: boolean
+          emails_found?: string[]
+          final_url?: string | null
+          first_seen_at?: string
+          framework?: string | null
+          has_media_queries?: boolean | null
+          has_ssl?: boolean | null
+          has_viewport_meta?: boolean | null
+          html_bytes?: number | null
+          http_status?: number | null
+          last_checked_at?: string | null
+          legal_page_checked_at?: string | null
+          legal_page_url?: string | null
+          meta_description?: string | null
+          next_check_at?: string
+          phones_found?: string[]
+          redirect_chain?: Json
+          sirens_found?: string[]
+          status?: Database["public"]["Enums"]["domain_status"]
+          tech_hash?: string | null
+          technologies?: Json
+          title?: string | null
+          ttfb_ms?: number | null
+          updated_at?: string
+        }
+        Update: {
+          booking_detected?: boolean
+          check_attempts?: number
+          check_error?: string | null
+          cms?: string | null
+          contact_form_detected?: boolean
+          contact_form_url?: string | null
+          content_hash?: string | null
+          copyright_year?: number | null
+          created_at?: string
+          domain?: string
+          ecommerce_detected?: boolean
+          emails_found?: string[]
+          final_url?: string | null
+          first_seen_at?: string
+          framework?: string | null
+          has_media_queries?: boolean | null
+          has_ssl?: boolean | null
+          has_viewport_meta?: boolean | null
+          html_bytes?: number | null
+          http_status?: number | null
+          last_checked_at?: string | null
+          legal_page_checked_at?: string | null
+          legal_page_url?: string | null
+          meta_description?: string | null
+          next_check_at?: string
+          phones_found?: string[]
+          redirect_chain?: Json
+          sirens_found?: string[]
+          status?: Database["public"]["Enums"]["domain_status"]
+          tech_hash?: string | null
+          technologies?: Json
+          title?: string | null
+          ttfb_ms?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       job_queue: {
         Row: {
           attempts: number
@@ -1406,6 +1517,14 @@ export type Database = {
     }
     Functions: {
       apply_company_patches: { Args: { patches: Json }; Returns: number }
+      attach_domain_by_legal_siren: {
+        Args: { p_domain: string }
+        Returns: {
+          attached: number
+          confirmed: number
+          skipped_shared: number
+        }[]
+      }
       claim_jobs: {
         Args: { batch_size?: number; types?: string[]; worker: string }
         Returns: {
@@ -1517,6 +1636,7 @@ export type Database = {
         }
         Returns: number
       }
+      siren_domain_count: { Args: { p_siren: string }; Returns: number }
     }
     Enums: {
       app_role: "user" | "admin"
@@ -1545,6 +1665,13 @@ export type Database = {
         | "expired_unused"
         | "manual"
         | "opt_out"
+      domain_status:
+        | "unknown"
+        | "reachable"
+        | "placeholder"
+        | "broken"
+        | "unreachable"
+        | "excluded"
       duplicate_status: "pending" | "merged" | "rejected"
       job_status: "pending" | "running" | "done" | "failed" | "dead"
       location_mode: "france" | "region" | "city" | "france_remote"
@@ -1719,6 +1846,14 @@ export const Constants = {
         "expired_unused",
         "manual",
         "opt_out",
+      ],
+      domain_status: [
+        "unknown",
+        "reachable",
+        "placeholder",
+        "broken",
+        "unreachable",
+        "excluded",
       ],
       duplicate_status: ["pending", "merged", "rejected"],
       job_status: ["pending", "running", "done", "failed", "dead"],

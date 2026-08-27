@@ -90,6 +90,8 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
         'reclaim_stalled_jobs',
         'refresh_admin_stats',
         'refresh_filter_options',
+        'resolve_websites',
+        'scan_domains',
         'sync_bodacc',
       ]);
     });
