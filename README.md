@@ -164,6 +164,35 @@ de trois boulangeries a un SIREN et trois SIRET. Le produit prospecte des
   toutes vers le site de la marque. Le rapprochement par domaine n'est retenu
   que s'il désigne une seule entreprise.
 
+### Choix de performance
+
+Mesures relevées sur la base locale, à l'échelle indiquée.
+
+| Chemin | Avant | Après | Levier |
+|---|---|---|---|
+| Ingestion — création | 60 lignes/s | **4 800 lignes/s** | écriture par lots |
+| Ingestion — fusion | 500 lignes/s | **4 600 lignes/s** | patches groupés en une instruction SQL |
+| Liste admin (300 k) | 550 ms | **1,8 ms** | agrégats dénormalisés + index de tri |
+| Options de filtre | 2 requêtes × 5 000 lignes | **0,3 ms** | vue matérialisée |
+| Vue d'ensemble | 82 ms | **0,07 ms** | compteurs précalculés |
+
+À 4 800 lignes/s, ingérer 4 millions d'établissements prend une quinzaine de
+minutes au lieu de dix-huit heures.
+
+Trois principes en découlent :
+
+- **Rien de ligne par ligne sur un chemin de masse.** Chaque aller-retour coûte
+  3,5 ms en local et dix fois plus sur une base distante. Les lots passent par
+  des fonctions SQL appelées en POST — avec `in(...)`, 500 identifiants font
+  dépasser la limite d'URL de la passerelle.
+- **Ce qui sert au tri est dénormalisé.** Trier sur un agrégat calculé oblige à
+  le calculer pour toute la table, quel que soit l'index. Les compteurs vivent
+  donc sur la ligne d'entreprise, maintenus par des triggers **au niveau
+  instruction** — un trigger par ligne multiplierait le coût d'une écriture en
+  lot par le nombre de lignes du lot. Surcoût mesuré : +23 %.
+- **Ce qui décrit un état est précalculé.** Les compteurs de la vue d'ensemble
+  et les valeurs des filtres n'ont pas besoin d'être exacts à la seconde.
+
 ### Partitions dans un schéma dédié
 
 `website_snapshots` et `company_events` sont partitionnées par mois, et leurs

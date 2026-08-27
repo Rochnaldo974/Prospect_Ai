@@ -130,3 +130,45 @@ export const pruneEventKeysHandler: JobHandler<z.infer<typeof prunePayload>> = {
     return { processed: pruned, succeeded: pruned, failed: 0 };
   },
 };
+
+/**
+ * Valeurs des listes déroulantes de la console.
+ *
+ * Précalculées plutôt que dérivées à chaque affichage : sur une base de
+ * plusieurs millions d'entreprises, alimenter trois menus déroulants ne doit
+ * pas coûter un parcours de table.
+ */
+export const refreshFilterOptionsHandler: JobHandler<z.infer<typeof noPayload>> = {
+  type: 'refresh_filter_options',
+  schema: noPayload,
+  defaultPriority: 20,
+
+  async run(_payload, { db, logger }) {
+    const { data, error } = await db.rpc('refresh_filter_options');
+    if (error) throw new Error(error.message);
+
+    const total = data ?? 0;
+    logger.info('Options de filtre rafraîchies', { total });
+
+    return { processed: total, succeeded: total, failed: 0 };
+  },
+};
+
+/**
+ * Compteurs de la vue d'ensemble.
+ *
+ * Dix-huit sous-requêtes de comptage : 82 ms à 300 000 entreprises, environ
+ * 800 ms à trois millions. Précalculés toutes les cinq minutes, l'affichage
+ * devient gratuit — et ces chiffres décrivent un état, pas une transaction.
+ */
+export const refreshAdminStatsHandler: JobHandler<z.infer<typeof noPayload>> = {
+  type: 'refresh_admin_stats',
+  schema: noPayload,
+  defaultPriority: 15,
+
+  async run(_payload, { db }) {
+    const { error } = await db.rpc('refresh_admin_stats');
+    if (error) throw new Error(error.message);
+    return { processed: 1, succeeded: 1, failed: 0 };
+  },
+};

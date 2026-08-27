@@ -45,17 +45,19 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
   });
 
   /**
-   * Réclame le job qu'on vient de planifier.
+   * Réclame le job qu'on vient de planifier, en le désignant par son type.
    *
-   * Échoue avec un message explicite plutôt qu'un TypeError si la file est
-   * vide : la cause la plus fréquente est un worker lancé en parallèle
-   * (`pnpm dev:worker`) qui consomme les jobs avant le test.
+   * Le filtre par type n'est pas une commodité : pg_cron insère ses propres
+   * jobs — reclaim_stalled_jobs toutes les cinq minutes, avec une priorité de
+   * 95 supérieure à celle des tests. Sans filtre, un test réclamerait le job
+   * du planificateur au lieu du sien, et échouerait sur une assertion qui
+   * n'a rien à voir avec ce qu'elle vérifie.
    */
-  const claimOne = async (): Promise<QueuedJob> => {
-    const [job] = await claimJobs(db, 'worker-test', 1);
+  const claimOne = async (type: string): Promise<QueuedJob> => {
+    const [job] = await claimJobs(db, 'worker-test', 1, [type]);
     if (!job) {
       throw new Error(
-        'Aucun job réclamé. Un worker tourne-t-il en parallèle sur la même base ?',
+        `Aucun job « ${type} » réclamé. Un worker tourne-t-il en parallèle sur la même base ?`,
       );
     }
     return job;
@@ -85,6 +87,8 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
         'expire_opportunities',
         'prune_event_keys',
         'reclaim_stalled_jobs',
+        'refresh_admin_stats',
+        'refresh_filter_options',
         'sync_bodacc',
       ]);
     });
@@ -96,7 +100,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
     it('refuse un payload de découverte sans périmètre', async () => {
       // Une découverte OSM sans ville interrogerait le monde entier.
       await enqueueJob(db, 'discover_osm', { cities: [] });
-      const job = await claimOne();
+      const job = await claimOne('discover_osm');
 
       const outcome = await executeJob(job, options());
       expect(outcome.status).toBe('abandoned');
@@ -114,7 +118,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
   describe('chemin nominal', () => {
     it('exécute un job et le marque terminé', async () => {
       await enqueueJob(db, 'ensure_partitions', {});
-      const job = await claimOne();
+      const job = await claimOne('ensure_partitions');
 
       const outcome = await executeJob(job, options());
       expect(outcome.status).toBe('succeeded');
@@ -125,7 +129,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
 
     it('journalise l’exécution dans job_runs', async () => {
       await enqueueJob(db, 'expire_opportunities', {});
-      const job = await claimOne();
+      const job = await claimOne('expire_opportunities');
       await executeJob(job, options());
 
       const { data } = await admin
@@ -154,7 +158,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
       };
 
       await enqueueJob(db, 'spy', {});
-      const job = await claimOne();
+      const job = await claimOne('spy');
       await executeJob(job, options(() => handler as unknown as JobHandler<never>));
 
       expect(seen).toEqual([{ monthsAhead: 7 }]);
@@ -164,7 +168,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
   describe('chemins d’échec', () => {
     it('abandonne un type de job inconnu sans le réessayer', async () => {
       await enqueueJob(db, 'type_inexistant', {});
-      const job = await claimOne();
+      const job = await claimOne('type_inexistant');
 
       const outcome = await executeJob(job, options());
       expect(outcome.status).toBe('abandoned');
@@ -186,7 +190,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
       };
 
       await enqueueJob(db, 'strict', { companyId: 'pas-un-uuid' });
-      const job = await claimOne();
+      const job = await claimOne('strict');
 
       const outcome = await executeJob(job, options(() => handler as unknown as JobHandler<never>));
       expect(outcome.status).toBe('abandoned');
@@ -212,7 +216,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
       };
 
       await enqueueJob(db, 'flaky', {}, { maxAttempts: 3 });
-      const job = await claimOne();
+      const job = await claimOne('flaky');
 
       const outcome = await executeJob(job, options(() => handler as unknown as JobHandler<never>));
       expect(outcome.status).toBe('retrying');
@@ -236,7 +240,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
       };
 
       await enqueueJob(db, 'doomed', {}, { maxAttempts: 5 });
-      const job = await claimOne();
+      const job = await claimOne('doomed');
 
       const outcome = await executeJob(job, options(() => handler as unknown as JobHandler<never>));
       expect(outcome.status).toBe('abandoned');
@@ -260,7 +264,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
       };
 
       await enqueueJob(db, 'flaky', {});
-      const job = await claimOne();
+      const job = await claimOne('flaky');
       await executeJob(job, options(() => handler as unknown as JobHandler<never>));
 
       const { data } = await admin.from('job_runs').select('status, error').eq('job_id', job.id).single();
@@ -278,7 +282,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
       };
 
       await enqueueJob(db, 'explosive', {});
-      const job = await claimOne();
+      const job = await claimOne('explosive');
 
       await expect(
         executeJob(job, options(() => handler as unknown as JobHandler<never>)),

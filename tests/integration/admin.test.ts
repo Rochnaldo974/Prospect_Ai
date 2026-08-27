@@ -266,6 +266,10 @@ describe.skipIf(!reachable)('console admin', () => {
     });
 
     it('liste les valeurs de filtre disponibles', async () => {
+      // Les options viennent d'une vue matérialisée : elle doit être
+      // rafraîchie pour refléter les données créées par ce test.
+      await admin.rpc('refresh_filter_options');
+
       const options = await getFilterOptions(db);
       expect(options.cities).toContain('Lyon');
       expect(options.sources).toContain('sirene');

@@ -167,11 +167,17 @@ export type Database = {
       }
       companies: {
         Row: {
+          active_signal_count: number
           address: string | null
+          best_opportunity_score: number | null
+          best_opportunity_type:
+            | Database["public"]["Enums"]["opportunity_type"]
+            | null
           city: string | null
           commercial_name: string | null
           company_status: Database["public"]["Enums"]["company_status"]
           contact_form_url: string | null
+          cooldown_until: string | null
           country: string
           created_at: string
           creation_date: string | null
@@ -180,6 +186,7 @@ export type Database = {
           employee_max: number | null
           employee_min: number | null
           has_contact: boolean | null
+          has_live_assignment: boolean
           id: string
           identity_confidence: number
           industry_code: string | null
@@ -190,6 +197,7 @@ export type Database = {
           legal_name: string
           lon: number | null
           next_scan_at: string | null
+          opportunity_count: number
           phone: string | null
           postal_code: string | null
           prospecting_allowed: boolean
@@ -200,6 +208,7 @@ export type Database = {
           siret: string | null
           suppression_global: boolean
           suppression_reason: string | null
+          trigger_signal_count: number
           updated_at: string
           website_confidence: number | null
           website_last_resolved_at: string | null
@@ -207,11 +216,17 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          active_signal_count?: number
           address?: string | null
+          best_opportunity_score?: number | null
+          best_opportunity_type?:
+            | Database["public"]["Enums"]["opportunity_type"]
+            | null
           city?: string | null
           commercial_name?: string | null
           company_status?: Database["public"]["Enums"]["company_status"]
           contact_form_url?: string | null
+          cooldown_until?: string | null
           country?: string
           created_at?: string
           creation_date?: string | null
@@ -220,6 +235,7 @@ export type Database = {
           employee_max?: number | null
           employee_min?: number | null
           has_contact?: boolean | null
+          has_live_assignment?: boolean
           id?: string
           identity_confidence?: number
           industry_code?: string | null
@@ -230,6 +246,7 @@ export type Database = {
           legal_name: string
           lon?: number | null
           next_scan_at?: string | null
+          opportunity_count?: number
           phone?: string | null
           postal_code?: string | null
           prospecting_allowed?: boolean
@@ -240,6 +257,7 @@ export type Database = {
           siret?: string | null
           suppression_global?: boolean
           suppression_reason?: string | null
+          trigger_signal_count?: number
           updated_at?: string
           website_confidence?: number | null
           website_last_resolved_at?: string | null
@@ -247,11 +265,17 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          active_signal_count?: number
           address?: string | null
+          best_opportunity_score?: number | null
+          best_opportunity_type?:
+            | Database["public"]["Enums"]["opportunity_type"]
+            | null
           city?: string | null
           commercial_name?: string | null
           company_status?: Database["public"]["Enums"]["company_status"]
           contact_form_url?: string | null
+          cooldown_until?: string | null
           country?: string
           created_at?: string
           creation_date?: string | null
@@ -260,6 +284,7 @@ export type Database = {
           employee_max?: number | null
           employee_min?: number | null
           has_contact?: boolean | null
+          has_live_assignment?: boolean
           id?: string
           identity_confidence?: number
           industry_code?: string | null
@@ -270,6 +295,7 @@ export type Database = {
           legal_name?: string
           lon?: number | null
           next_scan_at?: string | null
+          opportunity_count?: number
           phone?: string | null
           postal_code?: string | null
           prospecting_allowed?: boolean
@@ -280,6 +306,7 @@ export type Database = {
           siret?: string | null
           suppression_global?: boolean
           suppression_reason?: string | null
+          trigger_signal_count?: number
           updated_at?: string
           website_confidence?: number | null
           website_last_resolved_at?: string | null
@@ -1130,6 +1157,7 @@ export type Database = {
           data_quality_score: number | null
           domain: string | null
           has_contact: boolean | null
+          has_live_assignment: boolean | null
           id: string | null
           identity_confidence: number | null
           in_cooldown: boolean | null
@@ -1187,6 +1215,15 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_filter_options: {
+        Row: {
+          code: string | null
+          kind: string | null
+          label: string | null
+          usage_count: number | null
+        }
+        Relationships: []
+      }
       admin_inventory: {
         Row: {
           assigned: number | null
@@ -1224,8 +1261,35 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_stats_cache: {
+        Row: {
+          assignments_live: number | null
+          assignments_today: number | null
+          clients: number | null
+          companies_added_today: number | null
+          companies_excluded: number | null
+          companies_scanned: number | null
+          companies_total: number | null
+          companies_with_contact: number | null
+          companies_with_website: number | null
+          computed_at: string | null
+          contacts_made: number | null
+          jobs_dead: number | null
+          jobs_pending: number | null
+          jobs_running: number | null
+          meetings: number | null
+          opportunities_assigned: number | null
+          opportunities_available: number | null
+          signals_active: number | null
+          singleton: number | null
+          users_onboarded: number | null
+          users_total: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      apply_company_patches: { Args: { patches: Json }; Returns: number }
       claim_jobs: {
         Args: { batch_size?: number; types?: string[]; worker: string }
         Returns: {
@@ -1286,6 +1350,19 @@ export type Database = {
       reclaim_stalled_jobs: {
         Args: { stalled_after?: string }
         Returns: number
+      }
+      refresh_admin_stats: { Args: never; Returns: undefined }
+      refresh_company_metrics: {
+        Args: { target_ids: string[] }
+        Returns: undefined
+      }
+      refresh_filter_options: { Args: never; Returns: number }
+      resolve_company_identities: {
+        Args: { p_domains?: string[]; p_sirens?: string[]; p_sirets?: string[] }
+        Returns: {
+          company: Database["public"]["Tables"]["companies"]["Row"]
+          match_key: string
+        }[]
       }
       schedule_recurring_job: {
         Args: {

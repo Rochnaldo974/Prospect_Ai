@@ -1,6 +1,6 @@
 import type { Db } from '../db/client';
 import type { Database } from '../db/database.types';
-import { PAGE_SIZE, type CompanyFilters } from './filters';
+import { hasActiveFilters, PAGE_SIZE, type CompanyFilters } from './filters';
 
 export type CompanyOverviewRow = Database['public']['Views']['admin_company_overview']['Row'];
 
@@ -32,9 +32,14 @@ export async function listCompanies(
   db: Db,
   filters: CompanyFilters,
 ): Promise<CompanyListResult> {
+  // Comptage estimé quand aucun filtre n'est actif : sur une table de plusieurs
+  // millions de lignes, un count(*) exact coûte plus cher que la page elle-même,
+  // pour une information dont personne n'a besoin au chiffre près.
+  const countMode = hasActiveFilters(filters) ? 'exact' : 'estimated';
+
   let query = db
     .from('admin_company_overview')
-    .select('*', { count: 'exact' });
+    .select('*', { count: countMode });
 
   if (filters.q) {
     // Échappe les caractères significatifs de la syntaxe `or` de PostgREST.
@@ -64,11 +69,13 @@ export async function listCompanies(
   if (filters.contact === 'with') query = query.eq('has_contact', true);
   if (filters.contact === 'without') query = query.eq('has_contact', false);
 
-  if (filters.assigned === 'yes') query = query.not('assigned_user_id', 'is', null);
-  if (filters.assigned === 'no') query = query.is('assigned_user_id', null);
+  // Colonnes dénormalisées et indexées, plutôt qu'un test sur une jointure.
+  if (filters.assigned === 'yes') query = query.eq('has_live_assignment', true);
+  if (filters.assigned === 'no') query = query.eq('has_live_assignment', false);
 
-  if (filters.cooldown === 'yes') query = query.eq('in_cooldown', true);
-  if (filters.cooldown === 'no') query = query.eq('in_cooldown', false);
+  // La vue expose la colonne dénormalisée sous le nom `cooldown_ends_at`.
+  if (filters.cooldown === 'yes') query = query.not('cooldown_ends_at', 'is', null);
+  if (filters.cooldown === 'no') query = query.is('cooldown_ends_at', null);
 
   if (filters.prospectable === 'yes') {
     query = query.eq('prospecting_allowed', true).eq('suppression_global', false);
@@ -166,24 +173,37 @@ export interface FilterOptions {
   sources: string[];
 }
 
+/**
+ * Valeurs proposées dans les filtres.
+ *
+ * Lues depuis la vue matérialisée : la version précédente chargeait 5 000
+ * lignes de companies et autant de company_sources à chaque affichage pour
+ * alimenter trois menus déroulants.
+ */
 export async function getFilterOptions(db: Db): Promise<FilterOptions> {
-  const [cities, industries, sources] = await Promise.all([
-    db.from('companies').select('city').not('city', 'is', null).limit(5000),
-    db.from('companies').select('industry_code, industry_label').not('industry_code', 'is', null).limit(5000),
-    db.from('company_sources').select('source_name').limit(5000),
-  ]);
+  const { data, error } = await db
+    .from('admin_filter_options')
+    .select('kind, code, label')
+    .order('usage_count', { ascending: false })
+    .limit(3000);
 
-  const uniqueIndustries = new Map<string, string>();
-  for (const row of industries.data ?? []) {
-    if (row.industry_code) uniqueIndustries.set(row.industry_code, row.industry_label ?? row.industry_code);
+  if (error) throw new Error(`getFilterOptions : ${error.message}`);
+
+  const cities: string[] = [];
+  const industries: { code: string; label: string }[] = [];
+  const sources: string[] = [];
+
+  for (const row of data ?? []) {
+    if (!row.code) continue;
+    if (row.kind === 'city') cities.push(row.code);
+    else if (row.kind === 'industry') industries.push({ code: row.code, label: row.label ?? row.code });
+    else if (row.kind === 'source') sources.push(row.code);
   }
 
   return {
-    cities: [...new Set((cities.data ?? []).map((r) => r.city).filter((c): c is string => !!c))].sort(),
-    industries: [...uniqueIndustries.entries()]
-      .map(([code, label]) => ({ code, label }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'fr')),
-    sources: [...new Set((sources.data ?? []).map((r) => r.source_name))].sort(),
+    cities: cities.sort((a, b) => a.localeCompare(b, 'fr')),
+    industries: industries.sort((a, b) => a.label.localeCompare(b.label, 'fr')),
+    sources: sources.sort(),
   };
 }
 
@@ -192,7 +212,19 @@ export async function getFilterOptions(db: Db): Promise<FilterOptions> {
 export type AdminStats = Database['public']['Views']['admin_stats']['Row'];
 export type InventoryRow = Database['public']['Views']['admin_inventory']['Row'];
 
-export async function getAdminStats(db: Db): Promise<AdminStats | null> {
+/**
+ * Compteurs de la vue d'ensemble.
+ *
+ * Lus dans le cache précalculé. En cas d'absence — juste après une migration,
+ * avant le premier rafraîchissement — on retombe sur le calcul direct plutôt
+ * que d'afficher une page vide.
+ */
+export async function getAdminStats(
+  db: Db,
+): Promise<(AdminStats & { computed_at?: string | null }) | null> {
+  const cached = await db.from('admin_stats_cache').select('*').maybeSingle();
+  if (!cached.error && cached.data) return cached.data;
+
   const { data, error } = await db.from('admin_stats').select('*').maybeSingle();
   if (error) throw new Error(`getAdminStats : ${error.message}`);
   return data;

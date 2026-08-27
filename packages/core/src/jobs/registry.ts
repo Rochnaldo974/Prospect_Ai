@@ -5,6 +5,8 @@ import {
   expireOpportunitiesHandler,
   pruneEventKeysHandler,
   reclaimStalledHandler,
+  refreshAdminStatsHandler,
+  refreshFilterOptionsHandler,
 } from './handlers/maintenance';
 import { discoverOsmHandler, syncBodaccHandler } from './handlers/sources';
 
@@ -14,6 +16,8 @@ const HANDLERS: JobHandler<never>[] = [
   ensurePartitionsHandler,
   reclaimStalledHandler,
   pruneEventKeysHandler,
+  refreshFilterOptionsHandler,
+  refreshAdminStatsHandler,
   discoverOsmHandler,
   syncBodaccHandler,
 ] as JobHandler<never>[];
