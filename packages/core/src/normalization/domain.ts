@@ -58,6 +58,13 @@ export function normalizeDomainDetailed(
   // Port éventuel.
   value = value.replace(/:\d+$/, '');
 
+  // Domaines internationalisés : « boulangerie-café.fr » est un domaine
+  // français parfaitement valide, et l'AFNIC en recense près de 1 %. Ils sont
+  // convertis en punycode, seule forme qui traverse DNS et HTTP.
+  if (/[^\x00-\x7F]/.test(value)) {
+    value = toPunycode(value) ?? value;
+  }
+
   for (const prefix of STRIPPED_PREFIXES) {
     if (value.startsWith(prefix)) {
       value = value.slice(prefix.length);
@@ -98,6 +105,21 @@ export function normalizeDomainDetailed(
   }
 
   return { domain: value };
+}
+
+/**
+ * Convertit un nom internationalisé en punycode.
+ *
+ * `URL` applique IDNA sans dépendance : « ààà.fr » devient « xn--3caa.fr ».
+ * Un nom que la plateforme refuse de convertir n'est pas résolvable non plus.
+ */
+function toPunycode(value: string): string | null {
+  try {
+    const { hostname } = new URL(`https://${value}`);
+    return hostname || null;
+  } catch {
+    return null;
+  }
 }
 
 /** Reconstruit une URL affichable à partir d'un domaine normalisé. */

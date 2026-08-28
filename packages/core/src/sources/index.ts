@@ -7,3 +7,4 @@ export * from './http/client';
 export * from './osm/adapter';
 export * from './bodacc/adapter';
 export * from './sirene/enricher';
+export * from './afnic/adapter';

@@ -73,6 +73,7 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
 | `pnpm discover osm <ville>…` | découverte OpenStreetMap (téléphone, site, SIRET) |
 | `pnpm discover bodacc` | événements datés BODACC (`--days n`, `--dept 49,75`) |
 | `pnpm scan:domains` | scan des sites connus (`--limit n`, `--all`) |
+| `unzip -p AFNIC.zip \| pnpm import:afnic` | met les domaines .fr récents en file de scan |
 
 ---
 
@@ -164,6 +165,45 @@ de trois boulangeries a un SIREN et trois SIRET. Le produit prospecte des
 - le **domaine n'est pas unique** non plus : les enseignes de réseau renvoient
   toutes vers le site de la marque. Le rapprochement par domaine n'est retenu
   que s'il désigne une seule entreprise.
+
+### Où trouver du volume
+
+Le produit vit du nombre d'opportunités. Voici ce que chaque source apporte
+réellement, mesuré et non estimé.
+
+| Source | Volume | Contact | Daté | Coût |
+|---|---|---|---|---|
+| **OpenStreetMap** | 600 000 à 900 000 commerces français | 33 % | non | gratuit |
+| **BODACC** | ~300 000 créations/an | non | oui | gratuit |
+| **AFNIC** (.fr) | 4,6 M domaines actifs, 185 000 déposés en 90 j | via le site | oui | gratuit |
+| Recherche d'entreprises | complète tout SIREN | non | oui | gratuit |
+
+**La découverte inverse est le gisement principal.** Un site professionnel
+français doit afficher son SIREN dans ses mentions légales. On part donc du
+domaine, on lit le SIREN, on interroge le répertoire pour la raison sociale —
+et la page livre au passage le téléphone, que ni SIRENE ni BODACC ne donnent.
+
+Rendement mesuré sur 120 domaines .fr récemment déposés :
+
+```
+vrais sites          72 %
+SIREN identifié      13 %   ← accueil + mentions légales
+téléphone présent    20 %
+SIREN + téléphone     6 %   ← entreprise identifiée ET joignable
+```
+
+Rapporté aux 4,6 millions de domaines .fr actifs : environ **600 000 entreprises
+identifiables avec leur site**, dont **275 000 avec un téléphone**. Un balayage
+complet demande une cinquantaine d'heures de crawl à un rythme respectueux.
+
+Deux garde-fous, appris sur les données réelles :
+
+- Un SIREN présent sur plus de deux domaines est celui d'une agence web, pas
+  du commerçant.
+- Une page portant plusieurs SIREN ne dit pas lequel exploite le site.
+  Constaté sur un opticien de réseau dont les mentions légales portaient le
+  franchisé et le franchiseur : les créer tous les deux leur attribuait à tort
+  le même téléphone local. **Sans preuve, on n'attribue rien.**
 
 ### Moteur de signaux
 

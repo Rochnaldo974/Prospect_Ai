@@ -138,6 +138,15 @@ describe('domaines', () => {
     expect(isPlatformUrl('https://exemple.fr')).toBe(false);
   });
 
+  it('convertit les noms internationalisés en punycode', () => {
+    // Près de 1 % des domaines .fr portent des accents. Les rejeter écartait
+    // de vrais commerces français.
+    expect(normalizeDomain('boulangerie-café.fr')).toBe('xn--boulangerie-caf-pnb.fr');
+    expect(normalizeDomain('https://www.ààà.fr/')).toBe('xn--0caaa.fr');
+    // La forme punycode est stable : deux graphies convergent.
+    expect(normalizeDomain('café.fr')).toBe(normalizeDomain('xn--caf-dma.fr'));
+  });
+
   it('rejette les entrées malformées', () => {
     for (const input of ['', '   ', 'pas-un-domaine', 'http://', '.fr', 'exemple..fr', 'exemple.1']) {
       expect(normalizeDomain(input), input).toBeNull();

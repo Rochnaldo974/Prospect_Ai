@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createCompaniesFromDomains } from '../../ingestion/domain-to-company';
 import { scanDueDomains } from '../../enrichment/domain-scanner';
 import { resolveWebsites } from '../../enrichment/website-resolver';
 import { WebsiteFetcher } from '../../enrichment/fetcher';
@@ -90,6 +91,45 @@ export const resolveWebsitesHandler: JobHandler<z.infer<typeof resolvePayload>> 
         probed: report.probed,
         inconclusive: report.inconclusive,
         by_evidence: report.byEvidence,
+      },
+    };
+  },
+};
+
+const reversePayload = z.object({
+  limit: z.number().int().min(1).max(2000).default(200),
+});
+
+/**
+ * Découverte inverse : du site vers l'entreprise.
+ *
+ * Le chemin qui produit le plus de volume, et le seul qui livre à la fois
+ * l'identité et le contact. Un SIREN lu dans des mentions légales suffit à
+ * créer l'entreprise, avec le téléphone affiché sur la même page.
+ */
+export const companiesFromDomainsHandler: JobHandler<z.infer<typeof reversePayload>> = {
+  type: 'companies_from_domains',
+  schema: reversePayload,
+  defaultPriority: 68,
+  maxAttempts: 2,
+
+  async run(payload, { db, logger, signal }) {
+    const report = await createCompaniesFromDomains(db, {
+      limit: payload.limit,
+      logger,
+      ...(signal ? { signal } : {}),
+    });
+
+    return {
+      processed: report.domainsExamined,
+      succeeded: report.companiesCreated,
+      failed: report.errors,
+      metadata: {
+        sirens_seen: report.sirensSeen,
+        already_known: report.alreadyKnown,
+        shared_skipped: report.sharedSkipped,
+        ambiguous_ownership: report.ambiguousOwnership,
+        not_found_in_registry: report.notFoundInRegistry,
       },
     };
   },
