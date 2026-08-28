@@ -81,12 +81,14 @@ if (command === 'osm') {
   const report = await syncBodacc(db, {
     since,
     limit: Number(value('limit', 2000)),
+    createMissing: !args.includes('--no-create'),
     logger,
     ...(departments ? { departments } : {}),
   });
 
   console.log('\nSynchronisation terminée');
   console.log(`  parcourues   ${report.fetched}`);
+  console.log(`  créées       ${report.companiesCreated}`);
   console.log(`  rapprochées  ${report.matched}`);
   console.log(`  événements   ${report.eventsCreated}`);
   console.log(`  exclusions   ${report.excluded}`);

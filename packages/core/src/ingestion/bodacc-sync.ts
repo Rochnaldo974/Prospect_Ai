@@ -5,6 +5,8 @@ import { BodaccSource, type BodaccAnnouncement, type BodaccFamily } from '../sou
 
 export interface BodaccSyncReport {
   fetched: number;
+  /** Entreprises créées à partir d'une annonce de création. */
+  companiesCreated: number;
   /** Annonces dont le SIREN correspond à une entreprise connue. */
   matched: number;
   eventsCreated: number;
@@ -17,6 +19,17 @@ export interface BodaccSyncReport {
 
 export interface BodaccSyncOptions {
   since: Date;
+  /**
+   * Créer l'entreprise quand une annonce de création la concerne.
+   *
+   * Sans cela, BODACC ne fait qu'enrichir ce qu'on a déjà — or les créations
+   * sont précisément les entreprises qu'on n'a PAS. Mesuré sur les données
+   * réelles : la plus récente création parmi les commerces cartographiés dans
+   * OpenStreetMap datait de cinq mois, parce qu'il faut du temps avant qu'un
+   * nouveau commerce soit cartographié. Le meilleur déclencheur du produit ne
+   * peut donc pas venir de là.
+   */
+  createMissing?: boolean;
   until?: Date;
   families?: BodaccFamily[];
   departments?: string[];
@@ -49,6 +62,7 @@ export async function syncBodacc(
 ): Promise<BodaccSyncReport> {
   const report: BodaccSyncReport = {
     fetched: 0,
+    companiesCreated: 0,
     matched: 0,
     eventsCreated: 0,
     excluded: 0,
@@ -89,6 +103,48 @@ export async function syncBodacc(
       const list = bySiren.get(company.siren) ?? [];
       list.push(company.id);
       bySiren.set(company.siren, list);
+    }
+
+    // Les créations font naître l'entreprise si elle est inconnue : c'est la
+    // seule source qui livre les commerces neufs au moment où ils ouvrent.
+    if (options.createMissing) {
+      const missing = batch.filter(
+        (a) =>
+          (a.family === 'Créations' || a.family === 'Immatriculations')
+          && a.tradeName
+          && !bySiren.has(a.siren),
+      );
+
+      // Une même entreprise peut faire l'objet de deux annonces dans le lot.
+      const unique = new Map(missing.map((a) => [a.siren, a]));
+
+      for (const announcement of unique.values()) {
+        const { data: created, error: createError } = await db
+          .from('companies')
+          .insert({
+            siren: announcement.siren,
+            legal_name: announcement.tradeName!.slice(0, 300),
+            city: announcement.city,
+            postal_code: announcement.postalCode,
+            segment: 'other',
+            company_status: 'active',
+            // Identité modeste : on n'a ni SIRET, ni activité, ni contact.
+            // L'enrichissement depuis le répertoire complétera.
+            identity_confidence: 0.7,
+            last_seen_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (createError) {
+          // 23505 : une autre annonce du même lot l'a déjà créée.
+          if (createError.code !== '23505') report.errors += 1;
+          continue;
+        }
+
+        report.companiesCreated += 1;
+        bySiren.set(announcement.siren, [created.id]);
+      }
     }
 
     for (const announcement of batch) {
@@ -166,6 +222,7 @@ export async function syncBodacc(
 
   log?.info('Synchronisation BODACC terminée', {
     fetched: report.fetched,
+    companies_created: report.companiesCreated,
     matched: report.matched,
     events: report.eventsCreated,
     excluded: report.excluded,

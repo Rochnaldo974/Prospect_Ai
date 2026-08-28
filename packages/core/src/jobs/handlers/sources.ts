@@ -53,6 +53,8 @@ const bodaccPayload = z.object({
   sinceDays: z.number().int().min(1).max(90).default(2),
   departments: z.array(z.string().min(1).max(3)).optional(),
   limit: z.number().int().min(1).max(10_000).default(5000),
+  /** Faire naître les entreprises annoncées en création. */
+  createMissing: z.boolean().default(true),
 });
 
 /**
@@ -78,6 +80,7 @@ export const syncBodaccHandler: JobHandler<z.infer<typeof bodaccPayload>> = {
     const report = await syncBodacc(db, {
       since,
       limit: payload.limit,
+      createMissing: payload.createMissing,
       logger,
       ...(payload.departments ? { departments: payload.departments } : {}),
       ...(signal ? { signal } : {}),
@@ -88,6 +91,7 @@ export const syncBodaccHandler: JobHandler<z.infer<typeof bodaccPayload>> = {
       succeeded: report.eventsCreated,
       failed: report.errors,
       metadata: {
+        companies_created: report.companiesCreated,
         matched: report.matched,
         excluded: report.excluded,
         duplicates: report.duplicates,

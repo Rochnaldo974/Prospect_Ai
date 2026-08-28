@@ -1550,6 +1550,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      companies_needing_signals: {
+        Args: { p_limit?: number; p_since?: string }
+        Returns: string[]
+      }
       company_in_cooldown: {
         Args: { target_company: string }
         Returns: boolean
@@ -1593,6 +1597,15 @@ export type Database = {
       kill_job: {
         Args: { error_message: string; job_id: number }
         Returns: undefined
+      }
+      load_signal_context: {
+        Args: { p_company_ids: string[]; p_event_window_days?: number }
+        Returns: {
+          company: Database["public"]["Tables"]["companies"]["Row"]
+          domain: Database["public"]["Tables"]["domains"]["Row"]
+          domain_company_count: number
+          events: Json
+        }[]
       }
       merge_companies: {
         Args: {

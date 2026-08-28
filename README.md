@@ -165,6 +165,55 @@ de trois boulangeries a un SIREN et trois SIRET. Le produit prospecte des
   toutes vers le site de la marque. Le rapprochement par domaine n'est retenu
   que s'il désigne une seule entreprise.
 
+### Moteur de signaux
+
+Chaîne stricte : **fait → événement daté → signal → opportunité**. Chaque
+maillon est nécessaire, et le moteur n'en saute aucun.
+
+Deux natures de signaux, et la distinction décide de tout :
+
+| | Rôle | Exemple |
+|---|---|---|
+| **Déclencheur** | Peut créer une opportunité. **Porte obligatoirement une date.** | création d'entreprise, cession de fonds, site tombé |
+| **Modificateur** | Module un score, ne déclenche jamais | site lent, plateforme vieillissante, contenu figé |
+
+« Site lent » est vrai en permanence pour une large part du parc : en faire un
+motif d'appel reviendrait à prospecter au hasard. Seul un fait daté permet de
+répondre « pourquoi maintenant ».
+
+La contrainte est appliquée par la base — un signal de type `trigger` sans
+`trigger_event_id` est refusé — et non seulement par convention.
+
+Le moteur travaille **par différence** : un signal toujours vrai garde son
+identité et sa date de détection, un signal devenu faux est désactivé plutôt
+que supprimé. Redater un signal inchangé ferait refléter la dernière exécution
+du moteur au lieu du moment où le fait a été constaté.
+
+Mesuré sur 1 233 entreprises réelles : 2 544 signaux en 0,3 s, second passage
+0 créé et 100 % inchangés.
+
+#### Le déséquilibre structurel du produit
+
+C'est le constat le plus important de cette phase, et il oriente la suite.
+
+```
+OpenStreetMap   joignable (33 % ont un téléphone) mais JAMAIS daté
+                — la création la plus récente parmi 300 commerces
+                  cartographiés remontait à 5 mois
+
+BODACC          daté au jour près mais JAMAIS joignable
+                — 335 commerces créés en 45 jours dans un seul département,
+                  aucun avec un téléphone
+```
+
+Les deux populations ne se recouvrent presque pas : **334 entreprises portaient
+un déclencheur, une seule était joignable**.
+
+Il faut des mois avant qu'un nouveau commerce soit cartographié dans OSM — donc
+le meilleur signal du produit ne peut pas venir de là. Combler ce manque
+demande une source de contact à couverture immédiate, c'est-à-dire une API de
+POI payante. C'est le moment où le budget prévu cesse d'être optionnel.
+
 ### Sites web
 
 Le domaine est une **entité à part entière**, scannée une fois quel que soit le
@@ -304,7 +353,8 @@ ligne le jour où l'écosystème suit.
 - [x] **Phase 4b** — sources externes : OpenStreetMap et BODACC
 - [x] **Phase 5** — déduplication approchée
 - [x] **Phase 6** — scan des sites, rattachement par les mentions légales
-- [ ] Phase 7 — moteur de signaux
+- [x] **Phase 7** — moteur de signaux
+- [ ] Phase 8 — moteur d'opportunités
 - [ ] Phases 4-17 — voir `docs/ARCHITECTURE.md`
 
 ### Surface exposée aux utilisateurs

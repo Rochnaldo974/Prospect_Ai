@@ -10,3 +10,4 @@ export * from './sources';
 export * from './ingestion';
 export * from './dedup';
 export * from './enrichment';
+export * from './signals';

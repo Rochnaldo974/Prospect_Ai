@@ -10,6 +10,7 @@ import {
 } from './handlers/maintenance';
 import { detectDuplicatesHandler, discoverOsmHandler, syncBodaccHandler } from './handlers/sources';
 import { resolveWebsitesHandler, scanDomainsHandler } from './handlers/websites';
+import { detectSignalsHandler, enrichSireneHandler } from './handlers/signals';
 
 const HANDLERS: JobHandler<never>[] = [
   expireOpportunitiesHandler,
@@ -24,6 +25,8 @@ const HANDLERS: JobHandler<never>[] = [
   detectDuplicatesHandler,
   scanDomainsHandler,
   resolveWebsitesHandler,
+  enrichSireneHandler,
+  detectSignalsHandler,
 ] as JobHandler<never>[];
 
 const byType = new Map<string, JobHandler<never>>(HANDLERS.map((h) => [h.type, h]));

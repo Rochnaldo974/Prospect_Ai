@@ -173,6 +173,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
       }
 
       await persistScan(db, scan);
+      await recordScanEvents(db, scan, row.content_hash);
 
       if (scan.sirens.length > 0) {
         report.sirensFound += 1;
@@ -272,4 +273,72 @@ export async function enqueueDomain(db: Db, input: string): Promise<string | nul
 
   await db.from('domains').upsert({ domain }, { onConflict: 'domain', ignoreDuplicates: true });
   return domain;
+}
+
+/**
+ * Transforme les changements observés en événements datés.
+ *
+ * Le scan constate un état ; l'événement enregistre une TRANSITION. C'est la
+ * transition qui porte une date, et c'est elle qui autorise un déclencheur —
+ * « le site est cassé » est un état permanent, « le site est tombé le 12 »
+ * est un motif de contact.
+ */
+async function recordScanEvents(
+  db: Db,
+  scan: DomainScanResult,
+  previousHash: string | null,
+): Promise<void> {
+  // Le domaine peut être revendiqué par plusieurs établissements : l'événement
+  // concerne chacun d'eux.
+  const { data: companies } = await db
+    .from('companies')
+    .select('id')
+    .eq('domain', scan.domain);
+
+  if (!companies || companies.length === 0) return;
+
+  const now = new Date().toISOString();
+  const events: {
+    type: string;
+    importance: number;
+    confidence: number;
+    payload: Record<string, Json>;
+  }[] = [];
+
+  if (scan.status === 'broken' || scan.status === 'unreachable') {
+    // Seulement si le site répondait auparavant : un domaine jamais joignable
+    // n'est pas « tombé ».
+    if (previousHash !== null) {
+      events.push({
+        type: 'website_went_down',
+        importance: 90,
+        confidence: 0.95,
+        payload: { domain: scan.domain, status: scan.status, http_status: scan.fetch.status },
+      });
+    }
+  } else if (scan.contentChanged) {
+    events.push({
+      type: 'website_changed',
+      importance: 60,
+      confidence: 0.85,
+      payload: { domain: scan.domain, previous_hash: previousHash },
+    });
+  }
+
+  for (const event of events) {
+    for (const company of companies) {
+      await db.from('company_events').insert({
+        company_id: company.id,
+        event_type: event.type,
+        payload: event.payload as Json,
+        importance: event.importance,
+        confidence: event.confidence,
+        source: 'domain_scan',
+        occurred_at: now,
+        // La date du jour dans la clé : une nouvelle chute après remise en
+        // ligne produit bien un nouvel événement.
+        dedupe_key: `${event.type}:${scan.domain}:${company.id}:${now.slice(0, 10)}`,
+      });
+    }
+  }
 }
