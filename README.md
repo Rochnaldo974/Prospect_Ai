@@ -75,6 +75,21 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
 | `pnpm scan:domains` | scan des sites connus (`--limit n`, `--all`) |
 | `unzip -p AFNIC.zip \| pnpm import:afnic` | met les domaines .fr récents en file de scan |
 | `pnpm show:opportunities [n]` | affiche les opportunités telles qu'un freelance les recevra |
+| `pnpm engine` | enchaîne toute la nuit : avis → signaux → opportunités → attribution |
+| `pnpm engine --scan` | idem, en ajoutant l'enrichissement et le scan des sites (lent) |
+| `pnpm allocate [user_id]` | distribue les opportunités du jour, sans recollecter |
+
+> **`pnpm test` vide les tables du moteur.** Les tests d'intégration partagent
+> la base de développement et ont besoin de la trouver vide : entreprises,
+> opportunités et attributions collectées disparaissent à chaque exécution.
+> C'est sans gravité — `pnpm engine` reconstruit un stock en quelques
+> secondes — mais c'est déroutant si on l'ignore, parce que le tableau de bord
+> se vide sans que rien ne soit cassé.
+>
+> Un nettoyage borné aux seules fixtures a été tenté et abandonné : les tests
+> d'ingestion créent leurs entreprises par le pipeline lui-même, donc avec des
+> identifiants ordinaires, et comptent les lignes de tables entières. La vraie
+> correction est une base de test distincte, pas un filtre.
 
 ---
 
