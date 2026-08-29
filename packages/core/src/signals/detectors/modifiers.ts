@@ -68,6 +68,45 @@ export const placeholderSiteDetector: SignalDetector = {
 };
 
 /** Site en erreur durable. */
+/**
+ * Certificat refusé.
+ *
+ * Le visiteur ne voit pas le site : il voit un avertissement de sécurité
+ * pleine page, qu'il faut délibérément contourner. Le propriétaire, lui, a
+ * cliqué « continuer » une fois pour toutes il y a des mois et ne voit plus
+ * rien. C'est le défaut le plus asymétrique du web : invisible à celui qui le
+ * porte, bloquant pour tous les autres, et vérifiable en ouvrant l'adresse.
+ *
+ * Distinct de no_ssl, qui ne constate que l'absence de HTTPS.
+ */
+export const invalidCertificateDetector: SignalDetector = {
+  id: 'invalid_certificate',
+  describes: 'Certificat de sécurité refusé par les navigateurs',
+
+  detect({ domain }) {
+    if (domain?.tls_valid !== false) return [];
+
+    // Un nom de certificat qui ne correspond pas peut n'affecter qu'une
+    // variante de l'adresse ; une expiration ou un auto-signé affecte tout le
+    // monde, tout le temps.
+    const total = domain.tls_reason === 'ERR_TLS_CERT_ALTNAME_INVALID';
+
+    return [{
+      signalType: 'invalid_certificate',
+      kind: 'modifier',
+      category: 'need',
+      strength: total ? 0.7 : 0.95,
+      confidence: 0.95,
+      evidence: {
+        reason: domain.tls_reason,
+        valid_to: domain.tls_valid_to,
+        issuer: domain.tls_issuer,
+      },
+      fingerprint: `invalid_certificate:${domain.tls_reason ?? 'inconnu'}`,
+    }];
+  },
+};
+
 export const brokenSiteDetector: SignalDetector = {
   id: 'website_broken',
   describes: 'Site en erreur ou injoignable',
@@ -354,6 +393,7 @@ export const MODIFIER_DETECTORS: SignalDetector[] = [
   noWebsiteDetector,
   placeholderSiteDetector,
   brokenSiteDetector,
+  invalidCertificateDetector,
   datedPlatformDetector,
   staleContentDetector,
   slowSiteDetector,

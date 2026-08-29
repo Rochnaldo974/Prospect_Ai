@@ -20,6 +20,10 @@ export interface DomainSnapshot {
   framework: string | null;
   technologies: string[];
   has_ssl: boolean | null;
+  tls_valid: boolean | null;
+  tls_reason: string | null;
+  tls_valid_to: string | null;
+  tls_issuer: string | null;
   has_viewport_meta: boolean | null;
   has_media_queries: boolean | null;
   ttfb_ms: number | null;
@@ -36,6 +40,8 @@ export interface DomainSnapshot {
 export interface ContextEvent {
   id: string;
   event_type: string;
+  /** Contenu de l'événement : certains déclencheurs en dépendent. */
+  payload: unknown;
   importance: number;
   confidence: number;
   occurred_at: string;

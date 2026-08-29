@@ -17,6 +17,7 @@ import {
   weakIdentityDetector,
   websiteChangedDetector,
   websiteDownDetector,
+  domainRegisteredDetector,
 } from '../../packages/core/src/signals/detectors';
 import type {
   CompanyContext,
@@ -281,6 +282,48 @@ describe('déclencheurs', () => {
     }));
     expect(signals).toHaveLength(1);
     expect(signals[0]!.kind).toBe('trigger');
+  });
+
+  describe('dépôt de nom de domaine', () => {
+    const registered = (days: number) =>
+      event({ id: 'ed', event_type: 'domain_registered', occurred_at: daysAgo(days) });
+
+    it('ne se déclenche que sur un événement daté', () => {
+      // Un domaine connu n'est pas un domaine récemment déposé : sans la date
+      // venue d'AFNIC, on ne sait rien.
+      expect(domainRegisteredDetector.detect(context({ domain: domain() }))).toHaveLength(0);
+    });
+
+    it('s’éteint au-delà de la fenêtre', () => {
+      expect(domainRegisteredDetector.detect(context({ events: [registered(120)] }))).toHaveLength(0);
+    });
+
+    it('pèse plus lourd quand rien n’est en ligne derrière', () => {
+      // Une adresse réservée et vide dit que la décision est prise mais pas
+      // réalisée. Une adresse déjà servie est plus ambiguë.
+      const [vide] = domainRegisteredDetector.detect(context({
+        domain: null, events: [registered(10)],
+      }));
+      const [servie] = domainRegisteredDetector.detect(context({
+        domain: domain(), events: [registered(10)],
+      }));
+
+      expect(vide!.strength).toBeGreaterThan(servie!.strength);
+      expect(vide!.evidence['site_en_ligne']).toBe(false);
+      expect(servie!.evidence['site_en_ligne']).toBe(true);
+    });
+
+    it('décroît avec l’âge du dépôt', () => {
+      const [recent] = domainRegisteredDetector.detect(context({ events: [registered(5)] }));
+      const [ancien] = domainRegisteredDetector.detect(context({ events: [registered(80)] }));
+      expect(recent!.strength).toBeGreaterThan(ancien!.strength);
+    });
+
+    it('porte l’événement qui le date', () => {
+      const [signal] = domainRegisteredDetector.detect(context({ events: [registered(10)] }));
+      expect(signal!.kind).toBe('trigger');
+      expect(signal!.triggerEventId).toBe('ed');
+    });
   });
 });
 

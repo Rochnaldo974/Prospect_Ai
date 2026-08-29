@@ -3,7 +3,7 @@ import type { Json } from '../db/database.types';
 import type { Logger } from '../logger';
 import type { Company } from '../domain/types';
 import { ALL_DETECTORS } from './detectors';
-import { materializeCreationEvents } from './events';
+import { materializeCreationEvents, materializeDomainRegistrationEvents } from './events';
 import type {
   CompanyContext,
   ContextEvent,
@@ -103,15 +103,28 @@ export async function runSignalEngine(
   // ne les cherchent : sinon un déclencheur n'aurait rien à quoi s'adosser.
   if (!options.dryRun) {
     await materializeCreationEvents(db, { limit: options.limit ?? 2000, ...(log ? { logger: log } : {}) });
+    await materializeDomainRegistrationEvents(db, { limit: options.limit ?? 2000, ...(log ? { logger: log } : {}) });
   }
 
-  const { data: targets, error } = await db.rpc('companies_needing_signals', {
-    p_limit: options.limit ?? 1000,
-    ...(options.since ? { p_since: options.since.toISOString() } : {}),
-  });
+  // L'API tronque toute réponse à mille lignes, y compris celle d'une
+  // fonction : une limite plus haute doit être servie page par page, sans quoi
+  // les entreprises au-delà du millier ne sont jamais réévaluées.
+  const wanted = options.limit ?? 1000;
+  const pageSize = 1000;
+  const ids: string[] = [];
 
-  if (error) throw new Error(`runSignalEngine : ${error.message}`);
-  const ids = (targets ?? []).map((row) => row as unknown as string);
+  while (ids.length < wanted) {
+    const { data: targets, error } = await db.rpc('companies_needing_signals', {
+      p_limit: Math.min(pageSize, wanted - ids.length),
+      p_offset: ids.length,
+      ...(options.since ? { p_since: options.since.toISOString() } : {}),
+    });
+
+    if (error) throw new Error(`runSignalEngine : ${error.message}`);
+    const page = (targets ?? []).map((row) => row as unknown as string);
+    ids.push(...page);
+    if (page.length < Math.min(pageSize, wanted - ids.length + page.length)) break;
+  }
 
   for (let offset = 0; offset < ids.length; offset += batchSize) {
     if (options.signal?.aborted) break;

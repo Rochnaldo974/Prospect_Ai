@@ -22,6 +22,7 @@
     "db:types": "supabase gen types typescript --local > packages/core/src/db/database.types.ts",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "show:opportunities": "node --import tsx scripts/show-opportunities.mjs",
     "seed:dev": "node scripts/seed-dev.mjs",
     "seed:companies": "node scripts/seed-companies.mjs",
     "ingest:csv": "node --import tsx scripts/ingest-csv.mjs",

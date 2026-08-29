@@ -74,6 +74,7 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
 | `pnpm discover bodacc` | événements datés BODACC (`--days n`, `--dept 49,75`) |
 | `pnpm scan:domains` | scan des sites connus (`--limit n`, `--all`) |
 | `unzip -p AFNIC.zip \| pnpm import:afnic` | met les domaines .fr récents en file de scan |
+| `pnpm show:opportunities [n]` | affiche les opportunités telles qu'un freelance les recevra |
 
 ---
 
@@ -126,6 +127,7 @@ chose avec un aperçu des colonnes reconnues.
 | **SIRENE** (open data) | identité, NAF, effectif, date de création, statut de diffusion | gratuit | non |
 | **OpenStreetMap** (Overpass) | **téléphone, site, e-mail** + `ref:FR:SIRET` | gratuit | non |
 | **BODACC** | événements datés : créations, cessions, procédures collectives | gratuit | non |
+| **BOAMP** | appels d'offres publics : le besoin y est **déclaré**, avec sa date limite | gratuit | non |
 | Recherche d'entreprises (DINUM) | SIRENE + **coordonnées géographiques**, filtrable NAF × code postal | gratuit | non |
 | Base Adresse Nationale | géocodage, normalisation d'adresse | gratuit | non |
 
@@ -175,8 +177,27 @@ réellement, mesuré et non estimé.
 |---|---|---|---|---|
 | **OpenStreetMap** | 600 000 à 900 000 commerces français | 33 % | non | gratuit |
 | **BODACC** | ~300 000 créations/an | non | oui | gratuit |
-| **AFNIC** (.fr) | 4,6 M domaines actifs, 185 000 déposés en 90 j | via le site | oui | gratuit |
+| **AFNIC** (.fr) | 4,6 M domaines actifs, 185 000 déposés en 90 j | via le site | **oui, date de dépôt** | gratuit |
+| **BOAMP** | ~15 avis web ouverts à un instant donné | via la plateforme | oui | gratuit |
 | Recherche d'entreprises | complète tout SIREN | non | oui | gratuit |
+
+**Le BOAMP est la seule source où le besoin n'est pas déduit.** Partout
+ailleurs le moteur observe un fait — pas de site, site en panne, certificat
+expiré — et en infère qu'une proposition serait pertinente ; l'explication doit
+alors préciser qu'on ignore si l'entreprise cherche quelqu'un. Sur un appel
+d'offres, l'acheteur a écrit lui-même ce qu'il veut, avec une date limite.
+C'est de la qualité, pas du volume : une quinzaine d'avis ouverts en France à
+un instant donné, mais chacun porte sa propre justification.
+
+Contrepartie assumée : ces acheteurs sont des organismes publics, pas les
+commerces et artisans du segment initial.
+
+**LinkedIn et Instagram sont volontairement écartés.** Leur exploitation
+automatisée est interdite par leurs conditions, techniquement bloquée, et elle
+romprait la règle qui maintient la V1 en régime RGPD allégé : aucune donnée
+nominative. Le signal recherché — un commerce actif sur les réseaux mais sans
+site — reste atteignable par les tags OpenStreetMap et les liens présents sur
+le site de l'entreprise.
 
 **La découverte inverse est le gisement principal.** Un site professionnel
 français doit afficher son SIREN dans ses mentions légales. On part donc du

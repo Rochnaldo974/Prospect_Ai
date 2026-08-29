@@ -128,7 +128,7 @@ export async function importAfnicDomains(
   const cutoff = Date.now() - maxAgeDays * 86_400_000;
 
   let columns: Record<string, number> | null = null;
-  let batch: { domain: string; first_seen_at: string }[] = [];
+  let batch: { domain: string; registered_at: string }[] = [];
 
   const flush = async (): Promise<void> => {
     if (batch.length === 0) return;
@@ -176,7 +176,10 @@ export async function importAfnicDomains(
     report.selected += 1;
     batch.push({
       domain: row.domain,
-      first_seen_at: row.createdAt.toISOString(),
+      // Date de dépôt, pas date de découverte : first_seen_at reste à notre
+      // horloge, registered_at appartient au monde. Les confondre ferait
+      // dépendre l'âge d'un domaine du jour où on a lu le fichier.
+      registered_at: row.createdAt.toISOString().slice(0, 10),
     });
 
     if (batch.length >= batchSize) await flush();

@@ -23,9 +23,87 @@ export interface FetchResult {
   bytes: number;
   ttfbMs: number | null;
   hasSsl: boolean;
+  /**
+   * Certificat TLS, quand il a pu être examiné.
+   *
+   * `hasSsl` ne dit que le schéma de l'URL. Un certificat auto-signé, expiré
+   * ou émis pour un autre nom fait afficher au visiteur un avertissement de
+   * sécurité pleine page — le défaut le plus vérifiable qu'un freelance
+   * puisse montrer à un commerçant, et le plus invisible à son propriétaire,
+   * qui a cliqué « continuer » une fois pour toutes.
+   */
+  tls: TlsInspection | null;
   error: string | null;
   /** La page a été écartée avant téléchargement (robots.txt, type, taille). */
   skippedReason: 'robots' | 'content-type' | 'too-large' | null;
+}
+
+/**
+ * Examen du certificat TLS d'un hôte.
+ *
+ * Une connexion à part, volontairement : `fetch` échoue sans expliquer
+ * pourquoi quand le certificat est refusé, et un certificat invalide est
+ * précisément ce qu'on cherche à constater. On ouvre donc la connexion en
+ * acceptant tout, puis on demande à la couche TLS ce qu'elle en aurait pensé.
+ *
+ * Aucune donnée n'est échangée : la poignée de main suffit, et la connexion
+ * est refermée aussitôt.
+ */
+const first = (value: string | string[] | undefined): string | null =>
+  Array.isArray(value) ? value[0] ?? null : value ?? null;
+
+export async function inspectTls(
+  host: string,
+  timeoutMs = 8000,
+): Promise<TlsInspection | null> {
+  const { connect } = await import('node:tls');
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (value: TlsInspection | null): void => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(value);
+    };
+
+    const socket = connect({
+      host,
+      port: 443,
+      servername: host,
+      // On veut constater le refus, pas l'éviter : la vérification est faite
+      // après coup, sur la connexion établie.
+      rejectUnauthorized: false,
+      timeout: timeoutMs,
+    });
+
+    socket.once('secureConnect', () => {
+      const cert = socket.getPeerCertificate();
+      const error = socket.authorizationError;
+      done({
+        valid: socket.authorized,
+        reason: error ? String(error) : null,
+        validTo: cert?.valid_to ? new Date(cert.valid_to).toISOString() : null,
+        // Certains champs du sujet peuvent être multivalués.
+        issuer: first(cert?.issuer?.O) ?? first(cert?.issuer?.CN),
+      });
+    });
+
+    socket.once('timeout', () => done(null));
+    // Un hôte qui n'ouvre pas 443 n'a pas de certificat à examiner : ce n'est
+    // pas un défaut de certificat, c'est une absence de HTTPS.
+    socket.once('error', () => done(null));
+  });
+}
+
+export interface TlsInspection {
+  /** Le certificat est-il accepté par une chaîne de confiance publique ? */
+  valid: boolean;
+  /** Motif du refus, tel que rapporté par la couche TLS. */
+  reason: string | null;
+  /** Fin de validité, qui date le défaut quand il y en a un. */
+  validTo: string | null;
+  issuer: string | null;
 }
 
 export interface FetcherOptions {
@@ -117,6 +195,7 @@ export class WebsiteFetcher {
       bytes: 0,
       ttfbMs: null,
       hasSsl: url.startsWith('https://'),
+      tls: null,
       error: null,
       skippedReason: null,
     };
@@ -163,6 +242,7 @@ export class WebsiteFetcher {
         status: response.status,
         finalUrl,
         hasSsl: finalUrl.startsWith('https://'),
+        tls: null,
         contentType,
         ttfbMs,
         redirectChain: finalUrl !== url ? [url, finalUrl] : [],
@@ -226,7 +306,7 @@ export class WebsiteFetcher {
 
     return last ?? { url: `https://${domain}`, finalUrl: `https://${domain}`, status: null,
       redirectChain: [], html: null, contentType: null, bytes: 0, ttfbMs: null,
-      hasSsl: false, error: 'Aucune variante joignable', skippedReason: null };
+      hasSsl: false, tls: null, error: 'Aucune variante joignable', skippedReason: null };
   }
 }
 

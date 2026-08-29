@@ -17,7 +17,8 @@
     "./ingestion": "./src/ingestion/index.ts",
     "./dedup": "./src/dedup/index.ts",
     "./enrichment": "./src/enrichment/index.ts",
-    "./signals": "./src/signals/index.ts"
+    "./signals": "./src/signals/index.ts",
+    "./opportunities": "./src/opportunities/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

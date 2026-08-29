@@ -22,6 +22,7 @@ export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
   seo: 'SEO / visibilité',
   maintenance: 'Maintenance / optimisation',
   other: 'Autre',
+  tender_response: 'Réponse à appel d’offres',
 };
 
 export const LOCATION_MODE_LABELS: Record<LocationMode, string> = {

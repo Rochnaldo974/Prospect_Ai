@@ -1,8 +1,3 @@
-/**
- * Types générés depuis le schéma Supabase — NE PAS ÉDITER À LA MAIN.
- *
- * Régénérer après chaque migration :  pnpm db:types
- */
 export type Json =
   | string
   | number
@@ -783,11 +778,16 @@ export type Database = {
           next_check_at: string
           phones_found: string[]
           redirect_chain: Json
+          registered_at: string | null
           sirens_found: string[]
           status: Database["public"]["Enums"]["domain_status"]
           tech_hash: string | null
           technologies: Json
           title: string | null
+          tls_issuer: string | null
+          tls_reason: string | null
+          tls_valid: boolean | null
+          tls_valid_to: string | null
           ttfb_ms: number | null
           updated_at: string
         }
@@ -819,11 +819,16 @@ export type Database = {
           next_check_at?: string
           phones_found?: string[]
           redirect_chain?: Json
+          registered_at?: string | null
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
           technologies?: Json
           title?: string | null
+          tls_issuer?: string | null
+          tls_reason?: string | null
+          tls_valid?: boolean | null
+          tls_valid_to?: string | null
           ttfb_ms?: number | null
           updated_at?: string
         }
@@ -855,11 +860,16 @@ export type Database = {
           next_check_at?: string
           phones_found?: string[]
           redirect_chain?: Json
+          registered_at?: string | null
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
           technologies?: Json
           title?: string | null
+          tls_issuer?: string | null
+          tls_reason?: string | null
+          tls_valid?: boolean | null
+          tls_valid_to?: string | null
           ttfb_ms?: number | null
           updated_at?: string
         }
@@ -1550,10 +1560,12 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      companies_needing_signals: {
-        Args: { p_limit?: number; p_since?: string }
-        Returns: string[]
-      }
+      companies_needing_signals:
+        | { Args: { p_limit?: number; p_since?: string }; Returns: string[] }
+        | {
+            Args: { p_limit?: number; p_offset?: number; p_since?: string }
+            Returns: string[]
+          }
       company_in_cooldown: {
         Args: { target_company: string }
         Returns: boolean
@@ -1685,6 +1697,7 @@ export type Database = {
         | "broken"
         | "unreachable"
         | "excluded"
+        | "blocked"
       duplicate_status: "pending" | "merged" | "rejected"
       job_status: "pending" | "running" | "done" | "failed" | "dead"
       location_mode: "france" | "region" | "city" | "france_remote"
@@ -1699,6 +1712,7 @@ export type Database = {
         | "seo"
         | "maintenance"
         | "other"
+        | "tender_response"
       signal_category: "need" | "timing" | "risk" | "quality"
       signal_kind: "trigger" | "modifier"
     }
@@ -1867,6 +1881,7 @@ export const Constants = {
         "broken",
         "unreachable",
         "excluded",
+        "blocked",
       ],
       duplicate_status: ["pending", "merged", "rejected"],
       job_status: ["pending", "running", "done", "failed", "dead"],
@@ -1882,6 +1897,7 @@ export const Constants = {
         "seo",
         "maintenance",
         "other",
+        "tender_response",
       ],
       signal_category: ["need", "timing", "risk", "quality"],
       signal_kind: ["trigger", "modifier"],

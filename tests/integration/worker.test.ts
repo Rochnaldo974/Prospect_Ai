@@ -89,6 +89,8 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
         'ensure_partitions',
         'expire_assignments',
         'expire_opportunities',
+        'generate_opportunities',
+        'ingest_tenders',
         'prune_event_keys',
         'reclaim_stalled_jobs',
         'refresh_admin_stats',

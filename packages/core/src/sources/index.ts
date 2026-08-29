@@ -8,3 +8,4 @@ export * from './osm/adapter';
 export * from './bodacc/adapter';
 export * from './sirene/enricher';
 export * from './afnic/adapter';
+export * from './boamp/adapter';

@@ -3,7 +3,8 @@ import type { Json } from '../db/database.types';
 import type { Logger } from '../logger';
 import { normalizeDomainDetailed } from '../normalization';
 import { analyzePage, type PageAnalysis } from './page-analysis';
-import { WebsiteFetcher, type FetchResult } from './fetcher';
+import type { TlsInspection } from './fetcher';
+import { inspectTls, WebsiteFetcher, type FetchResult } from './fetcher';
 
 /**
  * Scan d'un domaine.
@@ -16,7 +17,7 @@ import { WebsiteFetcher, type FetchResult } from './fetcher';
 
 export interface DomainScanResult {
   domain: string;
-  status: 'reachable' | 'placeholder' | 'broken' | 'unreachable' | 'excluded';
+  status: 'reachable' | 'placeholder' | 'broken' | 'unreachable' | 'blocked' | 'excluded';
   analysis: PageAnalysis | null;
   fetch: FetchResult;
   legalPageUrl: string | null;
@@ -24,6 +25,8 @@ export interface DomainScanResult {
   sirens: string[];
   /** Le contenu a-t-il changé depuis le dernier passage ? */
   contentChanged: boolean;
+  /** Certificat examiné, quand l'hôte répond en HTTPS. */
+  tls: TlsInspection | null;
 }
 
 export interface ScanReport {
@@ -32,6 +35,7 @@ export interface ScanReport {
   placeholders: number;
   broken: number;
   unreachable: number;
+  blocked: number;
   excluded: number;
   unchanged: number;
   sirensFound: number;
@@ -51,7 +55,20 @@ export interface ScanOptions {
   fetcher?: WebsiteFetcher;
   logger?: Logger;
   signal?: AbortSignal;
+  /**
+   * Domaines traités de front. Chaque domaine est un hôte différent, et le
+   * limiteur par hôte du récupérateur reste en vigueur : la concurrence
+   * répartit la charge sur des hébergeurs distincts, elle ne l'accumule pas
+   * sur un seul.
+   */
+  concurrency?: number;
 }
+
+/**
+ * Codes par lesquels un serveur refuse notre requête sans rien dire de l'état
+ * du site : authentification exigée, pare-feu applicatif, débit limité.
+ */
+const BLOCKING_STATUSES = new Set([401, 403, 429]);
 
 /** Intervalle avant le prochain passage, selon ce qu'on a trouvé. */
 function nextCheckDays(status: DomainScanResult['status'], hasSiren: boolean): number {
@@ -66,6 +83,10 @@ function nextCheckDays(status: DomainScanResult['status'], hasSiren: boolean): n
       return 7;
     case 'unreachable':
       return 21;
+    case 'blocked':
+      // Rien à réessayer avant longtemps : c'est notre récupérateur qui est
+      // refusé, et il le sera encore demain.
+      return 90;
     case 'excluded':
       return 180;
   }
@@ -79,17 +100,32 @@ export async function scanDomain(
 ): Promise<DomainScanResult> {
   const result = await fetcher.probeDomain(domain, signal);
 
+  // Avant toute branche : un certificat refusé fait échouer la récupération
+  // elle-même. Constater le refus après coup reviendrait à ne jamais le
+  // constater, et à ranger en « site injoignable » un site qui répond très
+  // bien — avec un avertissement de sécurité devant.
+  const tls = result.skippedReason === 'robots' ? null : await inspectTls(domain);
+
   if (result.skippedReason === 'robots') {
     return {
       domain, status: 'excluded', analysis: null, fetch: result,
-      legalPageUrl: null, sirens: [], contentChanged: false,
+      legalPageUrl: null, sirens: [], contentChanged: false, tls: null,
     };
   }
 
   if (result.html === null) {
-    const status = result.status !== null && result.status >= 400 ? 'broken' : 'unreachable';
+    // 401, 403, 429 : le serveur refuse NOTRE requête, il ne tombe pas. Un
+    // visiteur ordinaire voit le site normalement. En faire un besoin de
+    // refonte serait la pire erreur que le produit puisse commettre.
+    const status = result.status === null
+      ? 'unreachable'
+      : BLOCKING_STATUSES.has(result.status)
+        ? 'blocked'
+        : result.status >= 400
+          ? 'broken'
+          : 'unreachable';
     return {
-      domain, status, analysis: null, fetch: result,
+      domain, status, analysis: null, fetch: result, tls,
       legalPageUrl: null, sirens: [], contentChanged: false,
     };
   }
@@ -115,6 +151,7 @@ export async function scanDomain(
   return {
     domain,
     status: analysis.placeholder ? 'placeholder' : 'reachable',
+    tls,
     analysis,
     fetch: result,
     legalPageUrl,
@@ -126,15 +163,20 @@ export async function scanDomain(
 /**
  * Parcourt la file de domaines à scanner.
  *
- * Les domaines sont traités un par un et non en parallèle : le limiteur du
- * récupérateur est par hôte, mais rien n'empêcherait d'ouvrir cent connexions
- * vers cent hébergeurs différents. À l'échelle d'un scan national, la
- * concurrence viendra du nombre de workers, pas de la boucle.
+ * Les domaines sont traités par petits groupes simultanés. Le limiteur du
+ * récupérateur est par hôte : deux domaines de la file appartenant au même
+ * hébergeur restent sérialisés, tandis que deux hébergeurs différents sont
+ * interrogés en même temps. C'est ce qui sépare un scan national réalisable
+ * d'un scan qui prendrait des jours — le débit du scan est le plafond du
+ * nombre d'opportunités que le produit peut trouver.
+ *
+ * La borne reste basse volontairement : faire tomber le site d'un artisan
+ * serait un échec, quelle que soit la qualité des données récoltées.
  */
 export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise<ScanReport> {
   const report: ScanReport = {
     scanned: 0, reachable: 0, placeholders: 0, broken: 0, unreachable: 0,
-    excluded: 0, unchanged: 0, sirensFound: 0, companiesAttached: 0,
+    blocked: 0, excluded: 0, unchanged: 0, sirensFound: 0, companiesAttached: 0,
     companiesConfirmed: 0, sharedSirensSkipped: 0, errors: 0,
   };
 
@@ -143,7 +185,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
 
   let query = db
     .from('domains')
-    .select('domain, content_hash')
+    .select('domain, content_hash, check_attempts')
     .neq('status', 'excluded')
     .order('next_check_at', { ascending: true })
     .limit(options.limit ?? 200);
@@ -153,9 +195,22 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
   const { data: due, error } = await query;
   if (error) throw new Error(`scanDueDomains : ${error.message}`);
 
-  for (const row of due ?? []) {
-    if (options.signal?.aborted) break;
+  const queue = (due ?? []).slice();
+  const concurrency = Math.max(1, Math.min(options.concurrency ?? 8, 32));
 
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const row = queue.shift();
+      if (row === undefined) return;
+      if (options.signal?.aborted) return;
+
+      await scanOne(row);
+    }
+  };
+
+  const scanOne = async (
+    row: { domain: string; content_hash: string | null; check_attempts: number },
+  ): Promise<void> => {
     try {
       const scan = await scanDomain(row.domain, fetcher, row.content_hash, options.signal);
       report.scanned += 1;
@@ -165,6 +220,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
         case 'placeholder': report.placeholders += 1; break;
         case 'broken': report.broken += 1; break;
         case 'unreachable': report.unreachable += 1; break;
+        case 'blocked': report.blocked += 1; break;
         case 'excluded': report.excluded += 1; break;
       }
 
@@ -172,8 +228,8 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
         report.unchanged += 1;
       }
 
-      await persistScan(db, scan);
-      await recordScanEvents(db, scan, row.content_hash);
+      await persistScan(db, scan, row.check_attempts);
+      await recordScanEvents(db, scan, row.content_hash, row.check_attempts);
 
       if (scan.sirens.length > 0) {
         report.sirensFound += 1;
@@ -211,7 +267,9 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
         })
         .eq('domain', row.domain);
     }
-  }
+  };
+
+  await Promise.all(Array.from({ length: concurrency }, worker));
 
   log?.info('Scan de domaines terminé', {
     scanned: report.scanned,
@@ -224,9 +282,19 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
   return report;
 }
 
-async function persistScan(db: Db, scan: DomainScanResult): Promise<void> {
+async function persistScan(
+  db: Db,
+  scan: DomainScanResult,
+  previousFailures: number,
+): Promise<void> {
   const analysis = scan.analysis;
   const days = nextCheckDays(scan.status, scan.sirens.length > 0);
+
+  // Échecs consécutifs. Une coupure d'une seconde arrive à n'importe quel
+  // hébergeur : annoncer à un artisan que son site est en panne sur la foi
+  // d'une seule requête ratée coûterait au freelance sa crédibilité dès le
+  // premier appel. Le compteur repart à zéro dès que le site répond.
+  const down = scan.status === 'broken' || scan.status === 'unreachable';
 
   const { error } = await db
     .from('domains')
@@ -260,6 +328,11 @@ async function persistScan(db: Db, scan: DomainScanResult): Promise<void> {
       last_checked_at: new Date().toISOString(),
       next_check_at: new Date(Date.now() + days * 86_400_000).toISOString(),
       check_error: scan.fetch.error,
+      check_attempts: down ? previousFailures + 1 : 0,
+      tls_valid: scan.tls?.valid ?? null,
+      tls_reason: scan.tls?.reason ?? null,
+      tls_valid_to: scan.tls?.validTo?.slice(0, 10) ?? null,
+      tls_issuer: scan.tls?.issuer ?? null,
     })
     .eq('domain', scan.domain);
 
@@ -287,6 +360,7 @@ async function recordScanEvents(
   db: Db,
   scan: DomainScanResult,
   previousHash: string | null,
+  previousFailures: number,
 ): Promise<void> {
   // Le domaine peut être revendiqué par plusieurs établissements : l'événement
   // concerne chacun d'eux.
@@ -303,6 +377,7 @@ async function recordScanEvents(
     importance: number;
     confidence: number;
     payload: Record<string, Json>;
+    key: string;
   }[] = [];
 
   if (scan.status === 'broken' || scan.status === 'unreachable') {
@@ -314,14 +389,56 @@ async function recordScanEvents(
         importance: 90,
         confidence: 0.95,
         payload: { domain: scan.domain, status: scan.status, http_status: scan.fetch.status },
+        // La date du jour dans la clé : une nouvelle chute après remise en
+        // ligne produit bien un nouvel événement.
+        key: `website_went_down:${scan.domain}:${now.slice(0, 10)}`,
+      });
+    } else if (previousFailures >= 1) {
+      // Un site que nous n'avons jamais vu fonctionner et qui ne répond
+      // toujours pas au deuxième passage. On ne sait pas depuis quand il est
+      // hors service — c'est un constat, pas une chute datée, et l'explication
+      // livrée au freelance doit le dire dans ces termes.
+      //
+      // La clé ne porte pas la date : le fait est enregistré une fois, pas à
+      // chaque passage. Sans cela, un site abandonné depuis des années
+      // reviendrait indéfiniment et le produit redeviendrait un annuaire.
+      events.push({
+        type: 'website_found_down',
+        importance: 85,
+        confidence: 0.9,
+        payload: {
+          domain: scan.domain,
+          status: scan.status,
+          http_status: scan.fetch.status,
+          observations: previousFailures + 1,
+        },
+        key: `website_found_down:${scan.domain}`,
       });
     }
+  } else if (scan.tls && !scan.tls.valid && scan.tls.validTo
+             && new Date(scan.tls.validTo).getTime() < Date.now()) {
+    // Un certificat expiré porte sa propre date : c'est le jour où le site est
+    // devenu inaccessible sans avertissement, connu à la seconde près et
+    // vérifiable par n'importe qui. Rien à inférer.
+    events.push({
+      type: 'certificate_expired',
+      importance: 88,
+      confidence: 0.98,
+      payload: {
+        domain: scan.domain,
+        expired_at: scan.tls.validTo,
+        reason: scan.tls.reason,
+        issuer: scan.tls.issuer,
+      },
+      key: `certificate_expired:${scan.domain}:${scan.tls.validTo.slice(0, 10)}`,
+    });
   } else if (scan.contentChanged) {
     events.push({
       type: 'website_changed',
       importance: 60,
       confidence: 0.85,
       payload: { domain: scan.domain, previous_hash: previousHash },
+      key: `website_changed:${scan.domain}:${now.slice(0, 10)}`,
     });
   }
 
@@ -335,9 +452,7 @@ async function recordScanEvents(
         confidence: event.confidence,
         source: 'domain_scan',
         occurred_at: now,
-        // La date du jour dans la clé : une nouvelle chute après remise en
-        // ligne produit bien un nouvel événement.
-        dedupe_key: `${event.type}:${scan.domain}:${company.id}:${now.slice(0, 10)}`,
+        dedupe_key: `${event.key}:${company.id}`,
       });
     }
   }
