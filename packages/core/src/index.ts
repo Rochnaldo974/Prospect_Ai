@@ -12,3 +12,4 @@ export * from './dedup';
 export * from './enrichment';
 export * from './signals';
 export * from './opportunities';
+export * from './allocation';

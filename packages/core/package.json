@@ -18,7 +18,8 @@
     "./dedup": "./src/dedup/index.ts",
     "./enrichment": "./src/enrichment/index.ts",
     "./signals": "./src/signals/index.ts",
-    "./opportunities": "./src/opportunities/index.ts"
+    "./opportunities": "./src/opportunities/index.ts",
+    "./allocation": "./src/allocation/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

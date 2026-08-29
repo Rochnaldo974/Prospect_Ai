@@ -60,16 +60,42 @@ for (const account of ACCOUNTS) {
     continue;
   }
 
-  if (account.role !== 'user') {
-    const { error: roleError } = await admin
-      .from('profiles')
-      .update({ role: account.role })
-      .eq('id', data.user.id);
-    if (roleError) {
-      console.error(`✗ rôle de ${account.email} : ${roleError.message}`);
-      process.exitCode = 1;
-      continue;
-    }
+  // Paramétrage terminé et périmètre large : sans cela le moteur
+  // d'attribution écarte le compte — il ne sert personne dont il ignore où il
+  // travaille — et le tableau de bord reste vide, ce qui donne à croire que
+  // la chaîne ne fonctionne pas.
+  const { error: profileError } = await admin
+    .from('profiles')
+    .update({
+      ...(account.role !== 'user' ? { role: account.role } : {}),
+      onboarding_completed: true,
+      city: 'Angers',
+      region: 'Pays de la Loire',
+    })
+    .eq('id', data.user.id);
+  if (profileError) {
+    console.error(`✗ profil de ${account.email} : ${profileError.message}`);
+    process.exitCode = 1;
+    continue;
+  }
+
+  const { error: prefError } = await admin
+    .from('user_preferences')
+    .upsert({
+      user_id: data.user.id,
+      // France entière : un compte de développement ne doit pas être privé de
+      // stock par un périmètre trop étroit.
+      location_mode: 'france',
+      city: 'Angers',
+      region: 'Pays de la Loire',
+      services: [],
+      preferred_industries: [],
+      excluded_industries: [],
+    }, { onConflict: 'user_id' });
+  if (prefError) {
+    console.error(`✗ préférences de ${account.email} : ${prefError.message}`);
+    process.exitCode = 1;
+    continue;
   }
 
   console.log(`✓ ${account.email} (${account.role})  —  mot de passe : ${account.password}`);
