@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCompanyDetail } from '@prospect/core';
+import { getCompanyDetail, presentOpportunities } from '@prospect/core';
 import { getAdminDb } from '@/lib/supabase/admin';
 import {
   Field,
@@ -11,6 +11,7 @@ import {
   formatDateTime,
   relativeDays,
 } from '@/components/admin/primitives';
+import { OpportunityExplanation } from '@/components/admin/opportunity-explanation';
 import { ScoreBreakdown } from '@/components/admin/score-breakdown';
 
 export const metadata: Metadata = { title: 'Fiche entreprise' };
@@ -24,6 +25,14 @@ export default async function CompanyDetailPage({
   const db = await getAdminDb();
   const detail = await getCompanyDetail(db, id);
   if (!detail) notFound();
+
+  // L'explication est reconstruite à la lecture, jamais figée au scoring :
+  // améliorer la formulation profite ainsi à tout le stock existant, sans
+  // qu'aucune opportunité ait à être régénérée.
+  const explained = new Map(
+    (await presentOpportunities(db, { ids: detail.opportunities.map((o) => o.id) }))
+      .map((o) => [o.id, o.explanation]),
+  );
 
   const {
     company, overview, sources, snapshots, events, signals,
@@ -194,7 +203,12 @@ export default async function CompanyDetailPage({
           <Section title="Opportunités" count={opportunities.length} empty="Aucune opportunité générée. Le moteur exige un événement daté pour en créer une.">
             <div className="space-y-3">
               {opportunities.map((opportunity) => (
-                <ScoreBreakdown key={opportunity.id} opportunity={opportunity} />
+                <div key={opportunity.id} className="space-y-3">
+                  <ScoreBreakdown opportunity={opportunity} />
+                  {explained.has(opportunity.id) ? (
+                    <OpportunityExplanation explanation={explained.get(opportunity.id)!} />
+                  ) : null}
+                </div>
               ))}
             </div>
           </Section>

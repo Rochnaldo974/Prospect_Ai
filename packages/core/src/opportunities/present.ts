@@ -50,16 +50,19 @@ export async function presentOpportunities(
   db: Db,
   options: { ids?: string[]; limit?: number } = {},
 ): Promise<PresentedOpportunity[]> {
+  // Des identifiants explicites valent demande explicite : la console admin
+  // doit pouvoir relire une opportunité expirée ou déjà attribuée.
+  const byId = options.ids !== undefined && options.ids.length > 0;
+
   let query = db
     .from('opportunities')
     // Littéral d'un seul tenant : la forme du résultat est déduite de ce
     // texte, et une concaténation la rendrait indéchiffrable au compilateur.
     .select('id, company_id, opportunity_type, base_score, confidence_score, reason_data, companies!inner(id, legal_name, commercial_name, city, industry_label, phone, contact_form_url, domain, creation_date, employee_min)')
-    .eq('status', 'available')
     .order('base_score', { ascending: false })
     .limit(options.limit ?? 20);
 
-  if (options.ids && options.ids.length > 0) query = query.in('id', options.ids);
+  query = byId ? query.in('id', options.ids!) : query.eq('status', 'available');
 
   const { data, error } = await query;
   if (error) throw new Error(`presentOpportunities : ${error.message}`);
