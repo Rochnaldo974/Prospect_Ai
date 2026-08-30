@@ -760,6 +760,7 @@ export type Database = {
           content_hash: string | null
           copyright_year: number | null
           created_at: string
+          dated_components: Json
           domain: string
           ecommerce_detected: boolean
           emails_found: string[]
@@ -779,9 +780,11 @@ export type Database = {
           phones_found: string[]
           redirect_chain: Json
           registered_at: string | null
+          responsive: boolean | null
           sirens_found: string[]
           status: Database["public"]["Enums"]["domain_status"]
           tech_hash: string | null
+          tech_year: number | null
           technologies: Json
           title: string | null
           tls_issuer: string | null
@@ -801,6 +804,7 @@ export type Database = {
           content_hash?: string | null
           copyright_year?: number | null
           created_at?: string
+          dated_components?: Json
           domain: string
           ecommerce_detected?: boolean
           emails_found?: string[]
@@ -820,9 +824,11 @@ export type Database = {
           phones_found?: string[]
           redirect_chain?: Json
           registered_at?: string | null
+          responsive?: boolean | null
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
+          tech_year?: number | null
           technologies?: Json
           title?: string | null
           tls_issuer?: string | null
@@ -842,6 +848,7 @@ export type Database = {
           content_hash?: string | null
           copyright_year?: number | null
           created_at?: string
+          dated_components?: Json
           domain?: string
           ecommerce_detected?: boolean
           emails_found?: string[]
@@ -861,9 +868,11 @@ export type Database = {
           phones_found?: string[]
           redirect_chain?: Json
           registered_at?: string | null
+          responsive?: boolean | null
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
+          tech_year?: number | null
           technologies?: Json
           title?: string | null
           tls_issuer?: string | null

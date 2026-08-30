@@ -214,6 +214,30 @@ nominative. Le signal recherché — un commerce actif sur les réseaux mais san
 site — reste atteignable par les tags OpenStreetMap et les liens présents sur
 le site de l'entreprise.
 
+**La refonte est le marché, et le diagnostic en est le prix d'entrée.**
+Presque toutes les entreprises ont un site : le stock potentiel est trois
+ordres de grandeur au-dessus de celui des créations. Mais un site vieux est un
+état, pas un événement — il l'était l'an dernier et le sera l'an prochain. Une
+opportunité de refonte sans fait daté n'est donc livrée que si l'on peut citer
+au moins **trois constats mesurés et vérifiables**, et elle passe derrière une
+opportunité datée de qualité comparable. Son « pourquoi maintenant » reste
+vide, assumé plutôt que fabriqué.
+
+Trois mesures apprises à nos dépens, qui valent d'être écrites :
+
+| Heuristique évidente | Ce que la mesure a donné |
+|---|---|
+| balise `viewport` absente = site non adapté | 47 sites scannés, **tous** en avaient une |
+| pas de media query dans le HTML = non adapté | 53 sites sur 123 — dont des enseignes nationales au site parfaitement adapté, leur CSS étant dans un fichier séparé |
+| media queries lues dans les deux premières feuilles | 16 sur 123 — les premières feuilles sont souvent une police et un jeu d'icônes, qui n'adaptent rien |
+| feuilles du site lui-même, police et icônes écartées | **2 sur 123** |
+
+Autrement dit : « site non adapté au mobile » est un angle quasiment mort en
+2026, et les trois approximations successives auraient produit 51 accusations
+fausses. En revanche la datation des composants tient : 50 des 58 sites
+datables portent des bibliothèques de plus de cinq ans, et une version lue dans
+une URL ne se discute pas.
+
 **La découverte inverse est le gisement principal.** Un site professionnel
 français doit afficher son SIREN dans ses mentions légales. On part donc du
 domaine, on lit le SIREN, on interroge le répertoire pour la raison sociale —

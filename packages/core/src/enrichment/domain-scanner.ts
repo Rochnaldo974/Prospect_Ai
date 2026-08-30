@@ -27,6 +27,8 @@ export interface DomainScanResult {
   contentChanged: boolean;
   /** Certificat examiné, quand l'hôte répond en HTTPS. */
   tls: TlsInspection | null;
+  /** Le site s'adapte-t-il au mobile ? null quand on n'a pas pu conclure. */
+  responsive: boolean | null;
 }
 
 export interface ScanReport {
@@ -110,6 +112,7 @@ export async function scanDomain(
     return {
       domain, status: 'excluded', analysis: null, fetch: result,
       legalPageUrl: null, sirens: [], contentChanged: false, tls: null,
+      responsive: null,
     };
   }
 
@@ -126,11 +129,22 @@ export async function scanDomain(
           : 'unreachable';
     return {
       domain, status, analysis: null, fetch: result, tls,
-      legalPageUrl: null, sirens: [], contentChanged: false,
+      legalPageUrl: null, sirens: [], contentChanged: false, responsive: null,
     };
   }
 
   const analysis = analyzePage(result.html, result.finalUrl);
+
+  // Adaptation au mobile : conclusion tirée d'une lecture effective, pas du
+  // seul HTML. La quasi-totalité des sites tiennent leur mise en page dans un
+  // fichier séparé, si bien qu'un HTML sans media query ne prouve rien — on
+  // l'a vérifié sur des enseignes nationales au site parfaitement adapté.
+  //
+  // Une requête de plus, et seulement quand la page ne tranche pas : c'est le
+  // prix d'un constat qu'on peut défendre devant le commerçant.
+  const responsive = analysis.hasMediaQueries
+    ? true
+    : await readsAsResponsive(analysis.stylesheets, result.finalUrl, fetcher, signal);
   const sirens = new Set(analysis.sirens);
   let legalPageUrl: string | null = null;
 
@@ -152,6 +166,7 @@ export async function scanDomain(
     domain,
     status: analysis.placeholder ? 'placeholder' : 'reachable',
     tls,
+    responsive,
     analysis,
     fetch: result,
     legalPageUrl,
@@ -185,7 +200,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
 
   let query = db
     .from('domains')
-    .select('domain, content_hash, check_attempts')
+    .select('domain, content_hash, check_attempts, tech_year')
     .neq('status', 'excluded')
     .order('next_check_at', { ascending: true })
     .limit(options.limit ?? 200);
@@ -209,7 +224,10 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
   };
 
   const scanOne = async (
-    row: { domain: string; content_hash: string | null; check_attempts: number },
+    row: {
+      domain: string; content_hash: string | null;
+      check_attempts: number; tech_year: number | null;
+    },
   ): Promise<void> => {
     try {
       const scan = await scanDomain(row.domain, fetcher, row.content_hash, options.signal);
@@ -229,7 +247,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
       }
 
       await persistScan(db, scan, row.check_attempts);
-      await recordScanEvents(db, scan, row.content_hash, row.check_attempts);
+      await recordScanEvents(db, scan, row.content_hash, row.check_attempts, row.tech_year);
 
       if (scan.sirens.length > 0) {
         report.sirensFound += 1;
@@ -282,6 +300,65 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
   return report;
 }
 
+/**
+ * Le site s'adapte-t-il au mobile, d'après ses feuilles de style ?
+ *
+ * On en lit au plus deux : au-delà, le coût dépasse l'information. Une absence
+ * de media query dans les deux premières ne prouve rien — d'où `null` plutôt
+ * que `false`. On ne conclut à l'inadaptation que si l'on a effectivement lu
+ * du CSS sans y trouver aucune règle d'adaptation.
+ */
+async function readsAsResponsive(
+  stylesheets: string[],
+  siteUrl: string,
+  fetcher: WebsiteFetcher,
+  signal?: AbortSignal,
+): Promise<boolean | null> {
+  const candidates = layoutStylesheets(stylesheets, siteUrl);
+  if (candidates.length === 0) return null;
+
+  let read = 0;
+  for (const href of candidates.slice(0, 3)) {
+    if (signal?.aborted) break;
+
+    const sheet = await fetcher.fetchPage(href, signal, /text\/css/i);
+    if (sheet.html === null) continue;
+
+    read += 1;
+    if (/@media[^{]*\((?:max|min)-width/i.test(sheet.html)) return true;
+  }
+
+  return read > 0 ? false : null;
+}
+
+/**
+ * Les feuilles susceptibles de porter la mise en page.
+ *
+ * Une police web et un jeu d'icônes n'adaptent rien : les lire d'abord faisait
+ * conclure à tort qu'un site n'était pas responsive, alors que sa feuille
+ * principale arrivait en troisième position — constaté sur le site d'une
+ * chaîne de supermarchés dont la mise en page s'adapte parfaitement.
+ *
+ * On sert donc d'abord les feuilles du site lui-même, et on écarte ce qui ne
+ * peut rien contenir d'utile.
+ */
+function layoutStylesheets(stylesheets: string[], siteUrl: string): string[] {
+  let host: string;
+  try {
+    host = new URL(siteUrl).hostname.replace(/^www\./, '');
+  } catch {
+    host = '';
+  }
+
+  const useful = stylesheets.filter((href) => !/fonts\.googleapis|font-?awesome|\bprint\.css/i.test(href));
+
+  // Tri stable : les feuilles du domaine d'abord, dans l'ordre de la page.
+  return [
+    ...useful.filter((href) => href.includes(host)),
+    ...useful.filter((href) => !href.includes(host)),
+  ];
+}
+
 async function persistScan(
   db: Db,
   scan: DomainScanResult,
@@ -323,6 +400,9 @@ async function persistScan(
       phones_found: analysis?.phones ?? [],
       emails_found: analysis?.emails ?? [],
       copyright_year: analysis?.copyrightYear ?? null,
+      responsive: scan.responsive,
+      tech_year: analysis?.technologyYear ?? null,
+      dated_components: (analysis?.datedComponents ?? []) as unknown as Json,
       legal_page_url: scan.legalPageUrl,
       legal_page_checked_at: scan.legalPageUrl ? new Date().toISOString() : null,
       last_checked_at: new Date().toISOString(),
@@ -361,6 +441,7 @@ async function recordScanEvents(
   scan: DomainScanResult,
   previousHash: string | null,
   previousFailures: number,
+  previousTechYear: number | null,
 ): Promise<void> {
   // Le domaine peut être revendiqué par plusieurs établissements : l'événement
   // concerne chacun d'eux.
@@ -431,6 +512,28 @@ async function recordScanEvents(
         issuer: scan.tls.issuer,
       },
       key: `certificate_expired:${scan.domain}:${scan.tls.validTo.slice(0, 10)}`,
+    });
+  } else if (scan.contentChanged && previousTechYear !== null
+             && new Date().getFullYear() - previousTechYear >= 5) {
+    // Un site immobile depuis des années qui bouge enfin.
+    //
+    // C'est le meilleur moment pour appeler, et le plus difficile à
+    // reproduire pour un concurrent : l'entreprise vient de décider que son
+    // site comptait. Elle a peut-être commencé seule, ou pris quelqu'un —
+    // l'explication doit poser la question plutôt que de trancher.
+    //
+    // Distinct de website_changed, qu'un site vivant déclenche chaque semaine
+    // sans que cela signifie quoi que ce soit.
+    events.push({
+      type: 'frozen_site_woke_up',
+      importance: 86,
+      confidence: 0.85,
+      payload: {
+        domain: scan.domain,
+        previous_tech_year: previousTechYear,
+        new_tech_year: scan.analysis?.technologyYear ?? null,
+      },
+      key: `frozen_site_woke_up:${scan.domain}:${now.slice(0, 10)}`,
     });
   } else if (scan.contentChanged) {
     events.push({

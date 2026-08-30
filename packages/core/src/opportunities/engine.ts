@@ -41,6 +41,8 @@ export interface OpportunityEngineReport {
   rejected: number;
   rejectionReasons: Record<string, number>;
   byType: Record<string, number>;
+  /** Retirées du stock parce que leur justification ne tient plus. */
+  withdrawn: number;
   errors: number;
 }
 
@@ -69,7 +71,7 @@ export async function runOpportunityEngine(
 ): Promise<OpportunityEngineReport> {
   const report: OpportunityEngineReport = {
     companiesExamined: 0, scored: 0, created: 0, updated: 0,
-    rejected: 0, rejectionReasons: {}, byType: {}, errors: 0,
+    rejected: 0, rejectionReasons: {}, byType: {}, withdrawn: 0, errors: 0,
   };
 
   const log = options.logger;
@@ -77,12 +79,17 @@ export async function runOpportunityEngine(
   const version = options.algorithmVersion ?? 'v0';
   const now = Date.now();
 
-  // Seules les entreprises portant un déclencheur actif peuvent produire une
-  // opportunité : inutile de charger les autres.
+  // Deux populations, et une seule requête.
+  //
+  // Les entreprises portant un déclencheur actif produisent les opportunités
+  // datées. Celles qui n'ont que des signaux d'état peuvent tout de même
+  // produire une opportunité de diagnostic — refonte uniquement, et sous
+  // condition de densité — d'où la seconde branche. Les entreprises sans
+  // aucun signal ne sont jamais chargées.
   const { data: candidates, error } = await db
     .from('companies')
     .select('id, has_contact, identity_confidence, domain, prospecting_allowed, suppression_global, cooldown_until')
-    .gt('trigger_signal_count', 0)
+    .or('trigger_signal_count.gt.0,active_signal_count.gt.0')
     .eq('prospecting_allowed', true)
     .eq('suppression_global', false)
     .limit(options.limit ?? 2000);
@@ -187,6 +194,7 @@ export async function runOpportunityEngine(
 
     const toInsert: Record<string, Json>[] = [];
     const toUpdate: { id: string; scored: ScoredOpportunity; signalIds: string[] }[] = [];
+    const toWithdraw: string[] = [];
 
     for (const company of batch) {
       report.companiesExamined += 1;
@@ -194,6 +202,7 @@ export async function runOpportunityEngine(
       const signals = signalsByCompany.get(company.id) ?? [];
       if (signals.length === 0) continue;
 
+      const scoredTypes = new Set<OpportunityType>();
       const scored = scoreAll({
         signals,
         identityConfidence: Number(company.identity_confidence),
@@ -210,6 +219,8 @@ export async function runOpportunityEngine(
       const idMap = signalIdsByCompany.get(company.id) ?? new Map<string, string>();
 
       for (const opportunity of scored) {
+        scoredTypes.add(opportunity.type);
+
         // ── Quality gate ────────────────────────────────────────────────
         //
         // L'ordre des contrôles va du plus structurel au plus fin : le motif
@@ -238,15 +249,40 @@ export async function runOpportunityEngine(
           toInsert.push(buildRow(company.id, opportunity, signalIds, version, gate));
         }
       }
+
+      // Une opportunité dont la justification ne tient plus doit sortir du
+      // stock, pas y rester en silence. Le cas s'est produit : un site dont on
+      // avait conclu à tort qu'il n'était pas adapté au mobile gardait son
+      // opportunité, et le constat corrigé n'y changeait rien — le freelance
+      // aurait reçu un argument que l'entreprise pouvait réfuter en ouvrant
+      // son téléphone.
+      //
+      // Les opportunités déjà attribuées ne sont pas touchées : le freelance
+      // travaille dessus, et c'est l'expiration de l'attribution qui tranche.
+      for (const [type, existingRow] of existing) {
+        if (scoredTypes.has(type)) continue;
+        if (existingRow.status === 'assigned') continue;
+        toWithdraw.push(existingRow.id);
+      }
     }
 
     if (options.dryRun) {
       report.created += toInsert.length;
       report.updated += toUpdate.length;
+      report.withdrawn += toWithdraw.length;
       continue;
     }
 
     try {
+      if (toWithdraw.length > 0) {
+        const { error: withdrawError } = await db
+          .from('opportunities')
+          .update({ status: 'expired' })
+          .in('id', toWithdraw);
+        if (withdrawError) report.errors += 1;
+        else report.withdrawn += toWithdraw.length;
+      }
+
       if (toInsert.length > 0) {
         const { data, error: insertError } = await db
           .from('opportunities')
@@ -287,6 +323,7 @@ export async function runOpportunityEngine(
     examined: report.companiesExamined,
     created: report.created,
     updated: report.updated,
+    withdrawn: report.withdrawn,
     rejected: report.rejected,
   });
 

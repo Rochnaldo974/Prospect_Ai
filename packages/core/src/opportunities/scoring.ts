@@ -67,6 +67,17 @@ export interface ScoredOpportunity {
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+/**
+ * Ce que coûte l'absence de « pourquoi maintenant ».
+ *
+ * Une opportunité de diagnostic reste utile — le constat est vrai, mesuré,
+ * vérifiable — mais rien n'indique que le moment soit bon. Elle doit donc
+ * passer derrière une opportunité datée de qualité comparable, sans pour
+ * autant être écartée : à besoin égal, un fait daté vaut environ un quart de
+ * plus.
+ */
+const NO_TRIGGER_PENALTY = 0.8;
+
 /** Décroissance exponentielle depuis le fait déclencheur. */
 export function freshnessOf(triggerType: string, occurredAt: string | null, now = Date.now()): number {
   if (!occurredAt) return 0.3;
@@ -150,24 +161,56 @@ export function scoreOpportunity(
   needScore = clamp(needScore, 0, 100);
   if (needScore < rule.minNeed) return null;
 
-  // ── Timing : le déclencheur le plus fort décide ───────────────────────
+  // ── Timing ────────────────────────────────────────────────────────────
+  //
+  // La règle générale reste : un fait daté, ou rien. Une seule famille y
+  // déroge, et sous condition — la refonte, où le marché est vaste et où
+  // l'absence d'urgence se compense par la densité du constat.
+  //
+  // L'opportunité de diagnostic n'a pas de « pourquoi maintenant » et le
+  // générateur d'explication en produira un vide, comme il doit. Elle est
+  // pénalisée en conséquence : son timing est nul et sa fraîcheur plafonnée,
+  // si bien qu'elle passe systématiquement derrière une opportunité datée de
+  // qualité comparable. Le stock qu'elle apporte ne prend la place de rien.
   const triggers = active.filter((s) => s.kind === 'trigger');
-  if (triggers.length === 0) return null;
+  const best = triggers.length > 0
+    ? triggers.reduce((a, b) => (b.strength > a.strength ? b : a))
+    : null;
 
-  const best = triggers.reduce((a, b) => (b.strength > a.strength ? b : a));
-  const timingScore = clamp(best.strength * 100, 0, 100);
-  const freshnessFactor = freshnessOf(best.signalType, best.occurredAt, now);
+  if (best === null) {
+    const minimum = rule.diagnosticMinFacts;
+    if (minimum === undefined) return null;
+    // Les constats qui comptent sont ceux qui portent le besoin : un signal
+    // présent mais sans poids dans cette règle ne prouve rien la concernant.
+    if (contributions.length < minimum) return null;
+  }
+
+  const timingScore = best !== null ? clamp(best.strength * 100, 0, 100) : 0;
+  // Rien ne date le constat : il ne peut être ni frais ni périmé. Un site de
+  // 2011 ne devient pas moins vieux en attendant.
+  const freshnessFactor = best !== null
+    ? freshnessOf(best.signalType, best.occurredAt, now)
+    : 1;
 
   // ── Confiance ─────────────────────────────────────────────────────────
   const contributingTypes = new Set(contributions.map((c) => c.signal));
   const contributingSignals = active.filter(
-    (s) => contributingTypes.has(s.signalType) || s === best,
+    (s) => contributingTypes.has(s.signalType) || (best !== null && s === best),
   );
   const riskSignals = active.filter((s) => s.category === 'risk');
   const confidenceScore = confidenceOf(contributingSignals, input.identityConfidence, riskSignals);
 
   // ── Assemblage ────────────────────────────────────────────────────────
-  const weighted = needScore * 0.55 + timingScore * 0.45;
+  //
+  // Sans déclencheur, le timing n'est pas mauvais : il est hors sujet. Le
+  // noter zéro reviendrait à pénaliser deux fois la même absence, et
+  // plafonnerait mécaniquement ces opportunités à quarante points — sous le
+  // seuil de livraison, quelle que soit la qualité du diagnostic. Le besoin
+  // porte donc seul la note, et une pénalité explicite exprime ce qui manque.
+  const weighted = best !== null
+    ? needScore * 0.55 + timingScore * 0.45
+    : needScore * NO_TRIGGER_PENALTY;
+
   const confidenceFactor = 0.4 + 0.6 * confidenceScore;
   const baseScore = clamp(weighted * freshnessFactor * confidenceFactor, 0, 100);
 
@@ -178,19 +221,24 @@ export function scoreOpportunity(
     freshnessFactor: Number(freshnessFactor.toFixed(3)),
     confidenceScore: Number(confidenceScore.toFixed(2)),
     baseScore: Number(baseScore.toFixed(2)),
-    triggerEventId: best.triggerEventId,
-    triggerType: best.signalType,
+    triggerEventId: best?.triggerEventId ?? null,
+    triggerType: best?.signalType ?? null,
     signalTypes: [...contributingTypes],
     reason: {
-      trigger: best.signalType,
-      trigger_strength: Number(best.strength.toFixed(2)),
-      trigger_occurred_at: best.occurredAt,
+      trigger: best?.signalType ?? null,
+      trigger_strength: best !== null ? Number(best.strength.toFixed(2)) : null,
+      trigger_occurred_at: best?.occurredAt ?? null,
+      // Trace explicite : une opportunité livrée sans fait daté doit pouvoir
+      // être reconnue comme telle en base, sans avoir à le déduire.
+      diagnostic_only: best === null,
       need_breakdown: contributions as unknown as Json,
       risks: riskSignals.map((r) => ({
         signal: r.signalType,
         penalty: RISK_PENALTIES[r.signalType] ?? 0,
       })) as unknown as Json,
-      formula: '(besoin × 0,55 + timing × 0,45) × fraîcheur × (0,40 + 0,60 × confiance)',
+      formula: best !== null
+        ? '(besoin × 0,55 + timing × 0,45) × fraîcheur × (0,40 + 0,60 × confiance)'
+        : 'besoin × 0,80 × (0,40 + 0,60 × confiance) — sans fait daté',
       weighted: Number(weighted.toFixed(2)),
       confidence_factor: Number(confidenceFactor.toFixed(3)),
     },

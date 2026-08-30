@@ -26,12 +26,16 @@ export interface DomainSnapshot {
   tls_issuer: string | null;
   has_viewport_meta: boolean | null;
   has_media_queries: boolean | null;
+  responsive: boolean | null;
   ttfb_ms: number | null;
   html_bytes: number | null;
   ecommerce_detected: boolean;
   booking_detected: boolean;
   contact_form_detected: boolean;
   copyright_year: number | null;
+  registered_at: string | null;
+  tech_year: number | null;
+  dated_components: unknown;
   sirens_found: string[];
   last_checked_at: string | null;
   first_seen_at: string;

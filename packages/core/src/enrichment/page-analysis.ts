@@ -1,3 +1,4 @@
+import { datedComponents, technologyYear, type DatedComponent } from './tech-vintage';
 import {
   extractSirenFromText,
   normalizeDomainDetailed,
@@ -24,6 +25,8 @@ export interface PageAnalysis {
   emails: string[];
   /** Liens vers les pages de mentions légales, à explorer ensuite. */
   legalPageLinks: string[];
+  /** Feuilles de style externes, dans l'ordre de la page. */
+  stylesheets: string[];
   contactFormUrl: string | null;
   hasContactForm: boolean;
   hasViewportMeta: boolean;
@@ -34,6 +37,10 @@ export interface PageAnalysis {
   ecommerceDetected: boolean;
   bookingDetected: boolean;
   copyrightYear: number | null;
+  /** Composants dont la version est lisible et l'année de publication certaine. */
+  datedComponents: DatedComponent[];
+  /** Année du composant le plus récent : borne inférieure de la dernière refonte. */
+  technologyYear: number | null;
   /** Page d'attente, domaine parké, site en construction. */
   placeholder: boolean;
   /** Hash du texte visible, pour détecter un changement réel de contenu. */
@@ -153,6 +160,8 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
   let cms: string | null = null;
   let framework: string | null = null;
 
+  const components = datedComponents(source);
+
   for (const entry of TECH_PATTERNS) {
     if (!entry.pattern.test(source)) continue;
     technologies.push(entry.name);
@@ -176,6 +185,17 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
   for (const match of source.matchAll(/href\s*=\s*["']mailto:([^"'?]+)/gi)) {
     const email = normalizeEmailDetailed(decodeURIComponent(match[1] ?? '')).email;
     if (email) emails.add(email);
+  }
+
+  // Les feuilles externes portent presque toujours la mise en page : le HTML
+  // seul ne permet pas de conclure sur l'adaptation au mobile.
+  const stylesheets = new Set<string>();
+  for (const match of source.matchAll(/<link[^>]+rel=["']stylesheet["'][^>]*>/gi)) {
+    const href = /href=["']([^"']+)["']/i.exec(match[0])?.[1];
+    if (!href || href.startsWith('data:')) continue;
+    try {
+      stylesheets.add(new URL(href, baseUrl).toString());
+    } catch { /* href non résolvable : sans intérêt */ }
   }
 
   const legalPageLinks = new Set<string>();
@@ -202,6 +222,7 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
     phones: [...phones],
     emails: [...emails],
     legalPageLinks: [...legalPageLinks],
+    stylesheets: [...stylesheets],
     contactFormUrl,
     hasContactForm: hasForm || contactFormUrl !== null,
     hasViewportMeta: /<meta[^>]+name=["']viewport["']/i.test(source),
@@ -211,6 +232,8 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
     technologies,
     ecommerceDetected: ECOMMERCE_PATTERNS.test(source),
     bookingDetected: BOOKING_PATTERNS.test(text),
+    datedComponents: components,
+    technologyYear: technologyYear(components),
     copyrightYear:
       copyrightYear && copyrightYear >= 1995 && copyrightYear <= new Date().getFullYear() + 1
         ? copyrightYear

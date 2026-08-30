@@ -184,7 +184,17 @@ export class WebsiteFetcher {
     return rules;
   }
 
-  async fetchPage(url: string, signal?: AbortSignal): Promise<FetchResult> {
+  /**
+   * @param accept Types de contenu acceptés. Par défaut le HTML seul : on ne
+   *   télécharge pas une archive ou une vidéo pour y chercher un SIREN. Les
+   *   feuilles de style font exception, quand on cherche à savoir si un site
+   *   s'adapte au mobile.
+   */
+  async fetchPage(
+    url: string,
+    signal?: AbortSignal,
+    accept: RegExp = /text\/html|application\/xhtml/i,
+  ): Promise<FetchResult> {
     const base: FetchResult = {
       url,
       finalUrl: url,
@@ -255,7 +265,7 @@ export class WebsiteFetcher {
         return result;
       }
 
-      if (contentType && !/text\/html|application\/xhtml/i.test(contentType)) {
+      if (contentType && !accept.test(contentType)) {
         await response.body?.cancel();
         return { ...result, skippedReason: 'content-type' };
       }
@@ -288,6 +298,19 @@ export class WebsiteFetcher {
    * qu'un site n'existe pas.
    */
   async probeDomain(domain: string, signal?: AbortSignal): Promise<FetchResult> {
+    // Un domaine qui ne résout pas ne répondra sur aucune variante. Sans ce
+    // contrôle, chaque domaine mort coûtait quatre tentatives arrivées au
+    // bout de leur délai, soit près d'une minute pour n'apprendre rien — et
+    // c'est ce qui plafonnait le débit du scan national bien plus que la
+    // concurrence. La résolution échoue en quelques millisecondes.
+    if (!(await resolves(domain))) {
+      return {
+        url: `https://${domain}`, finalUrl: `https://${domain}`, status: null,
+        redirectChain: [], html: null, contentType: null, bytes: 0, ttfbMs: null,
+        hasSsl: false, tls: null, error: 'Domaine non résolu', skippedReason: null,
+      };
+    }
+
     const variants = [
       `https://${domain}`,
       `https://www.${domain}`,
@@ -307,6 +330,33 @@ export class WebsiteFetcher {
     return last ?? { url: `https://${domain}`, finalUrl: `https://${domain}`, status: null,
       redirectChain: [], html: null, contentType: null, bytes: 0, ttfbMs: null,
       hasSsl: false, tls: null, error: 'Aucune variante joignable', skippedReason: null };
+  }
+}
+
+/**
+ * Le domaine a-t-il une adresse ?
+ *
+ * On interroge le DNS plutôt que d'attendre quatre délais HTTP. Une absence
+ * d'enregistrement est une réponse aussi ferme qu'un refus de connexion, et
+ * elle coûte mille fois moins cher. En cas de panne du résolveur, on répond
+ * oui : mieux vaut un scan lent qu'un parc entier déclaré mort.
+ */
+async function resolves(domain: string): Promise<boolean> {
+  const { promises: dns } = await import('node:dns');
+
+  try {
+    const addresses = await dns.resolve4(domain);
+    if (addresses.length > 0) return true;
+  } catch (cause: unknown) {
+    const code = (cause as { code?: string }).code;
+    if (code !== 'ENOTFOUND' && code !== 'ENODATA') return true;
+  }
+
+  try {
+    return (await dns.resolve6(domain)).length > 0;
+  } catch (cause: unknown) {
+    const code = (cause as { code?: string }).code;
+    return code !== 'ENOTFOUND' && code !== 'ENODATA';
   }
 }
 

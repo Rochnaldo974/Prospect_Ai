@@ -43,6 +43,9 @@ export interface ExplanationInput {
     ecommerceDetected?: boolean | null;
     tlsReason?: string | null;
     tlsValidTo?: string | null;
+    datedComponents?: { name: string; version: string; year: number }[] | null;
+    techYear?: number | null;
+    domainAgeYears?: number | null;
     tenderSubject?: string | null;
     tenderDeadline?: string | null;
     tenderUrl?: string | null;
@@ -182,6 +185,29 @@ function describeSignal(signal: string, facts: ExplanationInput['facts']): strin
       return facts.tenderSubject
         ? `Objet du marché, dans les termes de l'acheteur : « ${facts.tenderSubject} »`
         : null;
+    case 'outdated_stack': {
+      // On cite les composants et leur année. C'est le seul constat du
+      // produit que l'interlocuteur peut vérifier lui-même, en ouvrant le
+      // code source de sa propre page.
+      const parts = (facts.datedComponents ?? [])
+        .slice(0, 3)
+        .map((c) => `${c.name} ${c.version} (${c.year})`);
+      if (parts.length === 0) {
+        return facts.techYear
+          ? `Composants du site datant de ${facts.techYear} au plus récent`
+          : null;
+      }
+      return `Site bâti sur ${parts.join(', ')}`
+        + `${facts.techYear ? ` — rien de plus récent que ${facts.techYear}` : ''}`;
+    }
+    case 'not_responsive':
+      return 'Le site ne s’adapte pas aux écrans de téléphone — vérifiable en l’ouvrant sur mobile';
+    case 'aged_domain':
+      return facts.domainAgeYears
+        ? `Nom de domaine déposé il y a ${facts.domainAgeYears} ans`
+        : null;
+    case 'frozen_site_woke_up':
+      return null; // porté par « pourquoi maintenant »
     case 'invalid_certificate':
       return describeCertificate(facts.tlsReason ?? null);
     case 'certificate_expired':
@@ -237,6 +263,17 @@ const ANGLES: Record<OpportunityType, (facts: ExplanationInput['facts'], signals
     }
     if (signals.includes('dated_platform') && facts.cms) {
       levers.push(`la sortie de ${facts.cms}, qui limite ce qu'on peut faire évoluer`);
+    }
+    if (signals.includes('not_responsive')) {
+      levers.push("l'affichage sur téléphone, d'où vient l'essentiel de ses visiteurs");
+    }
+    if (signals.includes('outdated_stack') && facts.techYear) {
+      // On chiffre l'écart plutôt que de le qualifier : « quatorze ans » se
+      // discute moins que « obsolète ».
+      levers.push(
+        `la reprise de composants qui n'ont pas bougé depuis ${facts.techYear}`
+        + `, soit ${new Date().getFullYear() - facts.techYear} ans`,
+      );
     }
 
     const opening = levers.length > 0

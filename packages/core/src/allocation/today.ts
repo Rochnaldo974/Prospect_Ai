@@ -68,12 +68,13 @@ export async function getTodayOpportunities(
     ttfb_ms: number | null; has_ssl: boolean | null; http_status: number | null;
     ecommerce_detected: boolean | null; registered_at: string | null;
     tls_reason: string | null; tls_valid_to: string | null;
+    tech_year: number | null; dated_components: unknown;
   }>();
 
   for (let i = 0; i < domains.length; i += 100) {
     const { data: rows } = await db
       .from('domains')
-      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to')
+      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components')
       .in('domain', domains.slice(i, i + 100));
     for (const row of rows ?? []) facts.set(row.domain, row);
   }
@@ -159,6 +160,13 @@ export async function getTodayOpportunities(
           websiteStatus: site?.status ?? null,
           tlsReason: site?.tls_reason ?? null,
           tlsValidTo: site?.tls_valid_to ?? null,
+          techYear: site?.tech_year ?? null,
+          datedComponents: Array.isArray(site?.dated_components)
+            ? site.dated_components as { name: string; version: string; year: number }[]
+            : null,
+          domainAgeYears: site?.registered_at
+            ? Math.floor((Date.now() - new Date(site.registered_at).getTime()) / (365.25 * 86_400_000))
+            : null,
           tenderSubject: tender?.objet ?? null,
           tenderDeadline: tender?.deadline ?? null,
         },

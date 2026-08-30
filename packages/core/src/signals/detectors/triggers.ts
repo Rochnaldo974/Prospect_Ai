@@ -378,8 +378,55 @@ export const tenderPublishedDetector: SignalDetector = {
   },
 };
 
+/**
+ * Site figé qui se remet à bouger.
+ *
+ * Une entreprise qui touche enfin à un site immobile depuis cinq ans est une
+ * entreprise qui vient de décider que sa présence en ligne comptait. C'est le
+ * signal d'intention le plus fort que le produit sache lire sans que personne
+ * ait rien déclaré — et il est rare, donc précieux.
+ *
+ * Ce qu'on ne sait pas, et que l'explication doit dire : si elle s'y est mise
+ * seule ou si elle a déjà pris quelqu'un.
+ */
+export const frozenSiteWokeUpDetector: SignalDetector = {
+  id: 'frozen_site_woke_up',
+  describes: 'Site immobile depuis des années, modifié récemment',
+
+  detect({ domain, events }) {
+    if (!domain) return [];
+
+    const event = events.find((e) => e.event_type === 'frozen_site_woke_up');
+    if (!event) return [];
+
+    const age = ageInDays(event.occurred_at);
+    // Fenêtre courte : l'intérêt est d'arriver pendant que la décision se
+    // prend, pas trois mois après qu'elle a été prise.
+    if (age === null || age > 45) return [];
+
+    const payload = event.payload as { previous_tech_year?: number | null } | null;
+
+    return [{
+      signalType: 'frozen_site_woke_up',
+      kind: 'trigger',
+      category: 'timing',
+      strength: clamp01(1 - age / 60),
+      confidence: 0.85,
+      evidence: {
+        domain: domain.domain,
+        fige_depuis: payload?.previous_tech_year ?? null,
+        constate_le: event.occurred_at,
+      },
+      triggerEventId: event.id,
+      expiresAt: new Date(new Date(event.occurred_at).getTime() + 45 * 86_400_000),
+      fingerprint: `frozen_site_woke_up:${event.id}`,
+    }];
+  },
+};
+
 export const TRIGGER_DETECTORS: SignalDetector[] = [
   recentCompanyDetector,
+  frozenSiteWokeUpDetector,
   tenderPublishedDetector,
   certificateExpiredDetector,
   websiteFoundDownDetector,

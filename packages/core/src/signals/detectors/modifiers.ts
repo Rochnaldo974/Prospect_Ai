@@ -137,6 +137,116 @@ const DATED_PLATFORMS = new Set([
   'Wix', 'Jimdo', 'IONOS MyWebsite', 'Weebly', 'e-monsite', 'Google Sites', 'SPIP',
 ]);
 
+/**
+ * Site bâti sur des composants datés.
+ *
+ * Le signal de besoin le plus solide du produit, parce que le plus
+ * vérifiable : la version d'une bibliothèque est écrite dans le code source
+ * de la page, et son année de publication n'est pas discutable.
+ *
+ * À la différence de dated_platform, qui reconnaît sept constructeurs, celui-ci
+ * ne juge pas la solution : il lit une date. Un site WordPress bien tenu ne
+ * déclenche rien ; un site WordPress figé en 2014 le déclenche, et on peut
+ * dire pourquoi.
+ *
+ * Le seuil de cinq ans n'est pas arbitraire : en deçà, un site fait son
+ * travail et le refaire est un projet de confort, pas un besoin.
+ */
+export const outdatedStackDetector: SignalDetector = {
+  id: 'outdated_stack',
+  describes: 'Composants du site datés et vérifiables',
+
+  detect({ domain }) {
+    if (!domain?.tech_year) return [];
+
+    const age = new Date().getFullYear() - domain.tech_year;
+    if (age < 5) return [];
+
+    const components = Array.isArray(domain.dated_components) ? domain.dated_components : [];
+
+    return [{
+      signalType: 'outdated_stack',
+      kind: 'modifier',
+      category: 'need',
+      // Quinze ans d'écart sature ; cinq ans commence à peine à compter.
+      strength: clamp01((age - 4) / 11),
+      // Une version lisible dans une URL ne s'interprète pas : soit elle y
+      // est, soit elle n'y est pas.
+      confidence: 0.95,
+      evidence: { tech_year: domain.tech_year, years_behind: age, components },
+      fingerprint: `outdated_stack:${domain.tech_year}`,
+    }];
+  },
+};
+
+/**
+ * Domaine ancien.
+ *
+ * Pris seul, ne veut rien dire : un domaine de 2005 peut porter un site refait
+ * le mois dernier. Il ne sert qu'à appuyer un diagnostic déjà établi par
+ * ailleurs — d'où une force modeste, et une confiance en retrait.
+ */
+export const agedDomainDetector: SignalDetector = {
+  id: 'aged_domain',
+  describes: 'Nom de domaine déposé il y a longtemps',
+
+  detect({ domain }) {
+    if (!domain?.registered_at) return [];
+
+    const years = (Date.now() - new Date(domain.registered_at).getTime()) / (365.25 * 86_400_000);
+    if (years < 8) return [];
+
+    return [{
+      signalType: 'aged_domain',
+      kind: 'modifier',
+      category: 'need',
+      strength: clamp01((years - 7) / 15),
+      // L'âge du domaine ne dit rien de l'âge du site : indice, jamais preuve.
+      confidence: 0.5,
+      evidence: { registered_at: domain.registered_at, years: Math.round(years) },
+      fingerprint: `aged_domain:${domain.registered_at.slice(0, 4)}`,
+    }];
+  },
+};
+
+/**
+ * Site qui ne s'adapte pas au mobile.
+ *
+ * Le défaut le plus lourd de conséquence pour un commerce : l'essentiel de ses
+ * visiteurs arrivent par téléphone, et un site non adapté leur demande de
+ * zoomer pour lire une adresse. C'est aussi le plus facile à montrer — il
+ * suffit d'ouvrir le site devant le commerçant.
+ *
+ * On ne conclut que sur une feuille de style effectivement lue. La mesure
+ * naïve — chercher des media queries dans le HTML — annonçait 53 sites
+ * inadaptés sur 123 ; la lecture du CSS en donne 16. Les 37 autres étaient
+ * des enseignes nationales au site parfaitement adapté, dont la mise en page
+ * vit dans un fichier séparé. Les accuser aurait coûté la crédibilité du
+ * produit en un appel.
+ */
+export const notResponsiveDetector: SignalDetector = {
+  id: 'not_responsive',
+  describes: 'Site qui ne s’adapte pas aux écrans de téléphone',
+
+  detect({ domain }) {
+    // `null` signifie qu'on n'a pas pu lire de CSS : c'est une absence de
+    // preuve, pas une preuve d'absence.
+    if (domain?.responsive !== false) return [];
+
+    return [{
+      signalType: 'not_responsive',
+      kind: 'modifier',
+      category: 'need',
+      strength: 0.9,
+      // Deux feuilles lues suffisent dans l'immense majorité des cas, mais une
+      // règle d'adaptation peut vivre dans une troisième.
+      confidence: 0.85,
+      evidence: { responsive: false },
+      fingerprint: 'not_responsive',
+    }];
+  },
+};
+
 export const datedPlatformDetector: SignalDetector = {
   id: 'dated_platform',
   describes: 'Site bâti sur une solution de bricolage ou vieillissante',
@@ -395,6 +505,9 @@ export const MODIFIER_DETECTORS: SignalDetector[] = [
   brokenSiteDetector,
   invalidCertificateDetector,
   datedPlatformDetector,
+  outdatedStackDetector,
+  notResponsiveDetector,
+  agedDomainDetector,
   staleContentDetector,
   slowSiteDetector,
   noSslDetector,

@@ -11,6 +11,18 @@ import type { OpportunityType } from '../domain/types';
 
 export interface OpportunityRule {
   type: OpportunityType;
+  /**
+   * Nombre minimum de constats mesurés exigés en l'absence d'événement daté.
+   *
+   * Une opportunité sans « pourquoi maintenant » ne se justifie que par la
+   * densité de son diagnostic. Un seul constat — « le site est vieux » — n'est
+   * pas une opportunité, c'est une opinion ; trois constats vérifiables
+   * — composants de 2011, pas de HTTPS valide, 4,2 s de chargement — forment
+   * un dossier qu'un freelance peut ouvrir devant son interlocuteur.
+   *
+   * Absent : la règle exige un déclencheur daté, sans exception.
+   */
+  diagnosticMinFacts?: number;
   /** Signaux de besoin et leur contribution, en points sur 100. */
   needWeights: Record<string, number>;
   /**
@@ -62,6 +74,10 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     label: 'Refonte de site',
     requiresWebsite: true,
     minNeed: 40,
+    // La seule famille livrable sans événement daté. C'est le marché le plus
+    // vaste — presque toutes les entreprises ont un site — et le seul où
+    // l'absence d'urgence se compense par la précision du constat.
+    diagnosticMinFacts: 3,
     needWeights: {
       website_broken: 55,
       website_found_down: 50,
@@ -75,6 +91,16 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
       no_contact_form: 15,
       bodacc_cession: 25,
       domain_recently_registered: 20,
+      // Le constat le plus vérifiable du produit : une version lisible dans
+      // le code source, dont l'année de publication n'est pas discutable.
+      outdated_stack: 50,
+      // Un commerce dont le site est illisible sur téléphone perd l'essentiel
+      // de ses visiteurs : c'est le défaut le plus coûteux, et le plus simple
+      // à montrer.
+      not_responsive: 55,
+      frozen_site_woke_up: 30,
+      // Ne pèse presque rien seul : n'appuie qu'un diagnostic déjà établi.
+      aged_domain: 12,
     },
     // Le site appartient au réseau : le gérant d'un point de vente n'a aucune
     // prise dessus. Constaté sur des enseignes partageant un même domaine.
@@ -100,6 +126,7 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     minNeed: 45,
     needWeights: {
       slow_website: 45,
+      not_responsive: 40,
       // Remettre un certificat en état est une intervention courte et
       // chiffrable : c'est exactement le périmètre d'une maintenance.
       invalid_certificate: 55,
@@ -134,6 +161,9 @@ export const TRIGGER_HALF_LIVES: Record<string, number> = {
   // mais il a été livré une fois et n'a pas à revenir.
   website_found_down: 45,
   certificate_expired: 60,
+  // Une entreprise qui se remet à toucher son site décide vite : la fenêtre
+  // utile est celle de la décision, pas celle du chantier.
+  frozen_site_woke_up: 20,
   website_changed: 14,
   // Une adresse déposée reste un motif de contact quelques semaines : passé
   // ce délai, soit le site est monté, soit le projet a été abandonné.

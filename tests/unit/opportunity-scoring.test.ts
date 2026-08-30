@@ -7,7 +7,7 @@ import {
   type ScoringInput,
   type ScoringSignal,
 } from '../../packages/core/src/opportunities/scoring';
-import { ruleFor } from '../../packages/core/src/opportunities/rules';
+import { ruleFor, OPPORTUNITY_RULES } from '../../packages/core/src/opportunities/rules';
 
 /**
  * Scoring des opportunités.
@@ -223,5 +223,92 @@ describe('évaluation de tous les types', () => {
 
   it('ne renvoie rien quand aucun type ne tient', () => {
     expect(scoreAll(input({ signals: [signal({ signalType: 'active_business' })] }))).toEqual([]);
+  });
+});
+
+describe('opportunité sans fait daté', () => {
+  const constat = (types: string[]) => types.map((signalType) => ({
+    signalType, kind: 'modifier' as const, category: 'need' as const,
+    strength: 0.9, confidence: 0.9, occurredAt: null, triggerEventId: null,
+  }));
+
+  const refonte = ruleFor('website_redesign')!;
+
+  it('exige plusieurs constats mesurés', () => {
+    // Un seul constat — « le site est vieux » — n'est pas une opportunité,
+    // c'est une opinion. Trois forment un dossier qu'on peut ouvrir devant
+    // l'interlocuteur.
+    expect(scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable', signals: constat(['outdated_stack']),
+    }))).toBeNull();
+
+    expect(scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable',
+      signals: constat(['outdated_stack', 'no_ssl', 'slow_website']),
+    }))).not.toBeNull();
+  });
+
+  it('ne compte que les constats qui pèsent sur cette règle', () => {
+    // Un signal présent mais sans poids dans la règle ne prouve rien la
+    // concernant : le compter gonflerait artificiellement le dossier.
+    expect(scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable',
+      signals: constat(['outdated_stack', 'no_ssl', 'active_business', 'reachable']),
+    }))).toBeNull();
+  });
+
+  it('n’est jamais proposée par une règle qui ne l’autorise pas', () => {
+    // Seule la refonte déroge à la règle du fait daté. Les autres familles
+    // exigent un déclencheur, sans exception.
+    for (const rule of OPPORTUNITY_RULES.filter((r) => r.diagnosticMinFacts === undefined)) {
+      expect(scoreOpportunity(rule, input({
+        websiteStatus: 'reachable',
+        signals: constat(Object.keys(rule.needWeights)),
+      }))).toBeNull();
+    }
+  });
+
+  it('passe derrière une opportunité datée de besoin équivalent', () => {
+    const besoins = ['outdated_stack', 'no_ssl', 'slow_website'];
+
+    const sansDate = scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable', signals: constat(besoins),
+    }))!;
+
+    const avecDate = scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable',
+      signals: [...constat(besoins), {
+        signalType: 'website_found_down', kind: 'trigger' as const, category: 'timing' as const,
+        strength: 0.9, confidence: 0.9,
+        occurredAt: new Date().toISOString(), triggerEventId: 'e1',
+      }],
+    }))!;
+
+    expect(avecDate.baseScore).toBeGreaterThan(sansDate.baseScore);
+  });
+
+  it('se signale comme telle en base', () => {
+    // Une opportunité livrée sans fait daté doit pouvoir être reconnue sans
+    // avoir à le déduire : c'est ce qui permettra de mesurer sa valeur.
+    const scored = scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable',
+      signals: constat(['outdated_stack', 'no_ssl', 'slow_website']),
+    }))!;
+
+    expect(scored.reason['diagnostic_only']).toBe(true);
+    expect(scored.triggerType).toBeNull();
+    expect(scored.triggerEventId).toBeNull();
+  });
+
+  it('reste au-dessus du seuil de livraison quand le dossier est solide', () => {
+    // Le timing n'est pas mauvais, il est hors sujet : le noter zéro
+    // plafonnerait ces opportunités sous le seuil, quelle que soit la qualité
+    // du diagnostic, et la famille entière serait inerte.
+    const scored = scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable',
+      signals: constat(['website_broken', 'outdated_stack', 'no_ssl', 'slow_website']),
+    }))!;
+
+    expect(scored.baseScore).toBeGreaterThan(55);
   });
 });
