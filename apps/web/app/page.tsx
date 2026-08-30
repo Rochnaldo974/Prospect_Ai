@@ -237,7 +237,7 @@ function Market() {
  */
 function TimeSaved() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-28 pt-28">
+    <section className="mx-auto max-w-6xl px-6 pb-24 pt-24">
       <Reveal>
         <p className="field-label">Le temps que ça vous prend</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">

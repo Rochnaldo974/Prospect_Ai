@@ -24,33 +24,40 @@ const BEFORE = 8;
 const AFTER = 1;
 
 /** Chaque grief avec sa réponse. L'ordre suit celui d'une journée. */
+/**
+ * Chaque grief avec sa réponse, une ligne chacun.
+ *
+ * Les preuves tiennent en une demi-phrase : la section doit entrer dans un
+ * écran de portable, et c'est le verdict en gras qui porte — le reste ne
+ * fait que confirmer.
+ */
 const PAIRS: Array<{
   pain: [string, string];
   answer: [string, string];
 }> = [
   {
-    pain: ['Chercher au hasard.', 'Des heures à lister des entreprises sans savoir si une seule a un besoin.'],
-    answer: ['Cinq dossiers prêts.', 'Le problème est constaté, daté, et choisi selon ce que vous savez faire.'],
+    pain: ['Chercher au hasard.', 'Des heures pour zéro besoin trouvé.'],
+    answer: ['Cinq dossiers prêts.', 'Besoin constaté, daté, dans vos cordes.'],
   },
   {
-    pain: ['Vingt sites à ouvrir.', 'Pour en trouver un seul qui cloche, à l’œil.'],
-    answer: ['Déjà analysés.', 'Le défaut est nommé, et vérifiable en une minute.'],
+    pain: ['Vingt sites à ouvrir.', 'Pour un seul qui cloche.'],
+    answer: ['Déjà analysés.', 'Défaut nommé, vérifiable en une minute.'],
   },
   {
-    pain: ['Le contact introuvable.', 'Le bon numéro, le bon formulaire, la bonne personne.'],
-    answer: ['Le numéro est dans le dossier.', 'Celui que l’entreprise publie elle-même.'],
+    pain: ['Le contact introuvable.', ''],
+    answer: ['Le numéro est dans le dossier.', ''],
   },
   {
-    pain: ['Quoi dire ?', 'Faute d’accroche, le message générique part — et reste sans réponse.'],
-    answer: ['L’angle est écrit.', 'Par quoi commencer, et pourquoi appeler maintenant.'],
+    pain: ['Quoi dire ?', 'Le message générique reste sans réponse.'],
+    answer: ['L’angle est écrit.', 'Et pourquoi appeler maintenant.'],
   },
   {
-    pain: ['Quatrième à appeler.', 'Le dirigeant a déjà été démarché trois fois cette semaine.'],
-    answer: ['Seul pendant 72 h.', 'Personne d’autre ne reçoit cette entreprise.'],
+    pain: ['Quatrième à appeler.', 'Déjà démarché trois fois.'],
+    answer: ['Seul pendant 72 h.', 'Personne d’autre ne la reçoit.'],
   },
   {
-    pain: ['Le fil se perd.', 'Qui a été appelé, relancé, oublié.'],
-    answer: ['Suivi en un clic.', 'L’issue est notée ; l’entreprise sort du circuit ou y revient.'],
+    pain: ['Le fil se perd.', ''],
+    answer: ['Suivi en un clic.', ''],
   },
 ];
 
@@ -58,7 +65,7 @@ export function TimeGain() {
   const { ref, inView } = useInView<HTMLDivElement>();
 
   return (
-    <div ref={ref} className="mt-14">
+    <div ref={ref} className="mt-10">
       <div className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04),0_24px_60px_-32px_rgba(11,13,20,.2)]">
         <div className="grid md:grid-cols-2">
           <ColumnHead
@@ -103,7 +110,7 @@ function ColumnHead({
 }) {
   return (
     <div
-      className="border-b px-6 py-6 sm:px-7"
+      className="border-b px-6 py-4.5 sm:px-7"
       style={{ backgroundColor: highlighted ? 'color-mix(in srgb, var(--brand) 5%, var(--white))' : undefined }}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
@@ -111,7 +118,7 @@ function ColumnHead({
           {eyebrow}
         </p>
         <p className="flex items-baseline gap-1.5">
-          <span className="tabular text-3xl font-semibold tracking-tight" style={{ color }}>
+          <span className="tabular text-2xl font-semibold tracking-tight" style={{ color }}>
             {hours} h
           </span>
           <span className="text-xs text-muted-foreground">/ semaine</span>
@@ -122,7 +129,7 @@ function ColumnHead({
           dans le champ : voir la petite s'arrêter tôt pendant que la grande
           continue, c'est l'argument joué plutôt qu'affiché. */}
       <div
-        className="mt-4 h-2 overflow-hidden rounded-full"
+        className="mt-3 h-2 overflow-hidden rounded-full"
         style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}
         aria-hidden
       >
@@ -162,19 +169,19 @@ function Cell({
 }) {
   return (
     <div
-      className="flex gap-4 border-b px-6 py-5 last:border-b-0 sm:px-7 md:[&:nth-last-child(2)]:border-b-0"
+      className="flex gap-3.5 border-b px-6 py-3.5 last:border-b-0 sm:px-7 md:[&:nth-last-child(2)]:border-b-0"
       style={{ backgroundColor: highlighted ? 'color-mix(in srgb, var(--brand) 5%, var(--white))' : undefined }}
     >
       <span
         aria-hidden
-        className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold"
+        className="grid size-5.5 shrink-0 place-items-center rounded-full text-[10px] font-semibold"
         style={{ color, backgroundColor: wash }}
       >
         {mark}
       </span>
-      <p className="text-[15px] leading-relaxed">
-        <span className="font-semibold">{lead}</span>{' '}
-        <span className="text-muted-foreground">{rest}</span>
+      <p className="text-[15px] leading-snug">
+        <span className="font-semibold">{lead}</span>
+        {rest ? <span className="text-muted-foreground"> {rest}</span> : null}
       </p>
     </div>
   );
