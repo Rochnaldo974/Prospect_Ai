@@ -18,3 +18,4 @@ pnpm-debug.log*
 supabase/.branches/
 supabase/.temp/
 .vercel
+.env.production
