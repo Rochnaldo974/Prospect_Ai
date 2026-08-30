@@ -32,16 +32,16 @@ export function DossierPreview() {
         <div className="grid gap-x-10 gap-y-8 px-6 py-7 sm:px-8 lg:grid-cols-[1.35fr_1fr]">
           <div className="space-y-7">
             <Part title="Pourquoi cette entreprise">
-              SAKURA, restaurant à Angers. Le site ne répond pas (erreur HTTP 503). Certificat
-              auto-signé : les navigateurs le refusent et avertissent le visiteur. Ces éléments
-              rendent une proposition de refonte pertinente. Ils ne disent pas que l’entreprise a
-              formulé ce besoin.
+              SAKURA, restaurant à Angers. Son site ne s’ouvre plus, et le navigateur affiche
+              une alerte de sécurité avant même d’essayer. Un client qui cherche l’adresse ou les
+              horaires ne trouve rien. C’est un bon motif de proposer une refonte — pas la preuve
+              que l’entreprise l’a demandée.
             </Part>
 
             <Part title="Pourquoi maintenant">
-              À deux passages successifs, l’adresse que l’entreprise donne pour site n’a pas
-              répondu. Nous ne savons pas depuis quand. Ce que ses clients rencontrent
-              aujourd’hui en la cherchant, en revanche, se vérifie en une minute.
+              À deux passages successifs, le site n’a pas répondu. Nous ignorons depuis quand
+              c’est le cas — mais ce que ses clients trouvent aujourd’hui en la cherchant, vous
+              pouvez le vérifier en une minute.
             </Part>
 
             <Part title="Par quoi commencer">
@@ -55,9 +55,9 @@ export function DossierPreview() {
               <p className="field-label">Ce qui a été constaté</p>
               <div className="mt-2">
                 {[
-                  'Le site ne répond pas (erreur HTTP 503)',
-                  'Certificat auto-signé : refusé par les navigateurs',
-                  'Nom de domaine déposé il y a 14 ans',
+                  'Le site ne s’ouvre pas — erreur 503',
+                  'Alerte de sécurité affichée aux visiteurs',
+                  'Adresse du site déposée il y a 14 ans',
                 ].map((fact, i) => (
                   <p key={fact} className="evidence">
                     <span className="evidence__mark" aria-hidden>
@@ -74,7 +74,7 @@ export function DossierPreview() {
                 À savoir avant d’appeler
               </p>
               <p className="mt-1.5 text-sm leading-relaxed text-[var(--finding)]">
-                Informations partielles : à vérifier avant de contacter.
+                Nous ne savons pas depuis quand le site est en panne. À vérifier avant d’appeler.
               </p>
             </section>
 

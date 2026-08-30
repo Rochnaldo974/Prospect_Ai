@@ -41,17 +41,17 @@ const DURATIONS: Record<Phase, number> = {
 };
 
 const CHECKS = [
-  'Résolution DNS',
-  'Certificat TLS',
-  'Composants et versions',
-  'Adaptation mobile',
-  'Temps de réponse',
+  'Le site répond-il ?',
+  'Est-il sécurisé ?',
+  'Quel âge a-t-il ?',
+  'Lisible sur téléphone ?',
+  'En combien de temps s’affiche-t-il ?',
 ];
 
 const ISSUES = [
-  { label: 'Pas adapté au mobile', detail: 'aucune règle d’adaptation dans les feuilles de style', level: 'grave' },
-  { label: 'Certificat expiré', detail: 'depuis le 25 octobre 2025', level: 'grave' },
-  { label: 'Chargement lent', detail: '4,2 s mesurées au premier octet', level: 'moyen' },
+  { label: 'Illisible sur téléphone', detail: 'la page dépasse de l’écran', level: 'grave' },
+  { label: 'Alerte de sécurité à l’arrivée', detail: 'depuis le 25 octobre 2025', level: 'grave' },
+  { label: 'Quatre secondes avant d’afficher', detail: '4,2 s mesurées', level: 'moyen' },
 ] as const;
 
 export function SiteAudit() {
