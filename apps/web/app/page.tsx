@@ -183,8 +183,8 @@ function Delivered() {
           Ouvrons le premier
         </h2>
         <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-          Chaque ligne de la liste s’ouvre sur ceci : le problème, ce qui le date, ce qu’il
-          reste à vérifier, et le numéro. Vous savez quoi dire avant même de décrocher.
+          Le problème, ce qui le prouve, ce qu’il reste à vérifier, et par quoi commencer.
+          Vous savez quoi dire avant même de décrocher.
         </p>
       </Reveal>
 
