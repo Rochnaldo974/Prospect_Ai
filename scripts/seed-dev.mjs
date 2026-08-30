@@ -92,19 +92,31 @@ for (const account of ACCOUNTS) {
     continue;
   }
 
-  const { error: prefError } = await admin
+  // Les préférences ne sont posées QUE si elles n'existent pas.
+  //
+  // La version précédente les écrasait à chaque exécution : on paramétrait son
+  // compte dans l'interface, on relançait le seed pour reconstruire du stock,
+  // et les réponses disparaissaient sans un mot. Le tableau de bord affichait
+  // alors autre chose que ce qu'on avait demandé, et c'est le moteur qu'on
+  // soupçonnait.
+  const { data: current } = await admin
     .from('user_preferences')
-    .upsert({
-      user_id: data.user.id,
-      // France entière : un compte de développement ne doit pas être privé de
-      // stock par un périmètre trop étroit.
-      location_mode: 'france',
-      city: 'Angers',
-      region: 'Pays de la Loire',
-      services: [],
-      preferred_industries: [],
-      excluded_industries: [],
-    }, { onConflict: 'user_id' });
+    .select('user_id')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
+
+  const { error: prefError } = current
+    ? { error: null }
+    : await admin.from('user_preferences').insert({
+        user_id: data.user.id,
+        // France entière : un compte de développement ne doit pas être privé
+        // de stock par un périmètre trop étroit.
+        location_mode: 'france_remote',
+        services: [],
+        preferred_industries: [],
+        excluded_industries: [],
+      });
+
   if (prefError) {
     console.error(`✗ préférences de ${account.email} : ${prefError.message}`);
     process.exitCode = 1;
