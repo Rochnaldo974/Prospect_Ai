@@ -4,7 +4,6 @@ import { getSessionProfile } from '@/lib/auth/session';
 import { SiteAudit } from '@/components/landing/audit';
 import { Feed } from '@/components/landing/feed';
 import { TimeGain } from '@/components/landing/time-gain';
-import { DossierPreview } from '@/components/landing/dossier';
 import { Reveal } from '@/components/landing/reveal';
 import { SiteHeader } from '@/components/landing/site-header';
 
@@ -70,7 +69,7 @@ export default async function HomePage() {
       <main>
         <Hero />
         <Market />
-        <Delivered />
+        <TimeSaved />
         <Pricing />
       </main>
 
@@ -158,43 +157,42 @@ function Market() {
           <Feed />
         </Reveal>
 
-        <div className="mt-6">
-          <TimeGain />
-        </div>
-
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
           Cas réels, identités retirées, scores conformes au barème du moteur. 828 des 1 572
-          sites déjà analysés présentent au moins un défaut visible. Une heure contre huit :
-          ordre de grandeur, pas une mesure.
+          sites d’entreprises françaises déjà analysés présentent au moins un défaut visible.
         </p>
       </div>
     </section>
   );
 }
 
-/** Un dossier ouvert : le détail, après le volume. */
-function Delivered() {
+/**
+ * Le temps repris.
+ *
+ * Cette place revenait au dossier grand format. Il montrait bien ce qu'on
+ * achète, mais la liste juste au-dessus le montrait déjà — cinq fois, en
+ * plus court. Deux sections pour dire « voilà une entreprise et son
+ * problème » en faisaient une de trop.
+ *
+ * Ce qui manquait, à l'inverse, c'était la raison d'acheter : ce que le
+ * lecteur récupère. Elle occupe donc la section entière plutôt qu'une carte
+ * coincée sous la liste.
+ */
+function TimeSaved() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-24">
       <Reveal>
-        <p className="field-label">Ce que vous recevez</p>
+        <p className="field-label">Le temps que ça vous prend</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-          Ouvrons le premier
+          Sept heures reprises, chaque semaine
         </h2>
         <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-          Le problème, ce qui le prouve, ce qu’il reste à vérifier, et par quoi commencer.
-          Vous savez quoi dire avant même de décrocher.
+          Ce n’est pas la partie qui rapporte que le service vous enlève, c’est celle qui
+          prépare. Elle est déjà faite quand vous vous levez.
         </p>
+
+        <TimeGain />
       </Reveal>
-
-      <div className="mt-12">
-        <DossierPreview />
-      </div>
-
-      <p className="mt-6 text-xs text-muted-foreground">
-        Dossier réel, produit par le moteur. Chaque constat se vérifie en ouvrant l’adresse du
-        site.
-      </p>
     </section>
   );
 }
