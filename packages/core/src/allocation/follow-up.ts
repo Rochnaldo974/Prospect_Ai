@@ -21,6 +21,8 @@ export type OpenOutcome = (typeof OPEN_OUTCOMES)[number];
 export interface FollowUp {
   assignmentId: string;
   outcome: OpenOutcome;
+  /** La note laissée à la déclaration — la mémoire du freelance. */
+  notes: string | null;
   /** Date de la dernière déclaration, pour trier du plus ancien au plus récent. */
   outcomeAt: string;
   daysSince: number;
@@ -36,7 +38,7 @@ export interface FollowUp {
 export async function getFollowUps(db: Db, userId: string): Promise<FollowUp[]> {
   const { data, error } = await db
     .from('assignments')
-    .select('id, outcome, outcome_at, opportunities!inner(opportunity_type), companies!inner(legal_name, commercial_name, city, phone, website_url)')
+    .select('id, outcome, outcome_at, notes, opportunities!inner(opportunity_type), companies!inner(legal_name, commercial_name, city, phone, website_url)')
     .eq('user_id', userId)
     .in('outcome', OPEN_OUTCOMES)
     .order('outcome_at', { ascending: true });
@@ -57,6 +59,7 @@ export async function getFollowUps(db: Db, userId: string): Promise<FollowUp[]> 
     return {
       assignmentId: row.id as string,
       outcome: row.outcome as OpenOutcome,
+      notes: (row.notes as string | null) ?? null,
       outcomeAt,
       daysSince: Math.floor((now - new Date(outcomeAt).getTime()) / 86_400_000),
       type: opportunity.opportunity_type,

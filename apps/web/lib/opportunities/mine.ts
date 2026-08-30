@@ -1,6 +1,6 @@
 import 'server-only';
 import {
-  diagnoseEmptyDay, getFollowUps, getOutcomeStats, getServiceClient, getTodayOpportunities,
+  diagnoseEmptyDay, getFollowUps, getOutcomeStats, getServiceClient, getTodayOpportunities, markDayViewed,
   type EmptyDiagnosis, type FollowUp, type OutcomeStats, type TodayOpportunity,
 } from '@prospect/core';
 import { requireOnboardedUser } from '@/lib/auth/session';
@@ -43,6 +43,10 @@ export async function getMyOpportunities(): Promise<{
     getTodayOpportunities(db, profile.id),
     getFollowUps(db, profile.id),
   ]);
+
+  // « Livré et vu » : la mesure dont l'expérience a besoin pour comparer le
+  // groupe témoin. Après la lecture, pour ne jamais retarder l'affichage.
+  await markDayViewed(db, profile.id);
 
   const now = Date.now();
 

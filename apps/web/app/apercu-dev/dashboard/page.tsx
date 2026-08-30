@@ -33,7 +33,7 @@ export default function DashboardPreview() {
             <span className="text-lg font-semibold tracking-[-0.03em]">
               prospect<span className="text-[var(--brand)]">.ai</span>
             </span>
-            <DashboardNav />
+            <DashboardNav followUpCount={2} />
           </div>
           <div className="flex items-center gap-5 text-sm text-muted-foreground">
             <span>Préférences</span>
@@ -126,7 +126,7 @@ export default function DashboardPreview() {
                   </span>
                 </div>
                 <div className="mt-4 border-t pt-4">
-                  <FollowUpForm assignmentId={followUp.assignmentId} current={followUp.outcome} />
+                  <FollowUpForm assignmentId={followUp.assignmentId} current={followUp.outcome} notes={followUp.notes} />
                 </div>
               </article>
             ))}
@@ -233,6 +233,7 @@ function followUps(): FollowUp[] {
     {
       assignmentId: 'fix-f1',
       outcome: 'meeting',
+      notes: 'Rendez-vous mardi 10 h — demander Mme Perrot, apporter deux références.',
       outcomeAt: '2026-01-01T00:00:00Z',
       daysSince: 24,
       type: 'website_redesign',
@@ -241,6 +242,7 @@ function followUps(): FollowUp[] {
     {
       assignmentId: 'fix-f2',
       outcome: 'interested',
+      notes: null,
       outcomeAt: '2026-01-01T00:00:00Z',
       daysSince: 3,
       type: 'website_creation',

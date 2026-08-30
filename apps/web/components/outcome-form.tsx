@@ -50,17 +50,38 @@ export function OutcomeForm({
         Qu&apos;est-ce que ça a donné ?
       </p>
 
-      <div className="flex flex-wrap gap-2">
-        {ISSUES.map((issue) => (
-          <form key={issue.value} action={declareOutcome}>
-            <input type="hidden" name="assignmentId" value={assignmentId} />
-            <input type="hidden" name="outcome" value={issue.value} />
-            <Button type="submit" variant="outline" size="sm" title={issue.hint}>
+      {/* Un seul formulaire pour les six issues : la note doit partir avec
+          le bouton cliqué, et six formulaires séparés ne peuvent pas
+          partager un champ. */}
+      <form action={declareOutcome} className="space-y-3">
+        <input type="hidden" name="assignmentId" value={assignmentId} />
+
+        <div className="flex flex-wrap gap-2">
+          {ISSUES.map((issue) => (
+            <Button
+              key={issue.value}
+              type="submit"
+              name="outcome"
+              value={issue.value}
+              variant="outline"
+              size="sm"
+              title={issue.hint}
+            >
               {issue.label}
             </Button>
-          </form>
-        ))}
-      </div>
+          ))}
+        </div>
+
+        {/* La mémoire du freelance : relue telle quelle dans À relancer.
+            Facultative — un champ requis ferait mentir. */}
+        <input
+          type="text"
+          name="notes"
+          maxLength={500}
+          placeholder="Une note pour vous, facultative — ex. rappeler jeudi, demander le gérant"
+          className="w-full rounded-lg border bg-card px-3.5 py-2.5 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+        />
+      </form>
 
       {/* À l'écart du reste : ce n'est pas une issue commerciale de plus, et
           la confondre avec « pas intéressé » retirerait du service une

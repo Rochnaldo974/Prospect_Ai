@@ -80,6 +80,7 @@ export type Database = {
           id: string
           is_control: boolean
           match_score: number
+          notes: string | null
           opportunity_id: string
           outcome: Database["public"]["Enums"]["assignment_outcome"] | null
           outcome_at: string | null
@@ -97,6 +98,7 @@ export type Database = {
           id?: string
           is_control?: boolean
           match_score: number
+          notes?: string | null
           opportunity_id: string
           outcome?: Database["public"]["Enums"]["assignment_outcome"] | null
           outcome_at?: string | null
@@ -114,6 +116,7 @@ export type Database = {
           id?: string
           is_control?: boolean
           match_score?: number
+          notes?: string | null
           opportunity_id?: string
           outcome?: Database["public"]["Enums"]["assignment_outcome"] | null
           outcome_at?: string | null

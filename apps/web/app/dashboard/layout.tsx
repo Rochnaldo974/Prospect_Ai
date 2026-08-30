@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getFollowUps, getServiceClient } from '@prospect/core';
 import { getSessionProfile } from '@/lib/auth/session';
 import { signOut } from '@/app/(auth)/actions';
 import { DashboardNav } from '@/components/dashboard/nav';
@@ -13,6 +14,9 @@ import { DashboardNav } from '@/components/dashboard/nav';
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const profile = await getSessionProfile();
+  const followUpCount = profile
+    ? (await getFollowUps(getServiceClient(), profile.id)).length
+    : 0;
 
   return (
     <div className="min-h-dvh bg-[var(--mist)]">
@@ -22,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard" className="text-lg font-semibold tracking-[-0.03em]">
               prospect<span className="text-[var(--brand)]">.ai</span>
             </Link>
-            <DashboardNav />
+            <DashboardNav followUpCount={followUpCount} />
           </div>
 
           <div className="flex items-center gap-5 text-sm">

@@ -110,7 +110,11 @@ function Row({ followUp }: { followUp: FollowUp }) {
       </div>
 
       <div className="mt-4 border-t pt-4">
-        <FollowUpForm assignmentId={followUp.assignmentId} current={followUp.outcome} />
+        <FollowUpForm
+          assignmentId={followUp.assignmentId}
+          current={followUp.outcome}
+          notes={followUp.notes}
+        />
       </div>
     </article>
   );

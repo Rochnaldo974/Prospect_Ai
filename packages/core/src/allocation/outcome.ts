@@ -96,6 +96,10 @@ export async function recordOutcome(
       outcome: input.outcome,
       outcome_at: nowIso,
       contacted_at: contactedAt,
+      // La note vit ici, sur l'attribution : c'est la mémoire du freelance,
+      // et l'écran À relancer la lui remontre. La copie dans le cooldown ne
+      // sert qu'au diagnostic interne.
+      notes: input.notes ?? null,
     })
     .eq('id', assignment.id);
 
@@ -216,6 +220,23 @@ export async function recordOptOut(
     cooldownUntil: null,
     permanent: true,
   };
+}
+
+/**
+ * Marque comme vues toutes les attributions du jour d'un utilisateur.
+ *
+ * Appelée quand la page du matin se rend : « livré et vu » est la mesure
+ * dont l'expérience a besoin pour comparer le groupe témoin. L'ouverture
+ * d'un dossier précis n'est pas traquée — un <details> natif n'émet rien
+ * au serveur, et c'est un choix : pas de télémétrie de lecture.
+ */
+export async function markDayViewed(db: Db, userId: string): Promise<void> {
+  await db
+    .from('assignments')
+    .update({ viewed_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .in('status', ['active', 'contacted'])
+    .is('viewed_at', null);
 }
 
 /** Marque l'opportunité comme vue. Sert à mesurer, jamais à contraindre. */
