@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
-import { ScanDemo } from '@/components/landing/scan';
+import { SiteAudit } from '@/components/landing/audit';
+import { WeekComparison } from '@/components/landing/comparison';
+import { Pipeline } from '@/components/landing/pipeline';
 import { Reveal } from '@/components/landing/reveal';
+import { GoogleButton } from '@/components/google-button';
 
 export const metadata: Metadata = {
-  title: 'Prospect AI — cinq prospects vérifiés, chaque matin',
+  title: 'Prospect AI — sache ce qui cloche avant d’appeler',
   description:
-    'Pour développeurs web et mobile freelances : cinq entreprises par jour, avec la preuve datée qui justifie l’appel. Analyse du site, du certificat, des composants et des registres publics.',
+    'Pour développeurs web et mobile freelances : chaque entreprise proposée est auditée — score du site, certificat, mobile, performances — et tu reçois le défaut à corriger avec de quoi le prouver.',
 };
 
 /**
@@ -42,9 +45,14 @@ export default async function HomePage() {
               </Link>
             ) : (
               <>
-                <Link href="/login" className="text-muted-foreground transition-colors hover:text-foreground">
+                <Link href="/login" className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline">
                   Connexion
                 </Link>
+                {/* Google dans la barre : c'est le chemin le plus court vers
+                    un compte, et le seul où aucun mot de passe ne transite. */}
+                <div className="hidden md:block">
+                  <GoogleButton label="Continuer avec Google" compact />
+                </div>
                 <Link
                   href="/signup"
                   className="rounded-full bg-[var(--ink)] px-4 py-2 text-sm font-medium text-[var(--white)] transition-transform duration-200 hover:-translate-y-px"
@@ -60,6 +68,7 @@ export default async function HomePage() {
       <main>
         <Hero />
         <TimeSaved />
+        <Funnel />
         <Sources />
         <HowItWorks />
         <Pricing />
@@ -78,20 +87,22 @@ export default async function HomePage() {
 
 function Hero() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-24 pt-16 lg:pt-24">
-      <div className="grid gap-14 lg:grid-cols-[1fr_1.02fr] lg:items-center lg:gap-20">
+    <section className="mx-auto max-w-6xl px-6 pb-24 pt-14 lg:pt-20">
+      <div className="grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-16">
         <div className="max-w-xl motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both]">
-          <p className="field-label">Pour développeurs web et mobile</p>
+          <p className="field-label">Développeurs web et mobile · freelances</p>
 
-          <h1 className="mt-5 text-[clamp(2.5rem,5.5vw,4rem)] font-semibold leading-[1.02] tracking-[-0.04em]">
-            Cinq prospects par jour.
-            <span className="block text-muted-foreground">Déjà vérifiés.</span>
+          {/* Le passage à la ligne est imposé, pas laissé au hasard : la
+              coupure porte le sens — ce qui cloche / avant d'appeler. */}
+          <h1 className="mt-5 max-w-[16ch] text-[clamp(2.25rem,4.2vw,3.5rem)] font-semibold leading-[1.03] tracking-[-0.04em]">
+            Sache ce qui cloche sur leur site{' '}
+            <span className="text-[var(--brand)]">avant de décrocher.</span>
           </h1>
 
-          <p className="reasoning mt-6 text-muted-foreground">
-            Le moteur lit le site de chaque entreprise — certificat, composants, temps de
-            réponse — et le croise avec les registres publics. Tu reçois le fait daté qui
-            justifie d’appeler, pas une ligne dans un fichier.
+          <p className="reasoning mt-6 max-w-lg text-muted-foreground">
+            Le moteur audite le site de chaque entreprise — mobile, certificat, performances,
+            technologies — et ne te la propose que si le défaut est réel et l’entreprise
+            joignable. Tu ouvres l’adresse, tu vois le problème, tu appelles.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
@@ -99,19 +110,19 @@ function Hero() {
               href="/signup"
               className="group rounded-full bg-[var(--brand)] px-6 py-3.5 text-sm font-medium text-white transition-transform duration-200 hover:-translate-y-px"
             >
-              Commencer
+              Voir mes premiers dossiers
               <span className="ml-2 inline-block transition-transform duration-200 group-hover:translate-x-0.5">
                 →
               </span>
             </Link>
             <span className="text-sm text-muted-foreground">
-              Trois questions. Premier lot demain matin.
+              Trois questions, une minute.
             </span>
           </div>
         </div>
 
         <div className="motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both] [animation-delay:150ms]">
-          <ScanDemo />
+          <SiteAudit />
         </div>
       </div>
     </section>
@@ -119,50 +130,60 @@ function Hero() {
 }
 
 /**
- * Le gain de temps, chiffré honnêtement.
+ * Ce que la prospection coûte, et ce qu'elle rapporte.
  *
- * Les deux premiers nombres décrivent le produit et sont exacts. Le troisième
- * est une estimation du temps qu'un tri manuel demanderait, et il est présenté
- * comme telle : gonfler ce chiffre serait le plus facile et le plus court des
- * mensonges.
+ * Un développeur freelance ne manque pas de contacts : il manque de temps, et
+ * il a déjà constaté qu'envoyer soixante e-mails à froid ne rapporte presque
+ * rien. L'argument porte donc sur les heures, pas sur le volume.
  */
 function TimeSaved() {
-  const facts = [
-    { n: '5', unit: '/ jour', label: 'Prospects livrés', note: 'Jamais les mêmes que quelqu’un d’autre.' },
-    { n: '0', unit: 'doublon', label: 'Exclusivité garantie', note: 'Par la base de données, pas par du code.' },
-    { n: '~3 h', unit: '/ semaine', label: 'Tri manuel évité', note: 'Estimation, pas une promesse contractuelle.' },
-  ];
-
   return (
     <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-20">
+      <div className="mx-auto max-w-6xl px-6 py-24">
         <Reveal>
-          <h2 className="max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em]">
-            Prospecter, c’est trier. On garde le tri.
+          <h2 className="max-w-2xl text-[clamp(1.875rem,3.2vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+            Prospecter, ce n’est pas trouver.
+            <span className="block text-muted-foreground">C’est trier.</span>
           </h2>
-          <p className="reasoning mt-4 text-muted-foreground">
-            Un annuaire te donne dix mille entreprises et te laisse deviner lesquelles valent un
-            appel. Ici, le tri est déjà fait — et tu peux vérifier chaque raison en ouvrant
-            l’adresse.
+          <p className="reasoning mt-5 text-muted-foreground">
+            Trouver dix mille entreprises prend cinq minutes. Savoir lesquelles valent un appel
+            prend des heures — et c’est cette partie-là qu’on te retire.
           </p>
         </Reveal>
 
-        <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border bg-[var(--line)] sm:grid-cols-3">
-          {facts.map((fact, i) => (
-            <Reveal key={fact.label} delay={i * 80}>
-              <div className="h-full bg-[var(--white)] p-6">
-                <p className="tabular text-4xl font-semibold tracking-[-0.04em]">
-                  {fact.n}
-                  <span className="ml-1.5 text-base font-normal text-muted-foreground">
-                    {fact.unit}
-                  </span>
-                </p>
-                <p className="mt-3 text-sm font-medium">{fact.label}</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{fact.note}</p>
-              </div>
-            </Reveal>
-          ))}
+        <div className="mt-12">
+          <WeekComparison />
         </div>
+
+        <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
+          Exemple d’une semaine type, donné à titre d’illustration. Le seul chiffre garanti est
+          l’exclusivité : une entreprise attribuée ne l’est qu’à une personne, et la base de
+          données l’impose.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Le tri, en chiffres réels.
+ *
+ * Ce que la section précédente affirme en heures, celle-ci le montre en
+ * volumes : quatre maillons, chacun élimine, et ce qui arrive au bout a
+ * survécu à tout le reste.
+ */
+function Funnel() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-24">
+      <Reveal>
+        <p className="field-label">Du parc entier à tes cinq dossiers</p>
+        <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.2vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+          Quatre millions d’adresses. Cinq qui te concernent.
+        </h2>
+      </Reveal>
+
+      <div className="mt-12">
+        <Pipeline />
       </div>
     </section>
   );

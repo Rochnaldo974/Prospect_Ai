@@ -1,22 +1,22 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePrefersReducedMotion } from '@/lib/hooks/use-reduced-motion';
 
 /**
  * Une section qui monte en entrant dans le champ de vision.
  *
- * Trois précautions, apprises en la cassant : une animation d'apparition qui
+ * Deux précautions, apprises en la cassant : une animation d'apparition qui
  * masque son contenu en attendant un déclencheur laisse une page BLANCHE dès
- * que ce déclencheur tarde ou n'arrive jamais. C'est le pire défaut possible
- * pour un effet purement décoratif.
+ * que ce déclencheur tarde ou n'arrive jamais. Pour un effet purement
+ * décoratif, c'est le pire défaut possible.
  *
- *   ce qui est déjà visible au montage n'est jamais masqué ;
- *   un filet de sécurité révèle tout au bout d'une seconde, quoi qu'il
- *     arrive — observateur absent, script en échec, onglet en arrière-plan ;
- *   la préférence « moins de mouvement » court-circuite tout.
+ *   un filet de sécurité révèle tout au bout d'une seconde, quoi qu'il arrive ;
+ *   la préférence « moins de mouvement » affiche le contenu sans condition.
  *
- * L'observateur est débranché après le premier passage : une animation qui
- * rejoue à chaque défilement transforme une page en manège.
+ * Aucun contrôle manuel de la position : l'observateur signale de lui-même un
+ * élément déjà visible au montage. L'observer est débranché après le premier
+ * passage — une animation qui rejoue à chaque défilement fait un manège.
  */
 export function Reveal({
   children,
@@ -27,22 +27,11 @@ export function Reveal({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
+  const reduced = usePrefersReducedMotion();
 
   useEffect(() => {
     const node = ref.current;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (reduced || !node || typeof IntersectionObserver === 'undefined') {
-      setShown(true);
-      return;
-    }
-
-    // Déjà à l'écran au chargement : on affiche sans attendre de croisement,
-    // qui pourrait ne jamais se produire pour un élément immobile.
-    if (node.getBoundingClientRect().top < window.innerHeight) {
-      setShown(true);
-      return;
-    }
+    if (!node || typeof IntersectionObserver === 'undefined') return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -55,12 +44,7 @@ export function Reveal({
     );
 
     observer.observe(node);
-
-    // Filet : au-delà d'une seconde, le contenu passe avant l'effet.
-    const failsafe = window.setTimeout(() => {
-      setShown(true);
-      observer.disconnect();
-    }, 1000);
+    const failsafe = window.setTimeout(() => setShown(true), 1000);
 
     return () => {
       observer.disconnect();
@@ -68,15 +52,17 @@ export function Reveal({
     };
   }, []);
 
+  const visible = shown || reduced;
+
   return (
     <div
       ref={ref}
       className={
-        shown
+        visible
           ? 'motion-safe:animate-[revealUp_.65s_cubic-bezier(.16,.84,.44,1)_both]'
-          : 'opacity-0'
+          : 'opacity-0 motion-reduce:opacity-100'
       }
-      style={shown ? { animationDelay: `${delay}ms` } : undefined}
+      style={visible ? { animationDelay: `${delay}ms` } : undefined}
     >
       {children}
     </div>

@@ -8,13 +8,26 @@ import { signInWithGoogle } from '@/app/(auth)/actions';
  * chargé depuis un CDN : une dépendance externe pour vingt lignes de vecteur
  * ajouterait une requête bloquante sur l'écran d'entrée.
  */
-export function GoogleButton({ next, label }: { next?: string; label: string }) {
+export function GoogleButton({
+  next,
+  label,
+  compact = false,
+}: {
+  next?: string;
+  label: string;
+  /** Version resserrée pour la barre de navigation. */
+  compact?: boolean;
+}) {
   return (
     <form action={signInWithGoogle}>
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <button
         type="submit"
-        className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border bg-card text-sm font-medium transition-colors duration-150 hover:bg-accent"
+        className={
+          compact
+            ? 'flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150 hover:bg-[var(--mist)]'
+            : 'flex h-11 w-full items-center justify-center gap-3 rounded-lg border bg-card text-sm font-medium transition-colors duration-150 hover:bg-accent'
+        }
       >
         <GoogleMark />
         {label}
