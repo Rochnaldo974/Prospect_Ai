@@ -43,17 +43,30 @@ const ACCOUNTS = [
   { email: 'paul@prospect.local', password: 'paul123456', fullName: 'Paul Freelance', role: 'user' },
 ];
 
-for (const account of ACCOUNTS) {
-  const { data: list } = await admin.auth.admin.listUsers();
-  const existing = list.users.find((u) => u.email === account.email);
-  if (existing) await admin.auth.admin.deleteUser(existing.id);
+// Le compte est réutilisé plutôt que recréé.
+//
+// Supprimer puis recréer donnait un nouvel identifiant à chaque exécution, ce
+// qui invalidait la session ouverte dans le navigateur : on se retrouvait
+// déconnecté sans raison apparente après chaque seed, et le tableau de bord
+// vide donnait à croire que la chaîne était cassée.
+const { data: list } = await admin.auth.admin.listUsers();
 
-  const { data, error } = await admin.auth.admin.createUser({
-    email: account.email,
-    password: account.password,
-    email_confirm: true,
-    user_metadata: { full_name: account.fullName },
-  });
+for (const account of ACCOUNTS) {
+  const existing = list.users.find((u) => u.email === account.email);
+
+  const { data, error } = existing
+    ? await admin.auth.admin.updateUserById(existing.id, {
+        password: account.password,
+        email_confirm: true,
+        user_metadata: { full_name: account.fullName },
+      })
+    : await admin.auth.admin.createUser({
+        email: account.email,
+        password: account.password,
+        email_confirm: true,
+        user_metadata: { full_name: account.fullName },
+      });
+
   if (error) {
     console.error(`✗ ${account.email} : ${error.message}`);
     process.exitCode = 1;
@@ -98,5 +111,6 @@ for (const account of ACCOUNTS) {
     continue;
   }
 
-  console.log(`✓ ${account.email} (${account.role})  —  mot de passe : ${account.password}`);
+  console.log(`✓ ${account.email} (${account.role})  —  mot de passe : ${account.password}`
+    + `${existing ? '  [compte conservé]' : '  [créé]'}`);
 }

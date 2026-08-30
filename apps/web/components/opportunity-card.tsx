@@ -1,6 +1,7 @@
 import type { TodayOpportunity } from '@prospect/core';
 import { OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { OutcomeForm } from '@/components/outcome-form';
 
 /**
  * Une opportunité, telle que le freelance la reçoit.
@@ -91,6 +92,11 @@ export function OpportunityCard({ opportunity }: { opportunity: TodayOpportunity
             </a>
           ) : null}
         </div>
+
+        <OutcomeForm
+          assignmentId={opportunity.assignmentId}
+          contactedAt={opportunity.contactedAt}
+        />
       </CardContent>
     </Card>
   );
