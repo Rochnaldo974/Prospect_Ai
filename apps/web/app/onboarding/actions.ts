@@ -21,11 +21,6 @@ export interface StepState {
  * s'ouvrir l'attribution sans avoir répondu.
  */
 
-const text = (formData: FormData, name: string): string | null => {
-  const value = String(formData.get(name) ?? '').trim();
-  return value.length > 0 ? value.slice(0, 120) : null;
-};
-
 export async function saveServices(_prev: StepState, formData: FormData): Promise<StepState> {
   const profile = await requireUser();
 
@@ -34,25 +29,6 @@ export async function saveServices(_prev: StepState, formData: FormData): Promis
     .filter((value): value is OpportunityType => value in OPPORTUNITY_TYPE_LABELS);
 
   const result = await saveStep(getServiceClient(), profile.id, { services });
-  if (!result.ok) return { problem: result.problem ?? 'Enregistrement impossible.' };
-
-  redirect('/onboarding/zone');
-}
-
-export async function saveZone(_prev: StepState, formData: FormData): Promise<StepState> {
-  const profile = await requireUser();
-
-  const allowed = ['france', 'france_remote', 'region', 'city'] as const;
-  const submitted = String(formData.get('locationMode') ?? 'france');
-  const locationMode = (allowed as readonly string[]).includes(submitted)
-    ? submitted as (typeof allowed)[number]
-    : 'france';
-
-  const result = await saveStep(getServiceClient(), profile.id, {
-    locationMode,
-    city: text(formData, 'city'),
-    region: text(formData, 'region'),
-  });
   if (!result.ok) return { problem: result.problem ?? 'Enregistrement impossible.' };
 
   redirect('/onboarding/secteurs');

@@ -5,13 +5,6 @@ import {
 import { requireUser } from '@/lib/auth/session';
 import { FinishForm } from './finish-form';
 
-const MODE_LABELS: Record<string, string> = {
-  france: 'Partout en France',
-  france_remote: 'Partout en France, à distance',
-  region: 'Ma région',
-  city: 'Ma ville et ses environs',
-};
-
 /**
  * Ce qui a été retenu, et ce que ça donne.
  *
@@ -48,14 +41,6 @@ export default async function RecapStep() {
             ? 'Tout — aucune restriction'
             : answers.services.map((s) => OPPORTUNITY_TYPE_LABELS[s]).join(', '),
           href: '/onboarding/services',
-        },
-        {
-          label: 'Où tu travailles',
-          value: [
-            MODE_LABELS[answers.locationMode] ?? answers.locationMode,
-            [answers.city, answers.region].filter(Boolean).join(', '),
-          ].filter(Boolean).join(' · '),
-          href: '/onboarding/zone',
         },
         {
           label: 'Ce que tu évites',

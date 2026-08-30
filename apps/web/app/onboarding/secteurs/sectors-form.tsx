@@ -16,7 +16,7 @@ export function SectorsForm({ excluded }: { excluded: string[] }) {
         problem={state.problem}
         pending={pending}
         submitLabel="Continuer"
-        back="/onboarding/zone"
+        back="/onboarding/services"
       >
         <div className="grid gap-2.5 sm:grid-cols-2">
           {INDUSTRY_GROUPS.map((group) => (

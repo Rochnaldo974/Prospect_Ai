@@ -20,7 +20,7 @@ export function StatCard({
   tone?: 'default' | 'warning' | 'danger' | undefined;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4 transition-colors hover:border-[var(--rule)]">
+    <div className="rounded-lg border bg-card p-4 transition-colors hover:border-[var(--line)]">
       <p className="field-label">{label}</p>
       <p
         className={cn(
@@ -53,8 +53,8 @@ export function ScoreBadge({ score }: { score: number | null }) {
         'tabular inline-flex min-w-11 justify-center rounded border px-1.5 py-0.5 font-mono text-xs',
         // Les seuils suivent le quality gate : sous 55 l'opportunité n'entre
         // pas en stock, et la lecture visuelle doit refléter la règle.
-        value >= 75 && 'border-[var(--verified)]/30 bg-[var(--verified)]/10 text-[var(--verified)]',
-        value >= 55 && value < 75 && 'border-[var(--caution)]/30 bg-[var(--caution)]/10 text-[var(--caution)]',
+        value >= 75 && 'border-[var(--brand)]/30 bg-[var(--brand)]/10 text-[var(--brand)]',
+        value >= 55 && value < 75 && 'border-[var(--finding)]/30 bg-[var(--finding)]/10 text-[var(--finding)]',
         value < 55 && 'border-transparent bg-muted text-muted-foreground',
       )}
     >

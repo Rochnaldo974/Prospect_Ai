@@ -57,7 +57,7 @@ export function FinishForm({
           ) : (
             <>
               Avec ce paramétrage,{' '}
-              <strong className="tabular font-medium text-[var(--verified)]">{total}</strong>{' '}
+              <strong className="tabular font-medium text-[var(--brand)]">{total}</strong>{' '}
               {total === 1 ? 'opportunité correspond' : 'opportunités correspondent'} en ce moment.
               Tu en recevras cinq par jour, jamais les mêmes que quelqu&apos;un d&apos;autre.
             </>

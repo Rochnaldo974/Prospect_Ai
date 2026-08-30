@@ -84,7 +84,7 @@ export function Choice({
 }) {
   return (
     <label
-      className="group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-4 transition-colors duration-150 hover:border-[var(--verified)] has-[:checked]:border-[var(--verified)] has-[:checked]:bg-[var(--accent)]"
+      className="group flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-4 transition-colors duration-150 hover:border-[var(--brand)] has-[:checked]:border-[var(--brand)] has-[:checked]:bg-[var(--accent)]"
     >
       <input
         type={type}
@@ -92,7 +92,7 @@ export function Choice({
         value={value}
         {...(checked !== undefined ? { checked, onChange: onChange ?? (() => {}) } : {})}
         {...(defaultChecked !== undefined ? { defaultChecked } : {})}
-        className="mt-0.5 size-4 shrink-0 accent-[var(--verified)]"
+        className="mt-0.5 size-4 shrink-0 accent-[var(--brand)]"
       />
       <span className="min-w-0">
         <span className="block text-sm font-medium leading-snug">{title}</span>

@@ -3,103 +3,95 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Direction : « Dossier »
+   Direction : « Le relevé »
 
-   Le produit ne vend pas une liste d'entreprises — il vend une RAISON, datée
-   et vérifiable, de décrocher son téléphone aujourd'hui. Toute l'interface en
-   découle : structure de dossier d'expertise, finition contemporaine.
+   La cible, ce sont des développeurs web et mobile. Leur monde, c'est du code,
+   des versions, des codes HTTP et des horodatages — et c'est précisément ce
+   que le moteur lit chez leurs prospects. L'interface parle donc leur langue :
+   blanc franc, encre presque noire, et la preuve composée dans la police
+   qu'ils ont sous les yeux toute la journée.
 
-   Trois décisions portent l'identité :
+   Deux accents, et chacun a un métier :
 
-     le papier   un gris très légèrement vert, celui d'un papier d'archive.
-                 Ni le blanc clinique d'un tableau de bord, ni le crème chaud
-                 devenu le réflexe de tout site « éditorial ».
+     brand    ce que le PRODUIT fait — actions, liens, mise en avant.
+     finding  ce que le produit TROUVE — le défaut relevé sur un site.
 
-     l'appareil  chaque fait constaté porte sa source et sa date, comme une
-        de note  note en bas de page dans un rapport. Ce n'est pas un ornement :
-                 c'est la discipline du moteur rendue visible.
-
-     deux voix   le raisonnement écrit par le moteur est composé en SERIF, dans
-                 une justification de lecture. L'interface autour est en sans.
-                 On lit un argument ; on utilise un outil.
+   Les séparer n'est pas décoratif : sur une carte, on distingue d'un coup
+   d'œil ce qu'on peut faire de ce qui a été constaté.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
-  /* Papier d'archive : gris froid à sous-ton vert. */
-  --paper:        #eff1ee;
-  --paper-raised: #fafbf9;
-  --ink:          #161d1a;
-  --ink-soft:     #5a635e;
-  --rule:         #cdd3cd;
+  --white:  #ffffff;
+  --mist:   #f7f8fc;
+  --ink:    #0b0d14;
+  --ink-2:  #5b6274;
+  --line:   #e7e9f2;
 
-  /* Vert de validation : la couleur d'un tampon « vérifié », pas un néon. */
-  --verified:     #1d6b4f;
-  --verified-ink: #f3f8f5;
+  --brand:       #2c4bff;
+  --brand-wash:  #eef1ff;
+  --finding:     #ff4e3a;
+  --finding-wash:#fff0ee;
 
-  /* Ambre sourd pour les réserves. Une réserve n'est pas une alarme. */
-  --caution:      #8a5a12;
-  --caution-wash: #f6efe2;
-
-  --background: var(--paper);
+  --background: var(--white);
   --foreground: var(--ink);
-  --card: var(--paper-raised);
+  --card: var(--white);
   --card-foreground: var(--ink);
-  --popover: var(--paper-raised);
+  --popover: var(--white);
   --popover-foreground: var(--ink);
   --primary: var(--ink);
-  --primary-foreground: #f6f8f5;
-  --secondary: #e4e8e3;
+  --primary-foreground: var(--white);
+  --secondary: var(--mist);
   --secondary-foreground: var(--ink);
-  --muted: #e4e8e3;
-  --muted-foreground: var(--ink-soft);
-  --accent: #e2e9e4;
-  --accent-foreground: var(--ink);
-  --destructive: #96261b;
-  --destructive-foreground: #fbf5f4;
-  --border: var(--rule);
-  --input: var(--rule);
-  --ring: var(--verified);
+  --muted: var(--mist);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--brand-wash);
+  --accent-foreground: var(--brand);
+  --destructive: var(--finding);
+  --destructive-foreground: var(--white);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--brand);
 
-  --success: var(--verified);
-  --warning: var(--caution);
+  --success: #0f9d58;
+  --warning: #b45309;
 }
 
 .dark {
-  --paper:        #101512;
-  --paper-raised: #171e1a;
-  --ink:          #e6ebe6;
-  --ink-soft:     #98a29b;
-  --rule:         #2b3531;
+  --white:  #08090d;
+  --mist:   #0f1119;
+  --ink:    #edeff5;
+  --ink-2:  #939aad;
+  --line:   #1e2130;
 
-  --verified:     #4fae86;
-  --verified-ink: #0c1611;
-  --caution:      #cd9a4a;
-  --caution-wash: #241d10;
+  --brand:       #6b81ff;
+  --brand-wash:  #141a33;
+  --finding:     #ff7a68;
+  --finding-wash:#2a1512;
 
-  --background: var(--paper);
+  --background: var(--white);
   --foreground: var(--ink);
-  --card: var(--paper-raised);
+  --card: var(--mist);
   --card-foreground: var(--ink);
-  --popover: var(--paper-raised);
+  --popover: var(--mist);
   --popover-foreground: var(--ink);
-  --primary: #e6ebe6;
-  --primary-foreground: #101512;
-  --secondary: #1e2622;
+  --primary: var(--ink);
+  --primary-foreground: #08090d;
+  --secondary: #151824;
   --secondary-foreground: var(--ink);
-  --muted: #1e2622;
-  --muted-foreground: var(--ink-soft);
-  --accent: #202a25;
-  --accent-foreground: var(--ink);
-  --destructive: #d4665a;
-  --destructive-foreground: #1a0f0d;
-  --border: var(--rule);
-  --input: var(--rule);
-  --ring: var(--verified);
+  --muted: #151824;
+  --muted-foreground: var(--ink-2);
+  --accent: var(--brand-wash);
+  --accent-foreground: var(--brand);
+  --destructive: var(--finding);
+  --destructive-foreground: #1a0a08;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--brand);
 
-  --success: var(--verified);
-  --warning: var(--caution);
+  --success: #34d399;
+  --warning: #fbbf24;
 }
 
 @theme inline {
@@ -132,9 +124,13 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-familjen), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+  --color-brand: var(--brand);
+  --color-finding: var(--finding);
+
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  /* JetBrains Mono : celle qu'ils ont ouverte dans leur éditeur. Une preuve
+     doit se lire comme du code, parce que c'en est. */
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
 }
 
 @layer base {
@@ -161,7 +157,7 @@
   /* Accessibilité : la mise au point clavier doit être visible partout, et
      elle emprunte le vert de validation plutôt qu'un bleu système. */
   :focus-visible {
-    outline: 2px solid var(--verified);
+    outline: 2px solid var(--brand);
     outline-offset: 2px;
     border-radius: 3px;
   }
@@ -180,20 +176,37 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* Le relevé qui se remplit : chaque constat arrive comme il a été trouvé. */
+@keyframes findingIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Le curseur du scan, qui pulse tant qu'il travaille. */
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+/* Les sections qui montent à l'entrée dans le champ de vision. */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
 @layer components {
-  /* ── L'appareil de note ──────────────────────────────────────────────────
-     Signature de l'interface. Chaque fait constaté est présenté comme une
-     note de rapport : un repère dans la marge, le constat, et sa datation.
-     Ce n'est pas un ornement — c'est la règle du moteur rendue lisible :
-     rien n'est affirmé sans être sourcé.                                    */
+  /* ── Le relevé ───────────────────────────────────────────────────────────
+     Signature de l'interface. Un constat s'affiche comme une ligne de sortie
+     d'outil : un repère indexé, le fait, et rien d'autre. C'est la discipline
+     du moteur rendue lisible — rien n'est affirmé sans être sourcé.          */
 
   .evidence {
     display: grid;
-    grid-template-columns: 1.75rem 1fr;
-    column-gap: 0.75rem;
+    grid-template-columns: 1.5rem 1fr;
+    column-gap: 0.875rem;
     align-items: baseline;
     padding-block: 0.5rem;
-    border-top: 1px solid var(--rule);
+    border-top: 1px solid var(--line);
   }
 
   .evidence:first-of-type { border-top: 0; }
@@ -202,38 +215,30 @@
     font-family: var(--font-mono);
     font-size: 0.6875rem;
     font-variant-numeric: tabular-nums;
-    color: var(--verified);
-    letter-spacing: 0.02em;
+    color: var(--finding);
   }
 
-  .evidence__fact { font-size: 0.875rem; line-height: 1.55; }
+  .evidence__fact {
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
 
-  /* ── La voix du moteur ───────────────────────────────────────────────────
-     Le raisonnement écrit par le moteur est composé pour être LU, pas
-     survolé : serif de lecture, justification courte, interligne généreux.
-     L'interface autour reste en sans. On lit un argument, on utilise un
-     outil — la typographie doit dire lequel des deux on a sous les yeux.   */
-
+  /* Ce que le moteur explique. Justification courte, interligne large : c'est
+     un raisonnement, pas une notification. */
   .reasoning {
-    font-family: var(--font-serif);
     font-size: 1.0625rem;
-    line-height: 1.7;
-    max-width: 62ch;
-    color: var(--ink);
+    line-height: 1.65;
+    max-width: 60ch;
+    letter-spacing: -0.006em;
   }
-
-  /* ── L'étiquette de marge ────────────────────────────────────────────────
-     Reprise des formulaires administratifs : l'intitulé vit dans la marge,
-     en petites capitales, et ne dispute jamais l'attention au contenu.     */
 
   .field-label {
     font-family: var(--font-mono);
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    color: var(--ink-2);
   }
 
-  /* Données à comparer d'un coup d'œil : chiffres de même chasse. */
   .tabular { font-variant-numeric: tabular-nums; }
 }

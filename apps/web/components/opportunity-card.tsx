@@ -62,13 +62,13 @@ export function OpportunityCard({ opportunity }: { opportunity: TodayOpportunity
         ) : null}
 
         {why.caveats.length > 0 ? (
-          <section className="rounded-lg bg-[var(--caution-wash)] p-4">
-            <h3 className="field-label" style={{ color: 'var(--caution)' }}>
+          <section className="rounded-lg bg-[var(--finding-wash)] p-4">
+            <h3 className="field-label" style={{ color: 'var(--finding)' }}>
               À savoir avant d’appeler
             </h3>
             <ul className="mt-2 space-y-1.5">
               {why.caveats.map((caveat) => (
-                <li key={caveat} className="text-sm leading-relaxed text-[var(--caution)]">
+                <li key={caveat} className="text-sm leading-relaxed text-[var(--finding)]">
                   {caveat}
                 </li>
               ))}

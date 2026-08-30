@@ -22,6 +22,11 @@ import type { OpportunityType } from '../domain/types';
 
 export interface OnboardingAnswers {
   services: OpportunityType[];
+  /**
+   * Conservé dans le modèle mais plus demandé : le moteur en a besoin, et un
+   * studio local pourrait vouloir le restreindre un jour. La valeur par défaut
+   * couvre la France entière.
+   */
   locationMode: 'france' | 'region' | 'city' | 'france_remote';
   city: string | null;
   region: string | null;
@@ -54,8 +59,16 @@ export function validateAnswers(answers: OnboardingAnswers): OnboardingResult {
   return { ok: true, problem: null };
 }
 
-/** Les étapes, dans l'ordre. Le nombre est affiché à l'utilisateur. */
-export const ONBOARDING_STEPS = ['services', 'zone', 'secteurs', 'recapitulatif'] as const;
+/**
+ * Les étapes, dans l'ordre. Le nombre est affiché à l'utilisateur.
+ *
+ * Le périmètre géographique en a été retiré. Les développeurs web et mobile
+ * travaillent à distance : leur demander où ils habitent était une friction
+ * pour une information qui ne change rien à ce qu'on leur propose. Le
+ * paramétrage par défaut couvre donc la France entière, missions à distance
+ * assumées.
+ */
+export const ONBOARDING_STEPS = ['services', 'secteurs', 'recapitulatif'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 /**
@@ -113,7 +126,8 @@ export async function completeOnboarding(
     .upsert({
       user_id: userId,
       services: answers.services,
-      location_mode: answers.locationMode,
+      // Le périmètre n'est plus demandé : la cible travaille à distance.
+      location_mode: 'france_remote',
       city: answers.city,
       region: answers.region,
       excluded_industries: answers.excludedIndustries,

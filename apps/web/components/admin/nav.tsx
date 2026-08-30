@@ -36,7 +36,7 @@ export function AdminNav({ items }: { items: readonly { href: string; label: str
             {active ? (
               <span
                 aria-hidden
-                className="absolute -bottom-[13px] left-0 right-0 h-0.5 bg-[var(--verified)]"
+                className="absolute -bottom-[13px] left-0 right-0 h-0.5 bg-[var(--brand)]"
               />
             ) : null}
           </Link>

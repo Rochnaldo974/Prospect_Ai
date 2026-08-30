@@ -24,7 +24,7 @@ export function Field({
         type={type}
         autoComplete={autoComplete}
         required
-        className="h-11 w-full rounded-lg border bg-card px-3.5 text-sm transition-colors duration-150 focus-visible:border-[var(--verified)]"
+        className="h-11 w-full rounded-lg border bg-card px-3.5 text-sm transition-colors duration-150 focus-visible:border-[var(--brand)]"
       />
     </div>
   );

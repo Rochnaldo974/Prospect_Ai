@@ -13,7 +13,6 @@ import { ONBOARDING_STEPS } from '@prospect/core';
  */
 const TITLES: Record<string, string> = {
   services: 'Ce que tu fais',
-  zone: 'Où tu travailles',
   secteurs: 'Ce que tu évites',
   recapitulatif: 'Vérification',
 };
@@ -39,7 +38,7 @@ export function StepRail({ total }: { total: number }) {
           <span
             key={step}
             className={`h-1 flex-1 rounded-full transition-colors duration-500 ${
-              i <= index ? 'bg-[var(--verified)]' : 'bg-border'
+              i <= index ? 'bg-[var(--brand)]' : 'bg-border'
             }`}
           />
         ))}
@@ -58,7 +57,7 @@ export function StepRail({ total }: { total: number }) {
                 <span
                   aria-hidden
                   className={`absolute left-[0.4375rem] top-5 h-full w-px ${
-                    done ? 'bg-[var(--verified)]' : 'bg-border'
+                    done ? 'bg-[var(--brand)]' : 'bg-border'
                   }`}
                 />
               ) : null}
@@ -67,9 +66,9 @@ export function StepRail({ total }: { total: number }) {
                 aria-hidden
                 className={`relative mt-1 size-3.5 shrink-0 rounded-full border transition-colors ${
                   now
-                    ? 'border-[var(--verified)] bg-[var(--verified)]'
+                    ? 'border-[var(--brand)] bg-[var(--brand)]'
                     : done
-                      ? 'border-[var(--verified)] bg-background'
+                      ? 'border-[var(--brand)] bg-background'
                       : 'border-border bg-background'
                 }`}
               />

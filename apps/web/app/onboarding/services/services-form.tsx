@@ -86,8 +86,8 @@ function Stock({ count }: { count: number }) {
         tone === 'none'
           ? 'text-muted-foreground'
           : tone === 'thin'
-            ? 'text-[var(--caution)]'
-            : 'text-[var(--verified)]'
+            ? 'text-[var(--finding)]'
+            : 'text-[var(--brand)]'
       }
     >
       {label}

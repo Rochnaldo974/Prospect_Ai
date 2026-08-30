@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-sm">{children}</div>
       </div>
 
-      <aside className="hidden border-l bg-[var(--paper-raised)] lg:flex lg:flex-col lg:justify-center lg:px-16">
+      <aside className="hidden border-l bg-[var(--mist)] lg:flex lg:flex-col lg:justify-center lg:px-16">
         <Specimen />
       </aside>
     </div>

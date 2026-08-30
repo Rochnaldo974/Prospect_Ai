@@ -29,10 +29,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-10 border-b bg-[var(--paper)]/85 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b bg-[var(--white)]/85 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3">
           <Link href="/admin" className="field-label shrink-0">
-            Prospect AI <span className="text-[var(--verified)]">console</span>
+            Prospect AI <span className="text-[var(--brand)]">console</span>
           </Link>
 
           <AdminNav items={NAV} />
