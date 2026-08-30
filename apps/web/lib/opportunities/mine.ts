@@ -1,5 +1,8 @@
 import 'server-only';
-import { getServiceClient, getTodayOpportunities, type TodayOpportunity } from '@prospect/core';
+import {
+  diagnoseEmptyDay, getServiceClient, getTodayOpportunities,
+  type EmptyDiagnosis, type TodayOpportunity,
+} from '@prospect/core';
 import { requireOnboardedUser } from '@/lib/auth/session';
 
 /**
@@ -18,12 +21,20 @@ export async function getMyOpportunities(): Promise<{
   firstName: string;
   role: string;
   opportunities: TodayOpportunity[];
+  /** Renseigné seulement quand la journée est vide : dire POURQUOI. */
+  diagnosis: EmptyDiagnosis | null;
 }> {
   const profile = await requireOnboardedUser();
+  const db = getServiceClient();
+
+  const opportunities = await getTodayOpportunities(db, profile.id);
 
   return {
     firstName: profile.full_name?.split(' ')[0] ?? '',
     role: profile.role,
-    opportunities: await getTodayOpportunities(getServiceClient(), profile.id),
+    opportunities,
+    // Le diagnostic n'est calculé que s'il sert : trois requêtes de plus pour
+    // expliquer une page pleine seraient du gaspillage.
+    diagnosis: opportunities.length === 0 ? await diagnoseEmptyDay(db, profile.id) : null,
   };
 }

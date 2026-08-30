@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import { getMyOpportunities } from '@/lib/opportunities/mine';
 import { signOut } from '@/app/(auth)/actions';
 import { OpportunityCard } from '@/components/opportunity-card';
-import { EmptyState } from '@/components/empty-state';
+import { EmptyDay } from '@/components/empty-day';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 export const metadata: Metadata = { title: 'Mes opportunités' };
 
 export default async function DashboardPage() {
-  const { firstName, role, opportunities } = await getMyOpportunities();
+  const { firstName, role, opportunities, diagnosis } = await getMyOpportunities();
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -48,11 +48,7 @@ export default async function DashboardPage() {
       </header>
 
       {opportunities.length === 0 ? (
-        <EmptyState
-          title="Rien à te proposer aujourd’hui"
-          explanation="Mieux vaut ne rien envoyer que du remplissage : une opportunité n’est livrée que si un fait daté et vérifiable la justifie. Le moteur repasse cette nuit — élargir ton périmètre ou tes services augmente les correspondances."
-          action={{ href: '/onboarding?modifier', label: 'Revoir mes préférences' }}
-        />
+        <EmptyDay diagnosis={diagnosis} />
       ) : (
         <div className="space-y-5">
           {opportunities.map((opportunity) => (
