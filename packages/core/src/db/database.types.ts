@@ -781,6 +781,7 @@ export type Database = {
           redirect_chain: Json
           registered_at: string | null
           responsive: boolean | null
+          scan_priority: number
           sirens_found: string[]
           status: Database["public"]["Enums"]["domain_status"]
           tech_hash: string | null
@@ -825,6 +826,7 @@ export type Database = {
           redirect_chain?: Json
           registered_at?: string | null
           responsive?: boolean | null
+          scan_priority?: number
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
@@ -869,6 +871,7 @@ export type Database = {
           redirect_chain?: Json
           registered_at?: string | null
           responsive?: boolean | null
+          scan_priority?: number
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
@@ -1628,6 +1631,7 @@ export type Database = {
           events: Json
         }[]
       }
+      local_trade_score: { Args: { p_domain: string }; Returns: number }
       merge_companies: {
         Args: {
           p_absorbed_id: string

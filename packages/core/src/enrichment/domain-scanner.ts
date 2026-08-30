@@ -202,6 +202,11 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
     .from('domains')
     .select('domain, content_hash, check_attempts, tech_year')
     .neq('status', 'excluded')
+    // Le parc national compte 4,59 millions de domaines : l'ordre de passage
+    // décide de ce qu'on trouve les premiers jours. La priorité est calculée
+    // avant toute visite, sur le nom et l'âge du domaine — un « boulangerie »
+    // déposé il y a quinze ans passe avant un domaine anonyme de l'an dernier.
+    .order('scan_priority', { ascending: false })
     .order('next_check_at', { ascending: true })
     .limit(options.limit ?? 200);
 

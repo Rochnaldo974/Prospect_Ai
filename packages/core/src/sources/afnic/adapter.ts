@@ -152,6 +152,28 @@ export async function importAfnicDomains(
     report.alreadyKnown += current.length - inserted;
   };
 
+  try {
+    await consume();
+  } catch (cause: unknown) {
+    // Le flux se ferme pendant qu'on attend l'écriture d'un lot, et
+    // l'itérateur reprend sur une interface déjà close. C'est une fin de
+    // fichier, pas une erreur : les lignes lues sont toutes traitées, et le
+    // lot en attente est écrit juste après. Toute autre défaillance remonte.
+    if ((cause as { code?: string }).code !== 'ERR_USE_AFTER_CLOSE') throw cause;
+  }
+
+  await flush();
+
+  log?.info('Import AFNIC terminé', {
+    read: report.read,
+    selected: report.selected,
+    queued: report.queued,
+    already_known: report.alreadyKnown,
+  });
+
+  return report;
+
+  async function consume(): Promise<void> {
   for await (const line of lines) {
     if (options.signal?.aborted) break;
     if (!line.trim()) continue;
@@ -185,15 +207,5 @@ export async function importAfnicDomains(
     if (batch.length >= batchSize) await flush();
     if (report.selected >= limit) break;
   }
-
-  await flush();
-
-  log?.info('Import AFNIC terminé', {
-    read: report.read,
-    selected: report.selected,
-    queued: report.queued,
-    already_known: report.alreadyKnown,
-  });
-
-  return report;
+  }
 }
