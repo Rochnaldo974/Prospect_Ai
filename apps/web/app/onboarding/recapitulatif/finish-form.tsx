@@ -17,7 +17,7 @@ export function FinishForm({
     <form action={action}>
       <Step
         question="On y est."
-        help="Vérifie, corrige si besoin, et le premier lot t'attendra demain matin."
+        help="Vérifiez, corrigez si besoin, et le premier lot vous attendra demain matin."
         problem={state.problem}
         pending={pending}
         submitLabel="Terminer"
@@ -51,15 +51,14 @@ export function FinishForm({
             <>
               Avec ce paramétrage,{' '}
               <strong className="font-medium">rien n&apos;est disponible en ce moment</strong>. Le
-              moteur repasse chaque nuit — élargis ton périmètre ou tes services si tu ne veux pas
-              attendre.
+              moteur repasse chaque nuit — élargissez vos services si vous ne voulez pas attendre.
             </>
           ) : (
             <>
               Avec ce paramétrage,{' '}
               <strong className="tabular font-medium text-[var(--brand)]">{total}</strong>{' '}
               {total === 1 ? 'opportunité correspond' : 'opportunités correspondent'} en ce moment.
-              Tu en recevras cinq par jour, jamais les mêmes que quelqu&apos;un d&apos;autre.
+              Vous en recevrez cinq par jour, jamais les mêmes que quelqu&apos;un d&apos;autre.
             </>
           )}
         </p>

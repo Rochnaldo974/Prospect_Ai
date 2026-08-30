@@ -30,9 +30,9 @@ export function LoginForm({ next }: { next?: string | undefined }) {
 
   return (
     <>
-      <h1 className="text-3xl tracking-tight">Content de te revoir</h1>
+      <h1 className="text-3xl tracking-tight">Content de vous revoir</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Tes cinq opportunités du jour t’attendent.
+        Vos cinq opportunités du jour vous attendent.
       </p>
 
       <div className="mt-8">

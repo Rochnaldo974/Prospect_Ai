@@ -12,8 +12,8 @@ import { ONBOARDING_STEPS } from '@prospect/core';
  * l'ordre porte une information dont le lecteur a besoin.
  */
 const TITLES: Record<string, string> = {
-  services: 'Ce que tu fais',
-  secteurs: 'Ce que tu évites',
+  services: 'Ce que vous faites',
+  secteurs: 'Ce que vous évitez',
   recapitulatif: 'Vérification',
 };
 

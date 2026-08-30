@@ -4,14 +4,16 @@ import { getSessionProfile } from '@/lib/auth/session';
 import { SiteAudit } from '@/components/landing/audit';
 import { WeekComparison } from '@/components/landing/comparison';
 import { Pipeline } from '@/components/landing/pipeline';
+import { DossierPreview } from '@/components/landing/dossier';
 import { Reveal } from '@/components/landing/reveal';
 import {
   AlsoGrid, Changelog, Faq, Feature, FinalCall, Mechanism, Numbers, Readout, SectionTitle,
 } from '@/components/landing/sections';
 import { GoogleButton } from '@/components/google-button';
+import { SiteHeader } from '@/components/landing/site-header';
 
 export const metadata: Metadata = {
-  title: 'Prospect AI — sache ce qui cloche avant d’appeler',
+  title: 'Prospect AI — voyez ce qui cloche avant d’appeler',
   description:
     'Pour développeurs web et mobile freelances : cinq entreprises auditées chaque matin — certificat TLS, adaptation mobile, composants datés, temps de réponse — avec le défaut à corriger et le contact pour en parler.',
 };
@@ -20,19 +22,21 @@ export const metadata: Metadata = {
  * La page d'accueil.
  *
  * Elle s'adresse à des développeurs qui ont déjà essayé la prospection et
- * l'ont détestée. L'argument n'est donc pas « trouve plus de clients » — ils
- * l'ont entendu — mais « tu sauras quoi dire en décrochant ».
+ * l'ont détestée. L'argument n'est donc pas « trouvez plus de clients » — ils
+ * l'ont entendu — mais « vous saurez quoi dire en décrochant ».
  *
  * La densité est délibérée : une page qui ne paraît pas vide compte une
  * quinzaine de blocs, et chacun doit apporter une information NOUVELLE.
- * Le tutoiement est tenu partout, comme dans le reste du produit.
+ * Le vouvoiement est tenu partout : c'est la norme des SaaS français, y
+ * compris ceux vendus à des développeurs, et il doit être sans exception —
+ * la moitié des pages qui l'essaient dérapent au bout de trois sections.
  */
 export default async function HomePage() {
   const profile = await getSessionProfile();
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-transparent bg-white/85 backdrop-blur-md dark:bg-[var(--white)]/85">
+      <SiteHeader>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <span className="font-mono text-sm font-medium tracking-tight">
             prospect<span className="text-[var(--brand)]">.ai</span>
@@ -67,11 +71,12 @@ export default async function HomePage() {
             )}
           </nav>
         </div>
-      </header>
+      </SiteHeader>
 
       <main>
         <Hero />
         <Numbers />
+        <Delivered />
         <Promise />
         <Mechanism />
         <Features />
@@ -84,12 +89,7 @@ export default async function HomePage() {
         <FinalCall />
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-10 text-xs text-muted-foreground">
-          <span className="font-mono">prospect.ai</span>
-          <span>Données publiques françaises · aucune donnée nominative collectée</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
@@ -102,7 +102,7 @@ function Hero() {
           <p className="field-label">Développeurs web et mobile · freelances</p>
 
           <h1 className="mt-5 max-w-[15ch] text-[clamp(2.375rem,4.4vw,3.625rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
-            Sache ce qui cloche{' '}
+            Voyez ce qui cloche{' '}
             <span className="text-[var(--brand)]">avant d’appeler.</span>
           </h1>
 
@@ -145,7 +145,32 @@ function Hero() {
   );
 }
 
-/** Trois cartes de promesse, juste après les chiffres. */
+/**
+ * Ce qui est livré, en taille réelle.
+ *
+ * La capture produit est le mécanisme de preuve le plus systématique des
+ * pages qui convertissent : elle montre ce qu'on achète au lieu de le décrire.
+ * Placée haut, avant tout argument, elle répond à la seule question qui
+ * compte au premier scroll — à quoi ça ressemble concrètement.
+ */
+function Delivered() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-20">
+      <SectionTitle
+        eyebrow="Ce que vous recevez"
+        lead="Un dossier par entreprise, avec le défaut constaté, ce qui le date, ce qu’on ignore encore et le numéro. Les données ci-dessous viennent d’un scan réel."
+      >
+        Voilà un dossier
+      </SectionTitle>
+
+      <div className="mt-12">
+        <DossierPreview />
+      </div>
+    </section>
+  );
+}
+
+/** Trois cartes de promesse. */
 function Promise() {
   const cards = [
     {
@@ -154,7 +179,7 @@ function Promise() {
     },
     {
       title: 'Jamais deux fois la même',
-      body: 'Une entreprise attribuée l’est à une seule personne, garanti par un index unique en base. Personne n’appelle après toi.',
+      body: 'Une entreprise attribuée l’est à une seule personne, garanti par un index unique en base. Personne n’appelle après vous.',
     },
     {
       title: 'Ce qu’on ignore est écrit',
@@ -310,7 +335,7 @@ function Sources() {
   ];
 
   return (
-    <section className="border-y bg-[var(--mist)]">
+    <section id="sources" className="scroll-mt-20 border-y bg-[var(--mist)]">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <SectionTitle
           eyebrow="Sur quoi reposent les analyses"
@@ -345,7 +370,7 @@ function TimeCost() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-24">
       <SectionTitle
-        lead="Trouver dix mille entreprises prend cinq minutes. Savoir lesquelles valent un appel prend des heures — et c’est cette partie-là qu’on te retire."
+        lead="Trouver dix mille entreprises prend cinq minutes. Savoir lesquelles valent un appel prend des heures — et c’est cette partie-là qu’on vous retire."
       >
         Prospecter, ce n’est pas trouver.
         <span className="block text-muted-foreground">C’est trier.</span>
@@ -367,8 +392,8 @@ function Funnel() {
   return (
     <section className="border-y bg-[var(--mist)]">
       <div className="mx-auto max-w-6xl px-6 py-24">
-        <SectionTitle eyebrow="Du parc entier à tes cinq dossiers">
-          Quatre millions d’adresses. Cinq qui te concernent.
+        <SectionTitle eyebrow="Du parc entier à vos cinq dossiers">
+          Quatre millions d’adresses. Cinq qui vous concernent.
         </SectionTitle>
         <div className="mt-12">
           <Pipeline />
@@ -486,16 +511,98 @@ function Faq2() {
   );
 }
 
+/**
+ * Le journal.
+ *
+ * Deux colonnes : le titre tient à gauche pendant qu'on lit les entrées à
+ * droite. En une seule colonne étroite, la moitié droite de la section
+ * restait blanche — le défaut exact qu'on nous reprochait sur cette page.
+ */
 function Journal() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
-      <SectionTitle
-        eyebrow="Journal"
-        lead="Le produit bouge chaque semaine. Les entrées ci-dessous sont tirées du dépôt."
-      >
-        Dernières livraisons
-      </SectionTitle>
-      <Changelog />
+    <section id="journal" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24">
+      <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <SectionTitle
+            eyebrow="Journal"
+            lead="Le produit bouge chaque semaine. Les entrées ci-dessous sont tirées du dépôt."
+          >
+            Dernières livraisons
+          </SectionTitle>
+        </div>
+
+        <Reveal>
+          <Changelog />
+        </Reveal>
+      </div>
     </section>
+  );
+}
+
+
+/**
+ * Le pied de page.
+ *
+ * Il ne portait qu'une ligne. Un pied de page sert à deux choses : montrer
+ * qu'il existe une suite au produit, et loger ce que la loi française exige
+ * d'un service en ligne — le régime de données en fait partie, et il se
+ * trouve qu'ici c'est aussi un argument de vente.
+ */
+function SiteFooter() {
+  const columns: Array<[string, Array<[string, string]>]> = [
+    ['Produit', [
+      ['Méthode', '#methode'],
+      ['Sources', '#sources'],
+      ['Tarifs', '#tarifs'],
+      ['Journal', '#journal'],
+    ]],
+    ['Compte', [
+      ['Créer un compte', '/signup'],
+      ['Connexion', '/login'],
+    ]],
+    ['Données', [
+      ['Confidentialité', '/confidentialite'],
+    ]],
+  ];
+
+  return (
+    <footer className="border-t bg-[var(--mist)]">
+      <div className="mx-auto max-w-6xl px-6 py-16">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+          <div>
+            <span className="font-mono text-sm font-medium tracking-tight">
+              prospect<span className="text-[var(--brand)]">.ai</span>
+            </span>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
+              Cinq entreprises françaises auditées chaque matin, avec le défaut constaté et
+              de quoi le vérifier.
+            </p>
+          </div>
+
+          {columns.map(([heading, links]) => (
+            <div key={heading}>
+              <p className="field-label">{heading}</p>
+              <ul className="mt-4 space-y-2.5">
+                {links.map(([label, href]) => (
+                  <li key={label}>
+                    <Link
+                      href={href}
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t pt-6 text-xs text-muted-foreground">
+          <span>SIRENE · BODACC · AFNIC · BOAMP — données publiques françaises</span>
+          <span>Aucune donnée nominative collectée</span>
+        </div>
+      </div>
+    </footer>
   );
 }

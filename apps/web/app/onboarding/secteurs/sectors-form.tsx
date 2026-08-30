@@ -11,8 +11,8 @@ export function SectorsForm({ excluded }: { excluded: string[] }) {
   return (
     <form action={action}>
       <Step
-        question="Y a-t-il des secteurs que tu ne veux pas ?"
-        help="Facultatif, et la plupart n'en cochent aucun. Une opportunité écartée ici ne prendra pas une des cinq places de ta journée."
+        question="Des secteurs dont vous ne voulez pas ?"
+        help="Facultatif, et la plupart n'en cochent aucun. Une opportunité écartée ici ne prendra pas une des cinq places de votre journée."
         problem={state.problem}
         pending={pending}
         submitLabel="Continuer"

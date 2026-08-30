@@ -52,7 +52,7 @@ export function validateAnswers(answers: OnboardingAnswers): OnboardingResult {
   if (local && !answers.city && !answers.region) {
     return {
       ok: false,
-      problem: 'Indique ta ville ou ta région pour un périmètre local.',
+      problem: 'Indiquez votre ville ou votre région pour un périmètre local.',
     };
   }
 

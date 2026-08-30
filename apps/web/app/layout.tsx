@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     default: 'Prospect AI',
     template: '%s · Prospect AI',
   },
-  description: 'Chaque jour, les 5 opportunités commerciales qui valent ton temps.',
+  description: 'Chaque jour, les cinq opportunités commerciales qui valent votre temps.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -18,7 +18,7 @@ const STAGES = [
   { n: '4 590 087', label: 'domaines .fr actifs', note: 'le parc entier, importé' },
   { n: '259 452', label: 'entreprises identifiables', note: 'nom de métier, site analysable' },
   { n: '~20 %', label: 'reliées à leur SIREN', note: 'lu dans les mentions légales' },
-  { n: '5', label: 'dossiers, pour toi', note: 'défaut réel, contact joignable, exclusif' },
+  { n: '5', label: 'dossiers, pour vous', note: 'défaut réel, contact joignable, exclusif' },
 ];
 
 export function Pipeline() {

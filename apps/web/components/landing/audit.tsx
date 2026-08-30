@@ -21,14 +21,23 @@ import { usePrefersReducedMotion } from '@/lib/hooks/use-reduced-motion';
 /** Le score du site audité. Bas, et c'est le sujet. */
 const SCORE = 42;
 
-const PHASES = ['scan', 'score', 'issues', 'kept'] as const;
+/**
+ * Trois temps, pas quatre.
+ *
+ * Le score et les défauts formaient deux étapes séparées : pendant la
+ * seconde et demie du score, la carte n'affichait qu'une ligne en haut d'un
+ * bloc de trois cents pixels, et le vide sautait aux yeux à chaque boucle.
+ * Ils tiennent en un seul temps — le score se compte pendant que les défauts
+ * arrivent derrière lui, ce qui est d'ailleurs l'ordre réel : le score EST
+ * la somme des défauts.
+ */
+const PHASES = ['scan', 'report', 'kept'] as const;
 type Phase = (typeof PHASES)[number];
 
 const DURATIONS: Record<Phase, number> = {
-  scan: 2200,
-  score: 1400,
-  issues: 2400,
-  kept: 2600,
+  scan: 2300,
+  report: 3000,
+  kept: 2800,
 };
 
 const CHECKS = [
@@ -72,22 +81,24 @@ export function SiteAudit() {
         <span
           aria-hidden
           className={`size-1.5 rounded-full transition-colors duration-300 ${
-            index >= 3 ? 'bg-[var(--brand)]' : 'bg-[var(--finding)]'
+            index >= 2 ? 'bg-[var(--brand)]' : 'bg-[var(--finding)]'
           } ${index === 0 && !reduced ? 'motion-safe:animate-[pulseDot_1.2s_ease-in-out_infinite]' : ''}`}
         />
         <span className="field-label">
-          {index === 0 ? 'Analyse en cours' : index === 3 ? 'Prospect retenu' : 'Analyse terminée'}
+          {index === 0 ? 'Analyse en cours' : index === 2 ? 'Prospect retenu' : 'Analyse terminée'}
         </span>
         <span className="ml-auto font-mono text-[11px] text-muted-foreground">
           boulangerie-martin.fr
         </span>
       </figcaption>
 
-      <div className="relative min-h-[19rem] p-5">
+      {/* Hauteur fixée sur l'état le plus haut : la carte ne doit pas
+          grandir d'un temps à l'autre, sinon toute la page saute en boucle. */}
+      <div className="relative min-h-[21.5rem] p-5">
         <Scan active={phase === 'scan'} />
-        <Score active={index >= 1} highlighted={phase === 'score'} />
-        <Issues visible={index >= 2} />
-        <Kept visible={index >= 3} />
+        <Score active={index >= 1} />
+        <Issues visible={index >= 1} />
+        <Kept visible={index >= 2} />
       </div>
 
       {/* Progression de la séquence : quatre segments, un par temps. Il sert
@@ -139,7 +150,7 @@ function Scan({ active }: { active: boolean }) {
  * couleur suit donc l'inverse de l'intuition — le corail signale un site en
  * difficulté, donc un prospect qui vaut un appel.
  */
-function Score({ active, highlighted }: { active: boolean; highlighted: boolean }) {
+function Score({ active }: { active: boolean }) {
   const [value, setValue] = useState(0);
 
   useEffect(() => {
@@ -169,7 +180,7 @@ function Score({ active, highlighted }: { active: boolean; highlighted: boolean 
     <div
       className={`flex items-center gap-5 transition-all duration-500 ${
         active ? 'opacity-100' : 'pointer-events-none -translate-y-1 opacity-0'
-      } ${highlighted ? '' : ''}`}
+      }`}
     >
       <div className="relative grid size-20 shrink-0 place-items-center">
         <svg viewBox="0 0 36 36" className="absolute size-20 -rotate-90" aria-hidden>
@@ -208,7 +219,7 @@ function Issues({ visible }: { visible: boolean }) {
           className="flex items-start gap-3 border-t py-2.5"
           style={{
             animation: visible
-              ? `findingIn .4s cubic-bezier(.2,.7,.3,1) ${i * 0.22}s both`
+              ? `findingIn .4s cubic-bezier(.2,.7,.3,1) ${0.55 + i * 0.22}s both`
               : undefined,
           }}
         >
@@ -238,7 +249,7 @@ function Kept({ visible }: { visible: boolean }) {
       }`}
     >
       <p className="flex items-center gap-2 text-sm font-medium text-[var(--brand)]">
-        <span aria-hidden>✓</span> Retenu pour toi
+        <span aria-hidden>✓</span> Retenu pour vous
       </p>
       <p className="mt-1.5 font-mono text-xs text-[var(--brand)]/80">
         02 41 88 81 98 · exclusif 72 h

@@ -73,7 +73,7 @@ export function Numbers() {
 export function Mechanism() {
   const steps = [
     {
-      title: 'Tu dis ce que tu fais',
+      title: 'Vous dites ce que vous faites',
       body: 'Refonte, création, e-commerce, application mobile, maintenance. Trois questions, une minute.',
     },
     {
@@ -85,8 +85,8 @@ export function Mechanism() {
       body: 'Pas de contact joignable, pas de fait daté, identité douteuse, entreprise déjà démarchée : l’opportunité n’entre pas en stock.',
     },
     {
-      title: 'Cinq dossiers t’attendent',
-      body: 'Le défaut, la preuve, ce qu’on ignore encore, et le numéro. Tu dis ce que ça a donné, l’entreprise sort du circuit.',
+      title: 'Cinq dossiers vous attendent',
+      body: 'Le défaut, la preuve, ce qu’on ignore encore, et le numéro. Vous dites ce que ça a donné, l’entreprise sort du circuit.',
     },
   ];
 
@@ -94,7 +94,7 @@ export function Mechanism() {
     <section className="border-y bg-[var(--mist)]">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <SectionTitle eyebrow="Comment ça marche">
-          Quatre étapes, dont trois que tu ne fais pas
+          Quatre étapes, dont trois que vous ne faites pas
         </SectionTitle>
 
         <ol className="mt-14 grid gap-x-10 gap-y-12 md:grid-cols-2 lg:grid-cols-4">
@@ -203,7 +203,7 @@ export function AlsoGrid() {
     ['Groupe témoin', 'Une opportunité sur cinq tirée au hasard, pour mesurer ce que le moteur apporte.'],
     ['Suivi des appels', 'Pas de réponse, intéressé, devis, client — en un clic.'],
     ['Opposition respectée', 'Une entreprise qui demande à ne plus être contactée sort de toute la chaîne.'],
-    ['Filtres par secteur', 'Onze familles de métiers à exclure si elles ne t’intéressent pas.'],
+    ['Filtres par secteur', 'Onze familles de métiers à exclure si elles ne vous intéressent pas.'],
     ['Aucune donnée nominative', 'Ni nom, ni e-mail de personne physique. Régime RGPD allégé.'],
     ['Détection de réseaux', 'Les enseignes qui partagent le site de la marque sont écartées.'],
     ['Fraîcheur pondérée', 'Un fait de la semaine pèse plus qu’un fait du trimestre.'],
@@ -239,9 +239,9 @@ export function Changelog() {
   ];
 
   return (
-    <div className="mt-10 max-w-2xl">
+    <div>
       {entries.map(([date, title]) => (
-        <div key={title} className="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-t py-3.5">
+        <div key={title} className="flex flex-wrap items-baseline gap-x-6 gap-y-1 border-t py-4">
           <span className="w-28 shrink-0 font-mono text-[11px] text-muted-foreground">{date}</span>
           <span className="text-sm">{title}</span>
         </div>
@@ -269,15 +269,15 @@ export function Faq() {
     ],
     [
       'C’est du spam automatisé ?',
-      'Rien n’est envoyé pour toi. Le service livre des dossiers ; c’est toi qui décides d’appeler. Une entreprise n’est proposée qu’à une seule personne, et pas plus d’une fois par semestre.',
+      'Rien n’est envoyé à votre place. Le service livre des dossiers ; c’est vous qui décidez d’appeler. Une entreprise n’est proposée qu’à une seule personne, et pas plus d’une fois par semestre.',
     ],
     [
       'Ça me prend combien de temps par jour ?',
-      'Cinq dossiers se lisent en dix minutes. Chaque défaut annoncé se vérifie en ouvrant l’adresse du prospect — c’est le point : tu n’as pas à nous croire sur parole.',
+      'Cinq dossiers se lisent en dix minutes. Chaque défaut annoncé se vérifie en ouvrant l’adresse du prospect — c’est le point : vous n’avez pas à nous croire sur parole.',
     ],
     [
       'Et si les prospects ne correspondent pas à ma stack ?',
-      'Tu choisis tes familles à l’inscription : refonte, création, e-commerce, application mobile, maintenance, SEO. Une opportunité hors de ta liste ne t’est jamais proposée, quel que soit son score.',
+      'Vous choisissez vos familles à l’inscription : refonte, création, e-commerce, application mobile, maintenance, SEO. Une opportunité hors de votre liste ne vous est jamais proposée, quel que soit son score.',
     ],
     [
       'Que se passe-t-il si rien ne justifie d’appeler ?',

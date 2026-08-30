@@ -81,7 +81,7 @@ export async function signUp(
 
   // Si la confirmation e-mail est active, aucune session n'est ouverte ici.
   if (!data.session) {
-    return { notice: 'Vérifie ta boîte mail pour confirmer ton adresse.' };
+    return { notice: 'Vérifiez votre boîte mail pour confirmer votre adresse.' };
   }
 
   revalidatePath('/', 'layout');

@@ -37,7 +37,7 @@ export function OutcomeForm({
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm">J&apos;ai contacté</Button>
           <p className="text-xs text-muted-foreground">
-            Tu pourras dire ce que ça a donné juste après.
+            Vous pourrez dire ce que ça a donné juste après.
           </p>
         </div>
       </form>

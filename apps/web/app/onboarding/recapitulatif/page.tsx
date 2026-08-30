@@ -36,14 +36,14 @@ export default async function RecapStep() {
       total={total}
       rows={[
         {
-          label: 'Ce que tu fais',
+          label: 'Ce que vous faites',
           value: answers.services.length === 0
             ? 'Tout — aucune restriction'
             : answers.services.map((s) => OPPORTUNITY_TYPE_LABELS[s]).join(', '),
           href: '/onboarding/services',
         },
         {
-          label: 'Ce que tu évites',
+          label: 'Ce que vous évitez',
           value: sectors.length === 0 ? 'Rien d’exclu' : sectors.join(', '),
           href: '/onboarding/secteurs',
         },

@@ -46,7 +46,7 @@ describe('ce qu’on refuse', () => {
     // montrerait une erreur technique là où une question claire suffit.
     const result = validateAnswers(answers({ locationMode: 'city' }));
     expect(result.ok).toBe(false);
-    expect(result.problem).toMatch(/ville ou ta région/i);
+    expect(result.problem).toMatch(/ville ou votre région/i);
   });
 
   it('refuse aussi pour un périmètre régional sans lieu', () => {

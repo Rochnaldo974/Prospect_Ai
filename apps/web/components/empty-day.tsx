@@ -17,8 +17,8 @@ export function EmptyDay({ diagnosis }: { diagnosis: EmptyDiagnosis | null }) {
   if (diagnosis?.reason === 'servi') {
     return (
       <EmptyState
-        title="Tu as déjà tout vu aujourd’hui"
-        explanation="Les cinq dossiers du jour t’ont été remis, et tu les as traités. Les suivants arrivent demain matin."
+        title="Vous avez déjà tout vu aujourd’hui"
+        explanation="Les cinq dossiers du jour vous ont été remis, et vous les avez traités. Les suivants arrivent demain matin."
       />
     );
   }
@@ -30,10 +30,10 @@ export function EmptyDay({ diagnosis }: { diagnosis: EmptyDiagnosis | null }) {
 
     return (
       <EmptyState
-        title="Du stock existe, mais pas dans tes familles"
+        title="Du stock existe, mais pas dans vos familles"
         explanation={`${diagnosis.inStock} ${
           diagnosis.inStock === 1 ? 'opportunité est disponible' : 'opportunités sont disponibles'
-        } en ce moment, toutes en ${families} — que tu n’as pas retenu. Cocher cette famille suffirait à les débloquer.`}
+        } en ce moment, toutes en ${families} — que vous n’avez pas retenu. Cocher cette famille suffirait à les débloquer.`}
         action={{ href: '/onboarding?modifier', label: 'Ajouter cette famille' }}
       />
     );
@@ -42,10 +42,10 @@ export function EmptyDay({ diagnosis }: { diagnosis: EmptyDiagnosis | null }) {
   if (diagnosis?.reason === 'secteurs-exclus') {
     return (
       <EmptyState
-        title="Ton paramétrage écarte tout ce qui est en stock"
+        title="Votre paramétrage écarte tout ce qui est en stock"
         explanation={`${diagnosis.inStock} ${
           diagnosis.inStock === 1 ? 'opportunité est disponible' : 'opportunités sont disponibles'
-        }, mais aucune ne passe tes filtres — secteurs exclus ou familles non retenues. Élargir d’un cran suffirait.`}
+        }, mais aucune ne passe vos filtres — secteurs exclus ou familles non retenues. Élargir d’un cran suffirait.`}
         action={{ href: '/onboarding?modifier', label: 'Revoir mes préférences' }}
       />
     );
@@ -54,8 +54,8 @@ export function EmptyDay({ diagnosis }: { diagnosis: EmptyDiagnosis | null }) {
   if (diagnosis?.reason === 'inconnu') {
     return (
       <EmptyState
-        title="Rien de nouveau pour toi ce matin"
-        explanation="Le stock correspond à ton paramétrage, mais les entreprises concernées sont déjà attribuées, en cooldown, ou sous le seuil de qualité. Le moteur repasse cette nuit."
+        title="Rien de nouveau pour vous ce matin"
+        explanation="Le stock correspond à votre paramétrage, mais les entreprises concernées sont déjà attribuées, en cooldown, ou sous le seuil de qualité. Le moteur repasse cette nuit."
       />
     );
   }

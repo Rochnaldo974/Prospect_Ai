@@ -32,8 +32,8 @@ export function ServicesForm({
   return (
     <form action={action}>
       <Step
-        question="Qu'est-ce que tu fais ?"
-        help="Une opportunité hors de cette liste ne te sera jamais proposée, quel que soit son score. Ne rien cocher revient à tout accepter."
+        question="Que faites-vous ?"
+        help="Une opportunité hors de cette liste ne vous sera jamais proposée, quel que soit son score. Ne rien cocher revient à tout accepter."
         problem={state.problem}
         pending={pending}
         submitLabel="Continuer"
