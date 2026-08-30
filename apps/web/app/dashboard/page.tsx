@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getMyOpportunities } from '@/lib/opportunities/mine';
 import { signOut } from '@/app/(auth)/actions';
 import { OpportunityCard } from '@/components/opportunity-card';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -48,21 +48,11 @@ export default async function DashboardPage() {
       </header>
 
       {opportunities.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Rien à te proposer aujourd&apos;hui</CardTitle>
-            <CardDescription>
-              Mieux vaut ne rien envoyer qu&apos;envoyer du remplissage : une opportunité
-              n&apos;est livrée que si un fait daté et vérifiable la justifie.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Le moteur repasse chaque nuit. Élargir ton périmètre géographique ou tes
-              secteurs augmente le nombre de correspondances.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          title="Rien à te proposer aujourd’hui"
+          explanation="Mieux vaut ne rien envoyer que du remplissage : une opportunité n’est livrée que si un fait daté et vérifiable la justifie. Le moteur repasse cette nuit — élargir ton périmètre ou tes services augmente les correspondances."
+          action={{ href: '/onboarding?modifier', label: 'Revoir mes préférences' }}
+        />
       ) : (
         <div className="space-y-5">
           {opportunities.map((opportunity) => (

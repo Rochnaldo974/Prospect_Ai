@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils/cn';
 
-/** Compteur de la vue d'ensemble. */
+/**
+ * Un compteur de la vue d'ensemble.
+ *
+ * Le chiffre est en chasse fixe : ces cartes se lisent en colonne, et des
+ * chiffres de largeurs différentes se comparent mal. L'intitulé passe en
+ * étiquette de marge, comme partout ailleurs dans le produit.
+ */
 export function StatCard({
   label,
   value,
@@ -14,18 +20,18 @@ export function StatCard({
   tone?: 'default' | 'warning' | 'danger' | undefined;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-lg border bg-card p-4 transition-colors hover:border-[var(--rule)]">
+      <p className="field-label">{label}</p>
       <p
         className={cn(
-          'mt-1 text-2xl font-semibold tabular-nums',
+          'tabular mt-1.5 text-[1.75rem] font-semibold leading-none tracking-tight',
           tone === 'warning' && 'text-warning',
           tone === 'danger' && 'text-destructive',
         )}
       >
         {value}
       </p>
-      {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
@@ -44,10 +50,12 @@ export function ScoreBadge({ score }: { score: number | null }) {
   return (
     <span
       className={cn(
-        'inline-flex min-w-11 justify-center rounded px-1.5 py-0.5 text-xs font-semibold tabular-nums',
-        value >= 75 && 'bg-success/15 text-success',
-        value >= 55 && value < 75 && 'bg-warning/15 text-warning',
-        value < 55 && 'bg-muted text-muted-foreground',
+        'tabular inline-flex min-w-11 justify-center rounded border px-1.5 py-0.5 font-mono text-xs',
+        // Les seuils suivent le quality gate : sous 55 l'opportunité n'entre
+        // pas en stock, et la lecture visuelle doit refléter la règle.
+        value >= 75 && 'border-[var(--verified)]/30 bg-[var(--verified)]/10 text-[var(--verified)]',
+        value >= 55 && value < 75 && 'border-[var(--caution)]/30 bg-[var(--caution)]/10 text-[var(--caution)]',
+        value < 55 && 'border-transparent bg-muted text-muted-foreground',
       )}
     >
       {value}
@@ -78,7 +86,12 @@ export function Pill({
   );
 }
 
-/** Bloc de section pour la fiche entreprise. */
+/**
+ * Bloc de section pour la fiche entreprise.
+ *
+ * Le compteur vit à droite du titre, en chasse fixe : dans une fiche qui en
+ * empile huit, c'est lui qu'on parcourt pour savoir où regarder.
+ */
 export function Section({
   title,
   count,
@@ -93,15 +106,15 @@ export function Section({
   const isEmpty = count === 0;
   return (
     <section className="rounded-lg border bg-card">
-      <header className="flex items-baseline gap-2 border-b px-4 py-2.5">
-        <h2 className="text-sm font-semibold">{title}</h2>
+      <header className="flex items-baseline justify-between gap-3 border-b px-4 py-3">
+        <h2 className="field-label">{title}</h2>
         {count !== undefined ? (
-          <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+          <span className="tabular font-mono text-xs text-muted-foreground">{count}</span>
         ) : null}
       </header>
       <div className="p-4">
         {isEmpty && empty ? (
-          <p className="text-sm text-muted-foreground">{empty}</p>
+          <p className="py-2 text-sm leading-relaxed text-muted-foreground">{empty}</p>
         ) : (
           children
         )}
