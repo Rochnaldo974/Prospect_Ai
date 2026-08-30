@@ -17,7 +17,7 @@ export default function NotFound() {
         <p className="field-label">Erreur 404</p>
         <EmptyState
           title="Cette adresse ne mène nulle part"
-          explanation="Le lien est peut-être ancien, ou la page a changé de nom. Tes opportunités du jour, elles, sont toujours au même endroit."
+          explanation="Le lien est peut-être ancien, ou la page a changé de nom. Vos opportunités du jour, elles, sont toujours au même endroit."
           action={{ href: '/dashboard', label: 'Aller à mes opportunités' }}
         />
       </div>

@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- Banc d'essai mobile, dev uniquement : la fenêtre Chrome de cette machine
+     refuse de descendre sous 1440 px, un iframe de 390 px applique les mêmes
+     media queries qu'un téléphone. Fichier à ne pas déployer. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Banc mobile 390px</title>
+<style>
+  body { margin: 0; display: flex; gap: 24px; justify-content: center; background: #3a3f4d; padding: 20px; }
+  iframe { width: 390px; height: 800px; border: 0; border-radius: 12px; background: #fff; }
+</style>
+</head>
+<body>
+  <iframe id="a" src="/"></iframe>
+  <iframe id="b" src="/"></iframe>
+  <iframe id="c" src="/"></iframe>
+  <script>
+    // ?src=/chemin recible les trois cadres : le banc sert pour toute page.
+    const src = new URLSearchParams(location.search).get('src');
+    if (src) for (const f of document.querySelectorAll('iframe')) f.src = src;
+  </script>
+</body>
+</html>

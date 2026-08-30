@@ -12,7 +12,9 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Toutes les routes sauf fichiers statiques, images optimisées et favicon.
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    // Toutes les routes sauf fichiers statiques, images optimisées et tout
+    // chemin portant une extension : un fichier de public/ n'est jamais une
+    // page à protéger, et le renvoyer vers /login casse son chargement.
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 };

@@ -138,7 +138,7 @@ function Stats({ stats }: { stats: OutcomeStats }) {
   return (
     <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-[var(--line)] sm:grid-cols-5">
       {cells.map(([label, value]) => (
-        <div key={label} className="bg-card px-5 py-5">
+        <div key={label} className="bg-card px-5 py-5 last:col-span-2 sm:last:col-span-1">
           <p className="tabular text-2xl font-semibold tracking-tight">{value}</p>
           <p className="field-label mt-1">{label}</p>
         </div>

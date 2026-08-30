@@ -51,7 +51,7 @@ export default async function HomePage() {
             prospect<span className="text-[var(--brand)]">.ai</span>
           </Link>
 
-          <nav className="flex items-center gap-6 text-sm">
+          <nav className="flex items-center gap-4 text-sm sm:gap-6">
             {profile ? (
               <Link href="/dashboard" className="font-medium transition-opacity hover:opacity-70">
                 Mes opportunités
@@ -63,9 +63,12 @@ export default async function HomePage() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-medium text-[var(--white)] shadow-[0_6px_18px_-8px_rgba(11,13,20,.5)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_10px_24px_-8px_rgba(11,13,20,.55)]"
+                  className="whitespace-nowrap rounded-full bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-[var(--white)] shadow-[0_6px_18px_-8px_rgba(11,13,20,.5)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_10px_24px_-8px_rgba(11,13,20,.55)] sm:px-5"
                 >
-                  Essayer gratuitement
+                  {/* « gratuitement » n'apparaît qu'à partir de 640 px : en
+                      dessous, le bouton passait sur deux lignes et cassait
+                      toute la barre. */}
+                  Essayer<span className="hidden sm:inline"> gratuitement</span>
                 </Link>
               </>
             )}

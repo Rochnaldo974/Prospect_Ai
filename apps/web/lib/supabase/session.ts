@@ -3,10 +3,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@prospect/core';
 
 /** Routes accessibles sans session. */
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth', '/confidentialite'];
+
+// Les aperçus de développement ne demandent pas de session : la page fait
+// elle-même son 404 en production, le proxy n'a rien à leur ajouter.
+const DEV_PATHS = ['/apercu-dev'];
 
 function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const paths = process.env.NODE_ENV === 'production'
+    ? PUBLIC_PATHS
+    : [...PUBLIC_PATHS, ...DEV_PATHS];
+  return paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 /**

@@ -32,11 +32,15 @@ export function OpportunityRow({
       open={open}
       className="group overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04)]"
     >
-      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4 transition-colors hover:bg-[var(--mist)] sm:px-6">
+      {/* Une seule rangée, jamais de repli : sur 390 px de large, le
+          flex-wrap éclatait le nom sur trois lignes et tronquait le constat
+          à une lettre. Le centre tronque, les extrémités sont fixes, et la
+          prestation s'empile au-dessus du temps restant à droite. */}
+      <summary className="flex cursor-pointer list-none items-center gap-4 px-4 py-4 transition-colors hover:bg-[var(--mist)] sm:gap-5 sm:px-6">
         <Score value={opportunity.matchScore} done={done} />
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold tracking-tight">
+          <p className="truncate text-sm font-semibold tracking-tight">
             {company.name}
             {company.city ? (
               <span className="font-normal text-muted-foreground"> · {company.city}</span>
@@ -49,11 +53,12 @@ export function OpportunityRow({
           </p>
         </div>
 
-        <span className="shrink-0 rounded-full bg-[var(--brand-wash)] px-3 py-1.5 text-[13px] font-medium text-[var(--brand)]">
-          {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
-        </span>
-
-        <Remaining hoursLeft={opportunity.hoursLeft} />
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className="rounded-full bg-[var(--brand-wash)] px-2.5 py-1 text-xs font-medium text-[var(--brand)] sm:px-3 sm:py-1.5 sm:text-[13px]">
+            {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
+          </span>
+          <Remaining hoursLeft={opportunity.hoursLeft} />
+        </div>
 
         <span
           aria-hidden
