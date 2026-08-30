@@ -18,13 +18,20 @@ export function DossierPreview() {
       <div className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04),0_32px_80px_-32px_rgba(11,13,20,.28)]">
         <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-b px-6 py-5 sm:px-8">
           <div>
-            <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">SAKURA</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Restaurant · Angers</p>
+            <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Restaurant · Angers
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Nom et coordonnées masqués sur cette page
+            </p>
           </div>
           <div className="flex items-center gap-2.5">
             <span className="field-label rounded-full border px-2.5 py-1">Refonte de site</span>
+            {/* Le score d'OPPORTUNITÉ, qui monte quand celui du site descend.
+                Non étiqueté, il se lisait comme la note du site — soit un
+                site en panne présenté comme excellent, deux blocs plus bas. */}
             <span className="tabular rounded-full border border-[var(--brand)]/25 bg-[var(--brand-wash)] px-2.5 py-1 font-mono text-[11px] text-[var(--brand)]">
-              89/100
+              opportunité 89/100
             </span>
           </div>
         </header>
@@ -32,7 +39,7 @@ export function DossierPreview() {
         <div className="grid gap-x-10 gap-y-8 px-6 py-7 sm:px-8 lg:grid-cols-[1.35fr_1fr]">
           <div className="space-y-7">
             <Part title="Pourquoi cette entreprise">
-              SAKURA, restaurant à Angers. Son site ne s’ouvre plus, et le navigateur affiche
+              Un restaurant à Angers. Son site ne s’ouvre plus, et le navigateur affiche
               une alerte de sécurité avant même d’essayer. Un client qui cherche l’adresse ou les
               horaires ne trouve rien. C’est un bon motif de proposer une refonte — pas la preuve
               que l’entreprise l’a demandée.
@@ -79,9 +86,11 @@ export function DossierPreview() {
             </section>
 
             <section className="border-t pt-5">
-              <p className="font-mono text-base tracking-tight">02 41 88 81 98</p>
+              <p className="font-mono text-base tracking-tight text-muted-foreground">
+                02 •• •• •• ••
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Exclusif pendant 72 h · sakura-angers.fr
+                Exclusif pendant 72 h · numéro visible dans votre tableau de bord
               </p>
             </section>
           </div>

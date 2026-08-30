@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
 import { SiteAudit } from '@/components/landing/audit';
-import { Findings } from '@/components/landing/findings';
+import { Examples } from '@/components/landing/examples';
 import { DossierPreview } from '@/components/landing/dossier';
 import { Reveal } from '@/components/landing/reveal';
 import { SiteHeader } from '@/components/landing/site-header';
@@ -135,14 +135,35 @@ function Hero() {
   );
 }
 
-/** Reste-t-il du marché ? La seule réponse dont la page a besoin. */
+/**
+ * Reste-t-il du marché ? Quatre cas plutôt qu'un pourcentage.
+ *
+ * « 53 % des sites ont un défaut » demande au lecteur un effort de
+ * projection ; « ce restaurant n'a pas de site du tout » est immédiatement
+ * une facture qu'il sait établir. Le chiffre reste, mais en note, à sa
+ * place — il sert à dire que les quatre cas ne sont pas des exceptions.
+ */
 function Market() {
   return (
     <section className="border-y bg-[var(--mist)]">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <Reveal>
-          <Findings />
+          <p className="field-label">Ce que le moteur trouve</p>
+          <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+            Quatre entreprises trouvées cette semaine
+          </h2>
+          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+            Chacune a un problème que ses clients voient et qu’elle ne voit pas. C’est le
+            genre de dossier qui vous arrive le matin.
+          </p>
         </Reveal>
+
+        <Examples />
+
+        <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
+          Cas réels, identités retirées. Sur les 1 572 sites d’entreprises françaises analysés
+          à ce jour, 828 présentent au moins un de ces défauts — plus d’un sur deux.
+        </p>
       </div>
     </section>
   );
@@ -163,6 +184,9 @@ function Delivered() {
         <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
           Un dossier par entreprise, prêt à appeler
         </h2>
+        <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+          Voici le quatrième cas ci-dessus, en entier — tel qu’il vous arriverait demain matin.
+        </p>
       </Reveal>
 
       {/* Les trois temps tiennent sur une ligne. Ils n'ont jamais mérité une
@@ -192,13 +216,40 @@ function Delivered() {
   );
 }
 
-/** Combien ça coûte ? Et les trois objections, en une ligne chacune. */
+/**
+ * Combien ça coûte, et les trois objections en une ligne chacune.
+ *
+ * Deux formules, parce qu'un studio ne s'inscrit pas sur une offre qui parle
+ * de « développeur seul » — et parce qu'une seule ligne de prix laisse le
+ * lecteur se demander ce qu'elle cache.
+ */
 function Pricing() {
-  const included = [
-    '5 entreprises par jour, choisies selon ce que vous savez faire',
-    'Exclusives 72 h : personne d’autre ne les reçoit',
-    'Suivi de vos appels, de vos devis et de vos clients',
-    'Toute la France, tous les secteurs, sans engagement',
+  const plans = [
+    {
+      name: 'Solo',
+      tag: 'Le plus pris',
+      audience: 'Pour un développeur seul.',
+      price: '39',
+      features: [
+        '5 entreprises par jour, choisies selon ce que vous savez faire',
+        'Exclusives 72 h : personne d’autre ne les reçoit',
+        'Suivi de vos appels, de vos devis et de vos clients',
+        'Toute la France, tous les secteurs',
+      ],
+      featured: true,
+    },
+    {
+      name: 'Atelier',
+      audience: 'Pour un studio de deux à cinq personnes.',
+      price: '89',
+      features: [
+        '12 entreprises par jour, réparties entre les membres',
+        'Exclusivité à l’échelle du studio',
+        'Suivi partagé et export des dossiers',
+        'Toute la France, tous les secteurs',
+      ],
+      featured: false,
+    },
   ];
 
   const answers = [
@@ -210,59 +261,97 @@ function Pricing() {
   return (
     <section id="tarifs" className="scroll-mt-24 bg-[var(--ink)] text-white">
       <div className="mx-auto max-w-6xl px-6 py-24">
-        <div className="grid gap-14 lg:grid-cols-[1fr_1fr] lg:gap-20">
-          <Reveal>
-            <p className="field-label text-white/45">Tarif</p>
-            <h2 className="mt-4 text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-              39 € par mois, sans engagement.
-            </h2>
-            <p className="reasoning mt-5 max-w-md text-white/60">
-              Le nombre de places est limité : une entreprise n’est proposée qu’à une seule
-              personne, et il en sort un nombre fini chaque jour.
-            </p>
+        <Reveal>
+          <p className="field-label text-white/45">Tarifs</p>
+          <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+            Sans engagement, sans palier caché.
+          </h2>
+          <p className="reasoning mt-4 max-w-xl text-white/60">
+            Le nombre de places est limité : une entreprise n’est proposée qu’à une seule
+            personne, et il en sort un nombre fini chaque jour.
+          </p>
+        </Reveal>
 
-            <ul className="mt-9 space-y-3.5">
-              {included.map((line) => (
-                <li key={line} className="flex gap-3 text-sm">
-                  <span aria-hidden className="text-[var(--brand)]">
-                    ✓
-                  </span>
-                  <span className="text-white/85">{line}</span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <Link
-                href="/signup"
-                className="rounded-full bg-[var(--white)] px-7 py-3.5 text-sm font-medium text-[var(--ink)] transition-transform duration-200 hover:-translate-y-px"
+        <div className="mt-14 grid gap-5 md:grid-cols-2">
+          {plans.map((plan, i) => (
+            <Reveal key={plan.name} delay={i * 90}>
+              <article
+                className={`flex h-full flex-col rounded-2xl p-8 ${
+                  plan.featured
+                    ? 'bg-[var(--brand)]'
+                    : 'border border-white/12 bg-white/[0.04]'
+                }`}
               >
-                Essayer gratuitement
-              </Link>
-              <span className="text-xs text-white/50">
-                Sans carte bancaire. Trois questions, une minute.
-              </span>
-            </div>
-          </Reveal>
-
-          <Reveal delay={90}>
-            <div className="lg:pt-16">
-              {answers.map(([question, answer]) => (
-                <div key={question} className="border-t border-white/12 py-5">
-                  <p className="text-sm font-medium">{question}</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/60">{answer}</p>
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-lg font-semibold tracking-tight">{plan.name}</h3>
+                  {plan.tag ? (
+                    <span className="rounded-full bg-white/20 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em]">
+                      {plan.tag}
+                    </span>
+                  ) : null}
                 </div>
-              ))}
-              <p className="border-t border-white/12 pt-5 text-xs text-white/40">
-                Le détail du traitement des données est sur la{' '}
-                <Link href="/confidentialite" className="underline underline-offset-2 hover:text-white/70">
-                  page Confidentialité
+                <p className={`mt-1.5 text-sm ${plan.featured ? 'text-white/75' : 'text-white/50'}`}>
+                  {plan.audience}
+                </p>
+
+                <p className="mt-7 flex items-baseline gap-1.5">
+                  <span className="tabular text-5xl font-semibold tracking-tight">
+                    {plan.price}
+                  </span>
+                  <span className={`text-sm ${plan.featured ? 'text-white/75' : 'text-white/50'}`}>
+                    € / mois
+                  </span>
+                </p>
+
+                <ul className="mt-7 space-y-3">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex gap-3 text-sm">
+                      <span aria-hidden className={plan.featured ? 'text-white' : 'text-[var(--brand)]'}>
+                        ✓
+                      </span>
+                      <span className={plan.featured ? 'text-white/90' : 'text-white/80'}>
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  href="/signup"
+                  className={`mt-9 rounded-full px-6 py-3.5 text-center text-sm font-medium transition-transform duration-200 hover:-translate-y-px ${
+                    plan.featured
+                      ? 'bg-[var(--white)] text-[var(--ink)]'
+                      : 'border border-white/25 hover:bg-white/10'
+                  }`}
+                >
+                  Essayer gratuitement
                 </Link>
-                .
-              </p>
-            </div>
-          </Reveal>
+              </article>
+            </Reveal>
+          ))}
         </div>
+
+        <p className="mt-6 text-xs text-white/40">
+          Sans carte bancaire à l’inscription. Trois questions, une minute. Tarifs indicatifs
+          pendant le lancement.
+        </p>
+
+        <div className="mt-16 grid gap-x-12 gap-y-0 border-t border-white/12 pt-4 md:grid-cols-3">
+          {answers.map(([question, answer]) => (
+            <div key={question} className="py-5">
+              <p className="text-sm font-medium">{question}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-white/60">{answer}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-2 text-xs text-white/40">
+          Le détail du traitement des données est sur la{' '}
+          <Link href="/confidentialite" className="underline underline-offset-2 hover:text-white/70">
+            page Confidentialité
+          </Link>
+          .
+        </p>
       </div>
     </section>
   );

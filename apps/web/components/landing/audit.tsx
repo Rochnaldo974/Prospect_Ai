@@ -88,7 +88,7 @@ export function SiteAudit() {
           {index === 0 ? 'Analyse en cours' : index === 2 ? 'Prospect retenu' : 'Analyse terminée'}
         </span>
         <span className="ml-auto font-mono text-[11px] text-muted-foreground">
-          boulangerie-martin.fr
+          boulangerie-••••••.fr
         </span>
       </figcaption>
 
@@ -252,7 +252,7 @@ function Kept({ visible }: { visible: boolean }) {
         <span aria-hidden>✓</span> Retenu pour vous
       </p>
       <p className="mt-1.5 font-mono text-xs text-[var(--brand)]/80">
-        02 41 88 81 98 · exclusif 72 h
+        02 •• •• •• •• · exclusif 72 h
       </p>
     </div>
   );
