@@ -54,6 +54,45 @@ export function validateAnswers(answers: OnboardingAnswers): OnboardingResult {
   return { ok: true, problem: null };
 }
 
+/** Les étapes, dans l'ordre. Le nombre est affiché à l'utilisateur. */
+export const ONBOARDING_STEPS = ['services', 'zone', 'secteurs', 'recapitulatif'] as const;
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+
+/**
+ * Enregistre une réponse partielle.
+ *
+ * Chaque étape écrit dès qu'elle est validée, et `onboarding_completed` reste
+ * faux jusqu'à la dernière. Quelqu'un qui ferme son navigateur au milieu
+ * retrouve ses réponses ; et un profil à moitié rempli ne reçoit pas un lot
+ * construit sur des préférences incomplètes.
+ */
+export async function saveStep(
+  db: Db,
+  userId: string,
+  patch: Partial<OnboardingAnswers>,
+): Promise<OnboardingResult> {
+  const current = await readPreferences(db, userId);
+  const merged = { ...current, ...patch };
+
+  if (patch.locationMode !== undefined || patch.city !== undefined || patch.region !== undefined) {
+    const validation = validateAnswers(merged);
+    if (!validation.ok) return validation;
+  }
+
+  const { error } = await db
+    .from('user_preferences')
+    .upsert({
+      user_id: userId,
+      services: merged.services,
+      location_mode: merged.locationMode,
+      city: merged.city,
+      region: merged.region,
+      excluded_industries: merged.excludedIndustries,
+    }, { onConflict: 'user_id' });
+
+  return error ? { ok: false, problem: error.message } : { ok: true, problem: null };
+}
+
 /**
  * Enregistre le paramétrage et ouvre le compte à l'attribution.
  *

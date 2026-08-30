@@ -2,56 +2,104 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Direction : « Dossier »
+
+   Le produit ne vend pas une liste d'entreprises — il vend une RAISON, datée
+   et vérifiable, de décrocher son téléphone aujourd'hui. Toute l'interface en
+   découle : structure de dossier d'expertise, finition contemporaine.
+
+   Trois décisions portent l'identité :
+
+     le papier   un gris très légèrement vert, celui d'un papier d'archive.
+                 Ni le blanc clinique d'un tableau de bord, ni le crème chaud
+                 devenu le réflexe de tout site « éditorial ».
+
+     l'appareil  chaque fait constaté porte sa source et sa date, comme une
+        de note  note en bas de page dans un rapport. Ce n'est pas un ornement :
+                 c'est la discipline du moteur rendue visible.
+
+     deux voix   le raisonnement écrit par le moteur est composé en SERIF, dans
+                 une justification de lecture. L'interface autour est en sans.
+                 On lit un argument ; on utilise un outil.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
+  /* Papier d'archive : gris froid à sous-ton vert. */
+  --paper:        #eff1ee;
+  --paper-raised: #fafbf9;
+  --ink:          #161d1a;
+  --ink-soft:     #5a635e;
+  --rule:         #cdd3cd;
 
-  --success: oklch(0.596 0.145 163.225);
-  --warning: oklch(0.769 0.156 70.08);
+  /* Vert de validation : la couleur d'un tampon « vérifié », pas un néon. */
+  --verified:     #1d6b4f;
+  --verified-ink: #f3f8f5;
+
+  /* Ambre sourd pour les réserves. Une réserve n'est pas une alarme. */
+  --caution:      #8a5a12;
+  --caution-wash: #f6efe2;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #f6f8f5;
+  --secondary: #e4e8e3;
+  --secondary-foreground: var(--ink);
+  --muted: #e4e8e3;
+  --muted-foreground: var(--ink-soft);
+  --accent: #e2e9e4;
+  --accent-foreground: var(--ink);
+  --destructive: #96261b;
+  --destructive-foreground: #fbf5f4;
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--verified);
+
+  --success: var(--verified);
+  --warning: var(--caution);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
+  --paper:        #101512;
+  --paper-raised: #171e1a;
+  --ink:          #e6ebe6;
+  --ink-soft:     #98a29b;
+  --rule:         #2b3531;
 
-  --success: oklch(0.696 0.145 163.225);
-  --warning: oklch(0.828 0.156 70.08);
+  --verified:     #4fae86;
+  --verified-ink: #0c1611;
+  --caution:      #cd9a4a;
+  --caution-wash: #241d10;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-raised);
+  --popover-foreground: var(--ink);
+  --primary: #e6ebe6;
+  --primary-foreground: #101512;
+  --secondary: #1e2622;
+  --secondary-foreground: var(--ink);
+  --muted: #1e2622;
+  --muted-foreground: var(--ink-soft);
+  --accent: #202a25;
+  --accent-foreground: var(--ink);
+  --destructive: #d4665a;
+  --destructive-foreground: #1a0f0d;
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--verified);
+
+  --success: var(--verified);
+  --warning: var(--caution);
 }
 
 @theme inline {
@@ -83,13 +131,109 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@theme inline {
+  --font-sans: var(--font-familjen), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
   }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Le sans porte l'interface : titres serrés, personnalité dans les
+     terminaisons, jamais de graisse décorative. */
+  h1, h2, h3 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  /* Accessibilité : la mise au point clavier doit être visible partout, et
+     elle emprunte le vert de validation plutôt qu'un bleu système. */
+  :focus-visible {
+    outline: 2px solid var(--verified);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@layer components {
+  /* ── L'appareil de note ──────────────────────────────────────────────────
+     Signature de l'interface. Chaque fait constaté est présenté comme une
+     note de rapport : un repère dans la marge, le constat, et sa datation.
+     Ce n'est pas un ornement — c'est la règle du moteur rendue lisible :
+     rien n'est affirmé sans être sourcé.                                    */
+
+  .evidence {
+    display: grid;
+    grid-template-columns: 1.75rem 1fr;
+    column-gap: 0.75rem;
+    align-items: baseline;
+    padding-block: 0.5rem;
+    border-top: 1px solid var(--rule);
+  }
+
+  .evidence:first-of-type { border-top: 0; }
+
+  .evidence__mark {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--verified);
+    letter-spacing: 0.02em;
+  }
+
+  .evidence__fact { font-size: 0.875rem; line-height: 1.55; }
+
+  /* ── La voix du moteur ───────────────────────────────────────────────────
+     Le raisonnement écrit par le moteur est composé pour être LU, pas
+     survolé : serif de lecture, justification courte, interligne généreux.
+     L'interface autour reste en sans. On lit un argument, on utilise un
+     outil — la typographie doit dire lequel des deux on a sous les yeux.   */
+
+  .reasoning {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    max-width: 62ch;
+    color: var(--ink);
+  }
+
+  /* ── L'étiquette de marge ────────────────────────────────────────────────
+     Reprise des formulaires administratifs : l'intitulé vit dans la marge,
+     en petites capitales, et ne dispute jamais l'attention au contenu.     */
+
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+  }
+
+  /* Données à comparer d'un coup d'œil : chiffres de même chasse. */
+  .tabular { font-variant-numeric: tabular-nums; }
 }

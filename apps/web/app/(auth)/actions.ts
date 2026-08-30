@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
@@ -94,4 +95,39 @@ export async function signOut(): Promise<never> {
   await supabase.auth.signOut();
   revalidatePath('/', 'layout');
   redirect('/login');
+}
+
+/**
+ * Connexion par Google.
+ *
+ * Le fournisseur renvoie vers /auth/callback, qui échange le code contre une
+ * session côté serveur. `next` n'est jamais repris tel quel du formulaire sans
+ * contrôle : c'est le point d'entrée classique d'une redirection ouverte.
+ *
+ * Aucun mot de passe ne transite par le produit — c'est précisément l'intérêt,
+ * et une raison de plus de le proposer en premier.
+ */
+export async function signInWithGoogle(formData: FormData): Promise<never> {
+  const supabase = await createClient();
+  const origin = (await headers()).get('origin') ?? 'http://127.0.0.1:3000';
+
+  const requested = String(formData.get('next') ?? '');
+  const next = requested.startsWith('/') && !requested.startsWith('//') ? requested : '';
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`,
+      queryParams: {
+        // Redemande le consentement pour obtenir un jeton de rafraîchissement,
+        // sans quoi la session expire sans possibilité de la renouveler.
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+
+  if (error || !data.url) redirect('/login?error=google_indisponible');
+
+  redirect(data.url);
 }

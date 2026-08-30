@@ -1,95 +1,95 @@
 import type { TodayOpportunity } from '@prospect/core';
 import { OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { OutcomeForm } from '@/components/outcome-form';
 
 /**
  * Une opportunité, telle que le freelance la reçoit.
  *
- * L'ordre de lecture est délibéré : d'abord POURQUOI cette entreprise, puis
- * POURQUOI MAINTENANT, et seulement ensuite le moyen de la joindre. Un
- * numéro de téléphone en tête ferait de cette carte un annuaire ; ce que le
- * freelance ne peut pas produire seul, c'est la raison.
+ * La carte est composée comme une pièce de dossier, et l'ordre de lecture est
+ * délibéré : d'abord POURQUOI cette entreprise, puis POURQUOI MAINTENANT, et
+ * seulement ensuite le moyen de la joindre. Un numéro de téléphone en tête
+ * ferait de cette page un annuaire ; or ce qu'un freelance ne peut pas
+ * produire seul, c'est la raison.
+ *
+ * Deux voix typographiques, et c'est la décision qui porte l'écran : le
+ * raisonnement du moteur est composé en serif, dans une justification de
+ * lecture, parce qu'on lit un argument. Les constats sont en monospace avec
+ * leur repère de marge, parce qu'on les vérifie caractère par caractère.
  *
  * Rien n'indique ici qu'une des cinq a été tirée au hasard : la mesurer
- * suppose qu'il ne puisse pas la reconnaître.
+ * suppose que le freelance ne puisse pas la reconnaître.
  */
 export function OpportunityCard({ opportunity }: { opportunity: TodayOpportunity }) {
   const { company, explanation: why } = opportunity;
 
   return (
-    <Card>
-      <CardHeader className="gap-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">{company.name}</h2>
-          <span className="shrink-0 rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">
-            {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
-          </span>
+    <article className="overflow-hidden rounded-xl border bg-card shadow-[0_1px_2px_rgba(22,29,26,.04)] transition-shadow duration-300 hover:shadow-[0_2px_12px_rgba(22,29,26,.07)]">
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b p-5 pb-4">
+        <div className="min-w-0">
+          <h2 className="text-xl leading-tight tracking-tight">{company.name}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {[company.industry, company.city].filter(Boolean).join(' · ') || 'Localisation inconnue'}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {[company.industry, company.city].filter(Boolean).join(' · ') || '—'}
-        </p>
-      </CardHeader>
+        <span className="field-label shrink-0 rounded-full border px-2.5 py-1">
+          {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
+        </span>
+      </header>
 
-      <CardContent className="space-y-5 text-sm">
+      <div className="space-y-6 p-5">
         <Block title="Pourquoi cette entreprise">{why.why}</Block>
 
-        {/* Vide quand rien ne date le contact. Le générateur ne fabrique
-            jamais d'urgence, et cette absence est elle-même une information. */}
+        {/* Vide quand rien ne date le contact. Le générateur ne fabrique jamais
+            d'urgence, et cette absence est elle-même une information. */}
         {why.whyNow ? <Block title="Pourquoi maintenant">{why.whyNow}</Block> : null}
 
         <Block title="Par quoi commencer">{why.angle}</Block>
 
         {why.signals.length > 0 ? (
-          <div>
-            <Title>Ce qui a été constaté</Title>
-            <ul className="mt-1.5 space-y-1">
-              {why.signals.map((signal) => (
-                <li key={signal} className="flex gap-2 text-muted-foreground">
-                  <span aria-hidden className="select-none">—</span>
-                  <span>{signal}</span>
-                </li>
+          <section>
+            <h3 className="field-label">Ce qui a été constaté</h3>
+            <div className="mt-2">
+              {why.signals.map((signal, index) => (
+                <p key={signal} className="evidence">
+                  <span className="evidence__mark" aria-hidden>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="evidence__fact">{signal}</span>
+                </p>
               ))}
-            </ul>
-          </div>
+            </div>
+          </section>
         ) : null}
 
         {why.caveats.length > 0 ? (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-            <Title>À savoir avant d’appeler</Title>
-            <ul className="mt-1.5 space-y-1">
+          <section className="rounded-lg bg-[var(--caution-wash)] p-4">
+            <h3 className="field-label" style={{ color: 'var(--caution)' }}>
+              À savoir avant d’appeler
+            </h3>
+            <ul className="mt-2 space-y-1.5">
               {why.caveats.map((caveat) => (
-                <li key={caveat} className="text-amber-800 dark:text-amber-400">{caveat}</li>
+                <li key={caveat} className="text-sm leading-relaxed text-[var(--caution)]">
+                  {caveat}
+                </li>
               ))}
             </ul>
-          </div>
+          </section>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-5">
           {company.phone ? (
-            <a href={`tel:${company.phone}`} className="font-medium hover:underline">
+            <a
+              href={`tel:${company.phone}`}
+              className="font-mono text-base tracking-tight underline-offset-4 hover:underline"
+            >
               {formatPhone(company.phone)}
             </a>
           ) : null}
           {company.contactFormUrl ? (
-            <a
-              href={company.contactFormUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:underline"
-            >
-              Formulaire de contact
-            </a>
+            <ExternalLink href={company.contactFormUrl}>Formulaire de contact</ExternalLink>
           ) : null}
           {company.websiteUrl ? (
-            <a
-              href={company.websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:underline"
-            >
-              Voir le site
-            </a>
+            <ExternalLink href={company.websiteUrl}>Voir le site</ExternalLink>
           ) : null}
         </div>
 
@@ -97,8 +97,21 @@ export function OpportunityCard({ opportunity }: { opportunity: TodayOpportunity
           assignmentId={opportunity.assignmentId}
           contactedAt={opportunity.contactedAt}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </article>
+  );
+}
+
+function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+    >
+      {children}
+    </a>
   );
 }
 
@@ -110,17 +123,12 @@ function formatPhone(phone: string): string {
     : phone;
 }
 
-function Title({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{children}</p>
-  );
-}
-
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <Title>{title}</Title>
-      <p className="mt-1.5 leading-relaxed">{children}</p>
-    </div>
+    <section>
+      <h3 className="field-label">{title}</h3>
+      {/* La prose du moteur, composée pour être lue. */}
+      <p className="reasoning mt-2">{children}</p>
+    </section>
   );
 }

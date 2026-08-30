@@ -4,6 +4,7 @@ import { signOut } from '@/app/(auth)/actions';
 import { OpportunityCard } from '@/components/opportunity-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export const metadata: Metadata = { title: 'Mes opportunités' };
 
@@ -22,19 +23,19 @@ export default async function DashboardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <a
+          <Link
             href="/onboarding?modifier"
             className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
           >
             Préférences
-          </a>
+          </Link>
           {role === 'admin' ? (
-            <a
+            <Link
               href="/admin"
               className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
             >
               Admin
-            </a>
+            </Link>
           ) : null}
           {/* Server action plutôt qu'un route handler : un seul chemin de
               déconnexion, et pas d'URL POST exposée sans usage. */}
