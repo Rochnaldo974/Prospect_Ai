@@ -12,17 +12,31 @@ import { usePathname } from 'next/navigation';
  */
 const TABS = [
   ['/dashboard', 'Ce matin'],
+  ['/dashboard/plus-tard', 'Plus tard'],
   ['/dashboard/suivi', 'À relancer'],
 ] as const;
 
-export function DashboardNav({ followUpCount = 0 }: { followUpCount?: number }) {
+export function DashboardNav({
+  followUpCount = 0,
+  snoozedCount = 0,
+}: {
+  followUpCount?: number;
+  snoozedCount?: number;
+}) {
   const pathname = usePathname();
+  const counts: Record<string, number> = {
+    '/dashboard/suivi': followUpCount,
+    '/dashboard/plus-tard': snoozedCount,
+  };
 
   return (
     <nav className="flex items-center gap-6 text-sm">
       {TABS.map(([href, label]) => {
-        const active = pathname === href;
-        const badge = href === '/dashboard/suivi' && followUpCount > 0;
+        // La page dossier appartient à « Ce matin » : on y arrive par elle.
+        const active = pathname === href
+          || (href === '/dashboard' && pathname.startsWith('/dashboard/opportunite'));
+        const count = counts[href] ?? 0;
+        const badge = count > 0;
         return (
           <Link
             key={href}
@@ -39,7 +53,7 @@ export function DashboardNav({ followUpCount = 0 }: { followUpCount?: number }) 
                 l'onglet — un « À relancer » nu se laisse oublier. */}
             {badge ? (
               <span className="tabular grid min-w-5 place-items-center rounded-full bg-[var(--brand)] px-1 py-0.5 font-mono text-[10px] leading-none text-white">
-                {followUpCount}
+                {count}
               </span>
             ) : null}
           </Link>

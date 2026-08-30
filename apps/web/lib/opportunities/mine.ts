@@ -66,6 +66,18 @@ export async function getMyOpportunities(): Promise<{
   };
 }
 
+/**
+ * Un dossier du jour, seul — la page de travail.
+ *
+ * Réutilise la lecture du jour plutôt qu'une requête dédiée : le lot fait
+ * cinq lignes, et une seule définition de « ce qu'est un dossier » vaut
+ * mieux qu'une seconde qui divergera.
+ */
+export async function getMyOpportunity(assignmentId: string): Promise<DailyOpportunity | null> {
+  const { opportunities } = await getMyOpportunities();
+  return opportunities.find((o) => o.assignmentId === assignmentId) ?? null;
+}
+
 /** Le suivi : ce qui a été appelé et qui attend une suite. */
 export async function getMyFollowUps(): Promise<{
   firstName: string;

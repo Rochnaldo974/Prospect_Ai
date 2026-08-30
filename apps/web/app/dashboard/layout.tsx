@@ -14,9 +14,20 @@ import { DashboardNav } from '@/components/dashboard/nav';
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const profile = await getSessionProfile();
-  const followUpCount = profile
-    ? (await getFollowUps(getServiceClient(), profile.id)).length
-    : 0;
+  let followUpCount = 0;
+  let snoozedCount = 0;
+  if (profile) {
+    const db = getServiceClient();
+    const [followUps, snoozed] = await Promise.all([
+      getFollowUps(db, profile.id),
+      db.from('assignments').select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .in('status', ['active', 'contacted'])
+        .not('snoozed_at', 'is', null),
+    ]);
+    followUpCount = followUps.length;
+    snoozedCount = snoozed.count ?? 0;
+  }
 
   return (
     <div className="min-h-dvh bg-[var(--mist)]">
@@ -26,7 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard" className="text-lg font-semibold tracking-[-0.03em]">
               prospect<span className="text-[var(--brand)]">.ai</span>
             </Link>
-            <DashboardNav followUpCount={followUpCount} />
+            <DashboardNav followUpCount={followUpCount} snoozedCount={snoozedCount} />
           </div>
 
           <div className="flex items-center gap-5 text-sm">

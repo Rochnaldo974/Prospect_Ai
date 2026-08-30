@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getServiceClient, markContacted, recordOptOut, recordOutcome } from '@prospect/core';
+import { getServiceClient, markContacted, recordOptOut, recordOutcome, setSnoozed } from '@prospect/core';
 import type { DeclarableOutcome } from '@prospect/core';
 import { requireUser } from '@/lib/auth/session';
 
@@ -67,4 +67,21 @@ export async function declareOptOut(formData: FormData): Promise<void> {
     notes: notes.length > 0 ? notes.slice(0, 2000) : null,
   });
   revalidatePath('/dashboard');
+}
+
+
+/** Mettre de côté, ou reprendre. Un marque-page — l'exclusivité court. */
+export async function toggleSnooze(formData: FormData): Promise<void> {
+  const profile = await requireUser();
+  const assignmentId = String(formData.get('assignmentId') ?? '');
+  if (!assignmentId) return;
+
+  await setSnoozed(getServiceClient(), {
+    assignmentId,
+    userId: profile.id,
+    snoozed: formData.get('snoozed') === 'true',
+  });
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/plus-tard');
+  revalidatePath(`/dashboard/opportunite/${assignmentId}`);
 }

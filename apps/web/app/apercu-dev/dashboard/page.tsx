@@ -70,12 +70,8 @@ export default function DashboardPreview() {
         </header>
 
         <div className="mt-8 space-y-3">
-          {opportunities.map((opportunity, index) => (
-            <OpportunityRow
-              key={opportunity.assignmentId}
-              opportunity={opportunity}
-              open={index === 1}
-            />
+          {opportunities.map((opportunity) => (
+            <OpportunityRow key={opportunity.assignmentId} opportunity={opportunity} />
           ))}
         </div>
 
@@ -141,6 +137,7 @@ function fixtures(): DailyOpportunity[] {
   const base = {
     rank: 1,
     viewedAt: null,
+    snoozedAt: null,
     exclusiveUntil: '2026-01-01T00:00:00Z',
   };
 
@@ -157,6 +154,8 @@ function fixtures(): DailyOpportunity[] {
         city: 'Angers',
         industry: 'Boulangerie-pâtisserie',
         phone: '+33241000001',
+        email: null,
+        address: null,
         contactFormUrl: null,
         websiteUrl: 'https://exemple.invalid',
       },
@@ -180,6 +179,8 @@ function fixtures(): DailyOpportunity[] {
         city: 'Rennes',
         industry: 'Menuiserie',
         phone: '+33299000002',
+        email: null,
+        address: null,
         contactFormUrl: null,
         websiteUrl: 'https://exemple.invalid',
       },
@@ -203,6 +204,8 @@ function fixtures(): DailyOpportunity[] {
         city: 'Nantes',
         industry: 'Restauration',
         phone: null,
+        email: null,
+        address: null,
         contactFormUrl: 'https://exemple.invalid/contact',
         websiteUrl: null,
       },

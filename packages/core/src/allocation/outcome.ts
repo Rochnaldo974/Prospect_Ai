@@ -252,6 +252,25 @@ export async function markViewed(
     .is('viewed_at', null);
 }
 
+/**
+ * Met un dossier de côté, ou l'en ressort.
+ *
+ * Un marque-page, rien de plus : l'exclusivité court toujours, l'expiration
+ * aussi. Prolonger l'une ou l'autre reviendrait à laisser un utilisateur
+ * geler une entreprise que d'autres attendent.
+ */
+export async function setSnoozed(
+  db: Db,
+  input: { assignmentId: string; userId: string; snoozed: boolean },
+): Promise<void> {
+  await db
+    .from('assignments')
+    .update({ snoozed_at: input.snoozed ? new Date().toISOString() : null })
+    .eq('id', input.assignmentId)
+    .eq('user_id', input.userId)
+    .in('status', ['active', 'contacted']);
+}
+
 /** Marque qu'un contact a été tenté, sans encore en connaître l'issue. */
 export async function markContacted(
   db: Db,

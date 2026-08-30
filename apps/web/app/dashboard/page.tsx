@@ -22,8 +22,11 @@ export const metadata: Metadata = { title: 'Ce matin' };
 export default async function DashboardPage() {
   const { firstName, opportunities, diagnosis, followUpCount } = await getMyOpportunities();
 
-  const done = opportunities.filter((o) => o.contactedAt !== null).length;
-  const total = opportunities.length;
+  // Les dossiers mis de côté vivent sous « Plus tard » : les laisser ici
+  // ferait de la mise de côté un simple marquage, pas un rangement.
+  const today = opportunities.filter((o) => o.snoozedAt === null);
+  const done = today.filter((o) => o.contactedAt !== null).length;
+  const total = today.length;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
@@ -48,14 +51,8 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="mt-8 space-y-3">
-          {opportunities.map((opportunity, index) => (
-            <OpportunityRow
-              key={opportunity.assignmentId}
-              opportunity={opportunity}
-              // Le premier dossier est ouvert : une liste entièrement fermée
-              // demande un clic avant de montrer quoi que ce soit.
-              open={index === 0 && opportunity.contactedAt === null}
-            />
+          {today.map((opportunity) => (
+            <OpportunityRow key={opportunity.assignmentId} opportunity={opportunity} />
           ))}
         </div>
       )}

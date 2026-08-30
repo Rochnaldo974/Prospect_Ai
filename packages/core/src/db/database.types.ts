@@ -85,6 +85,7 @@ export type Database = {
           outcome: Database["public"]["Enums"]["assignment_outcome"] | null
           outcome_at: string | null
           rank: number
+          snoozed_at: string | null
           status: Database["public"]["Enums"]["assignment_status"]
           user_id: string
           viewed_at: string | null
@@ -103,6 +104,7 @@ export type Database = {
           outcome?: Database["public"]["Enums"]["assignment_outcome"] | null
           outcome_at?: string | null
           rank: number
+          snoozed_at?: string | null
           status?: Database["public"]["Enums"]["assignment_status"]
           user_id: string
           viewed_at?: string | null
@@ -121,6 +123,7 @@ export type Database = {
           outcome?: Database["public"]["Enums"]["assignment_outcome"] | null
           outcome_at?: string | null
           rank?: number
+          snoozed_at?: string | null
           status?: Database["public"]["Enums"]["assignment_status"]
           user_id?: string
           viewed_at?: string | null

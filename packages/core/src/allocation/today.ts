@@ -22,15 +22,41 @@ export interface TodayOpportunity {
   exclusiveUntil: string;
   viewedAt: string | null;
   contactedAt: string | null;
+  /** Mis de côté par le freelance — un marque-page, pas un droit de plus. */
+  snoozedAt: string | null;
   company: {
     name: string;
     city: string | null;
     industry: string | null;
     phone: string | null;
+    /**
+     * E-mail GÉNÉRIQUE relevé sur le site (contact@, info@…). Jamais un
+     * e-mail nominatif : si rien de générique n'a été trouvé, null — on ne
+     * montre pas plutôt que de risquer une adresse personnelle.
+     */
+    email: string | null;
+    address: string | null;
     contactFormUrl: string | null;
     websiteUrl: string | null;
   };
   explanation: Explanation;
+}
+
+/** Préfixes d'adresse considérés comme non nominatifs, sans exception. */
+const GENERIC_EMAIL_PREFIXES = new Set([
+  'contact', 'info', 'infos', 'bonjour', 'hello', 'accueil', 'reservation',
+  'reservations', 'commercial', 'boutique', 'atelier', 'cabinet', 'agence',
+  'secretariat', 'commande', 'sav', 'support', 'administration',
+]);
+
+export function pickGenericEmail(emails: unknown): string | null {
+  if (!Array.isArray(emails)) return null;
+  for (const email of emails) {
+    if (typeof email !== 'string') continue;
+    const prefix = email.split('@')[0]?.toLowerCase().replace(/[^a-z]/g, '');
+    if (prefix && GENERIC_EMAIL_PREFIXES.has(prefix)) return email;
+  }
+  return null;
 }
 
 interface ReasonData {
@@ -50,7 +76,7 @@ export async function getTodayOpportunities(
 ): Promise<TodayOpportunity[]> {
   const { data, error } = await db
     .from('assignments')
-    .select('id, rank, match_score, exclusive_until, viewed_at, contacted_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, contact_form_url, website_url, domain, creation_date, employee_min)')
+    .select('id, rank, match_score, exclusive_until, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, website_url, domain, creation_date, employee_min)')
     .eq('user_id', userId)
     .in('status', ['active', 'contacted'])
     .order('rank', { ascending: true });
@@ -74,7 +100,7 @@ export async function getTodayOpportunities(
   for (let i = 0; i < domains.length; i += 100) {
     const { data: rows } = await db
       .from('domains')
-      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components')
+      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components, emails_found')
       .in('domain', domains.slice(i, i + 100));
     for (const row of rows ?? []) facts.set(row.domain, row);
   }
@@ -104,7 +130,8 @@ export async function getTodayOpportunities(
   return data.map((row) => {
     const company = row.companies as unknown as {
       legal_name: string; commercial_name: string | null; city: string | null;
-      industry_label: string | null; phone: string | null; contact_form_url: string | null;
+      industry_label: string | null; phone: string | null; address: string | null;
+      postal_code: string | null; contact_form_url: string | null;
       website_url: string | null; domain: string | null;
       creation_date: string | null; employee_min: number | null;
     };
@@ -127,11 +154,14 @@ export async function getTodayOpportunities(
       exclusiveUntil: row.exclusive_until,
       viewedAt: row.viewed_at,
       contactedAt: row.contacted_at,
+      snoozedAt: (row as unknown as { snoozed_at: string | null }).snoozed_at,
       company: {
         name,
         city: company.city,
         industry: company.industry_label,
         phone: company.phone,
+        email: pickGenericEmail((site as unknown as { emails_found?: unknown })?.emails_found),
+        address: [company.address, company.postal_code, company.city].filter(Boolean).join(', ') || null,
         contactFormUrl: company.contact_form_url,
         websiteUrl: company.website_url,
       },

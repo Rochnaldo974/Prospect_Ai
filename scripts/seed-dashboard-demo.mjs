@@ -141,6 +141,15 @@ const CASES = [
     assign: { rank: 5, score: 61, exclusive: hours(52) },
   },
 
+  {
+    // MIS DE CÔTÉ : attribué HIER (le plafond de cinq par jour est tenu
+    // par la base, et elle a raison), encore sous exclusivité.
+    name: 'Torréfaction du Ralliement', fields: { industry_label: 'Torréfacteur', city: 'Angers', phone: '+33241889917', domain: 'demo-ralliement.fr', website_url: 'https://demo-ralliement.fr' },
+    domain: { status: 'reachable', cms: 'wordpress', tech_year: 2013, copyright_year: 2016 },
+    opp: { type: 'website_redesign', trigger: null, occurred: null, needs: [['dated_platform', 45], ['stale_content', 30]] },
+    assign: { rank: 1, score: 64, exclusive: hours(40), snoozed: true, assignedHoursAgo: 30 },
+  },
+
   // ── À relancer ────────────────────────────────────────────────────────
   {
     name: 'Garage Millet', fields: { industry_label: 'Garage automobile', city: 'Le Mans', phone: '+33243778001' },
@@ -226,17 +235,18 @@ for (const c of CASES) {
     match_score: c.assign.score ?? 70,
     exclusive_until: c.assign.exclusive ?? daysAgoIso(c.assign.daysAgo ?? 0),
     status: closed ? 'completed' : (c.assign.contactedHoursAgo ? 'contacted' : 'active'),
+    snoozed_at: c.assign.snoozed ? hours(-3) : null,
     contacted_at: closed ? outcomeAt : (c.assign.contactedHoursAgo ? hours(-c.assign.contactedHoursAgo) : null),
     outcome: c.assign.outcome ?? null,
     outcome_at: outcomeAt,
     notes: c.assign.notes ?? null,
-    assigned_at: closed ? daysAgoIso((c.assign.daysAgo ?? 0) + 1) : hours(-6),
+    assigned_at: closed ? daysAgoIso((c.assign.daysAgo ?? 0) + 1) : hours(-(c.assign.assignedHoursAgo ?? 6)),
   });
   if (assignError) throw new Error(`assignments ${c.name} : ${assignError.message}`);
   inserted += 1;
 }
 
 console.log(`✓ ${inserted} attributions de démonstration pour ${email}`);
-console.log('  Ce matin : 5 (1 appelée, 1 urgente, 1 sans téléphone, 1 sans ville, 1 diagnostic)');
+console.log('  Ce matin : 5 + 1 mis de côté (1 appelée, 1 urgente, 1 sans téléphone, 1 sans ville, 1 diagnostic)');
 console.log('  À relancer : 5 (3 statuts, notes courte/longue/absente, 1 dossier à 24 j)');
 console.log('  Closes : 10 (4 refus, 4 sans réponse, 2 clients)');
