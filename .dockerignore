@@ -1,0 +1,11 @@
+# Sans ce fichier, le contexte Docker embarque les node_modules du poste et
+# le .next : plusieurs gigaoctets copiés pour rien, et des binaires macOS
+# dans une image Linux.
+node_modules
+**/node_modules
+**/.next
+.git
+supabase/.branches
+supabase/.temp
+*.log
+.env*

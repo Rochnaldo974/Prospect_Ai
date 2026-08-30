@@ -1,0 +1,34 @@
+# Le worker sur Fly.io, région cdg (Paris) — la même ville que le Supabase
+# hébergé (AWS eu-west-3). Le worker parle à la base en HTTPS à chaque lot :
+# le garder à moins de 5 ms de Paris coûte zéro effort et se sent partout.
+#
+# Ce fichier décrit une « process app » : aucun port exposé, pas de HTTP.
+# Fly relance la machine si le processus meurt ; pg_cron, lui, vit dans
+# Postgres et n'a pas besoin de cette machine pour planifier.
+
+app = "prospect-worker"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "apps/worker/Dockerfile"
+
+# Cinq minutes de grâce à l'arrêt : le worker cesse de réclamer dès le
+# SIGTERM et laisse finir les jobs en cours — un scan interrompu à la hache
+# laisserait des verrous à récupérer par reclaim_stalled_jobs.
+kill_signal = "SIGTERM"
+kill_timeout = "5m"
+
+[env]
+  # L'URL du projet Supabase hébergé. Pas un secret : elle est dans chaque
+  # page du site. La clé service_role, ELLE, passe par `fly secrets set`.
+  NEXT_PUBLIC_SUPABASE_URL = "https://tjeqsghmlwxmedumsdyt.supabase.co"
+  WORKER_ID = "fly-cdg-1"
+  WORKER_CONCURRENCY = "4"
+  WORKER_POLL_INTERVAL_MS = "2000"
+
+[[restart]]
+  policy = "always"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

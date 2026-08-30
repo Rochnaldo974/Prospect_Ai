@@ -1,0 +1,25 @@
+# Le worker sur un VPS (Hetzner, Scaleway, OVH…) — l'alternative à Fly.io
+# quand on préfère une machine à soi. Depuis la racine du dépôt :
+#
+#   docker compose -f apps/worker/docker-compose.yml up -d --build
+#
+# Le fichier .env attendu à côté de ce compose porte deux lignes :
+#   NEXT_PUBLIC_SUPABASE_URL=https://tjeqsghmlwxmedumsdyt.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY=…
+services:
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    env_file: .env
+    environment:
+      WORKER_ID: vps-1
+      WORKER_CONCURRENCY: "4"
+    restart: unless-stopped
+    # Même grâce qu'ailleurs : SIGTERM puis cinq minutes pour finir les jobs.
+    stop_grace_period: 5m
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"

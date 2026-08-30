@@ -22,7 +22,10 @@ COPY apps/worker ./apps/worker
 ENV NODE_ENV=production
 WORKDIR /app/apps/worker
 
-# SIGTERM déclenche l'arrêt propre : le worker cesse de réclamer et laisse
-# finir les jobs en cours. dumb-init n'est pas nécessaire, Node gère le signal.
+# Node est lancé DIRECTEMENT, en PID 1. La première version passait par
+# « pnpm start » : pnpm devenait PID 1 et tuait son enfant sur SIGTERM au
+# lieu de le transmettre — constaté au banc, le log « Arrêt demandé »
+# n'apparaissait jamais. Un redéploiement pendant un scan aurait donc
+# interrompu les jobs en cours au lieu de les laisser finir.
 STOPSIGNAL SIGTERM
-CMD ["pnpm", "start"]
+CMD ["node", "--import", "tsx", "src/runner.ts"]

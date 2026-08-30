@@ -9,7 +9,11 @@ import { z } from 'zod';
  */
 const serverEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  // Facultative : seule l'application web s'en sert, et elle la lit
+  // directement. L'exiger ici forçait le worker déployé à transporter une
+  // clé du navigateur qu'il n'utilise jamais — découvert au premier
+  // démarrage du conteneur, qui refusait de partir sans elle.
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1).optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
   WORKER_ID: z.string().default('local'),
