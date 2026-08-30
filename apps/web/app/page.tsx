@@ -2,14 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
 import { SiteAudit } from '@/components/landing/audit';
+import { Findings } from '@/components/landing/findings';
 import { DossierPreview } from '@/components/landing/dossier';
-import { WeekCost } from '@/components/landing/week-cost';
-import { Defects } from '@/components/landing/defects';
-import { Steps } from '@/components/landing/steps';
-import { Filters } from '@/components/landing/filters';
-import { Exclusive } from '@/components/landing/exclusive';
 import { Reveal } from '@/components/landing/reveal';
-import { Faq, FinalCall, SectionTitle } from '@/components/landing/sections';
 import { SiteHeader } from '@/components/landing/site-header';
 
 export const metadata: Metadata = {
@@ -21,20 +16,22 @@ export const metadata: Metadata = {
 /**
  * La page d'accueil.
  *
- * Trois règles tenues d'un bout à l'autre.
+ * Quatre sections, et c'est une contrainte, pas un budget. La version
+ * précédente en comptait onze et disait onze choses vraies — l'effet obtenu
+ * n'était pas la richesse mais la fatigue : à la troisième section, le
+ * lecteur avait déjà décidé, et les huit suivantes ne servaient qu'à lui
+ * donner des occasions de partir.
  *
- * Le vocabulaire d'abord. Le lecteur est développeur, mais il lit cette page
- * en client : il n'achète pas une méthode de détection, il achète un
- * carnet d'appels. Tout le vocabulaire d'ingénierie — certificats, feuilles
- * de style, registres, seuils — est donc sorti de la page. Il reste dans le
- * produit, où il sert à vérifier ; ici, il ne servirait qu'à impressionner.
+ * Un freelance décide sur trois questions, dans cet ordre :
  *
- * La forme ensuite. Onze sections, et onze structures différentes : une
- * page dont chaque bloc est un titre suivi d'une grille de trois cartes se
- * lit comme un formulaire, quelle que soit la qualité du texte.
+ *   reste-t-il du marché ?   → 53 % des sites analysés ont un défaut visible
+ *   qu'est-ce que je reçois ? → un dossier, montré en taille réelle
+ *   combien ça coûte ?        → 39 €
  *
- * L'audace enfin, dépensée à un seul endroit — la semaine de prospection
- * dessinée en blocs de temps. Le reste reste sobre pour que ce bloc porte.
+ * Tout ce qui ne répond pas à l'une de ces trois questions est sorti :
+ * la semaine de prospection en blocs de temps, le bandeau de quatre nombres,
+ * le paramétrage, l'exclusivité en section propre, la FAQ. Ce qui comptait
+ * là-dedans tient en une ligne, à l'endroit où la question se pose.
  */
 export default async function HomePage() {
   const profile = await getSessionProfile();
@@ -49,12 +46,6 @@ export default async function HomePage() {
 
           <nav className="flex items-center gap-6 text-sm">
             <Link
-              href="#methode"
-              className="hidden text-muted-foreground transition-colors hover:text-foreground md:inline"
-            >
-              Comment ça marche
-            </Link>
-            <Link
               href="#tarifs"
               className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
             >
@@ -67,10 +58,7 @@ export default async function HomePage() {
               </Link>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="font-medium transition-opacity hover:opacity-70"
-                >
+                <Link href="/login" className="font-medium transition-opacity hover:opacity-70">
                   Connexion
                 </Link>
                 <Link
@@ -87,16 +75,9 @@ export default async function HomePage() {
 
       <main>
         <Hero />
-        <Advantages />
-        <Cost />
-        <HowItWorks />
-        <WhatWeFind />
+        <Market />
         <Delivered />
-        <YourChoice />
-        <Exclusivity />
         <Pricing />
-        <Questions />
-        <FinalCall />
       </main>
 
       <SiteFooter />
@@ -104,10 +85,10 @@ export default async function HomePage() {
   );
 }
 
-/** Le héros : ce que le service fait, et l'audit qui le fait sous les yeux. */
+/** Ce que le service fait, et l'audit qui le fait sous les yeux. */
 function Hero() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-20 pt-14 lg:pt-20">
+    <section className="mx-auto max-w-6xl px-6 pb-24 pt-14 lg:pt-20">
       <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
         <div className="motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both]">
           <p className="field-label">Pour les développeurs web et mobile freelances</p>
@@ -118,9 +99,9 @@ function Hero() {
           </h1>
 
           <p className="reasoning mt-6 max-w-lg text-muted-foreground">
-            Notre moteur analyse des sites d’entreprises françaises en continu. Chaque matin, il
-            vous propose cinq entreprises dont le site a besoin d’être refait — celles avec
-            lesquelles vous avez le plus de chances de signer.
+            Notre moteur analyse des sites d’entreprises françaises en continu. Chaque matin,
+            il vous en propose cinq dont le site a besoin d’être refait — avec ce qui cloche et
+            le numéro pour en parler.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -134,15 +115,15 @@ function Hero() {
               </span>
             </Link>
             <Link
-              href="#methode"
+              href="#tarifs"
               className="rounded-full border px-6 py-3.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
             >
-              Comment ça marche
+              Voir les tarifs
             </Link>
           </div>
 
           <p className="mt-4 text-xs text-muted-foreground">
-            Sans carte bancaire. Trois questions, une minute.
+            Une heure par semaine au lieu d’une journée. Sans carte bancaire.
           </p>
         </div>
 
@@ -154,333 +135,156 @@ function Hero() {
   );
 }
 
-/**
- * Les avantages, chiffrés, juste après le héros.
- *
- * Chaque ligne porte un nombre ET la phrase qui le rend utile. Un bandeau de
- * quatre nombres sous quatre étiquettes de trois mots — « 5 registres publics
- * croisés » — se regarde sans se comprendre : le lecteur n'a aucune raison de
- * savoir ce qu'est un registre, ni pourquoi il devrait s'en réjouir.
- */
-function Advantages() {
-  const rows = [
-    ['5', 'entreprises à rappeler chaque matin, choisies selon ce que vous savez faire.'],
-    ['1 h', 'de prospection par semaine au lieu d’une journée entière — la recherche est faite.'],
-    ['72 h', 'pendant lesquelles vous êtes seul à l’avoir. Vous n’appelez jamais après un autre.'],
-    ['4,6 M', 'de sites français passés au crible en continu pour ne vous en sortir que cinq.'],
+/** Reste-t-il du marché ? La seule réponse dont la page a besoin. */
+function Market() {
+  return (
+    <section className="border-y bg-[var(--mist)]">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <Reveal>
+          <Findings />
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/** Qu'est-ce que je reçois ? Un dossier, montré en taille réelle. */
+function Delivered() {
+  const beats = [
+    ['1', 'Vous dites ce que vous faites', 'Trois questions, une minute.'],
+    ['2', 'Le moteur cherche sans vous', 'Il tourne pendant que vous travaillez.'],
+    ['3', 'Cinq dossiers vous attendent', 'Chaque matin, prêts à appeler.'],
   ];
 
-  return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-5xl px-6 py-16">
-        {rows.map(([value, text], i) => (
-          <Reveal key={value} delay={i * 70}>
-            <div className="flex flex-wrap items-baseline gap-x-8 gap-y-1 border-b py-5 last:border-b-0">
-              <span className="tabular w-24 shrink-0 text-3xl font-semibold tracking-tight sm:text-4xl">
-                {value}
-              </span>
-              <span className="max-w-xl flex-1 text-[15px] leading-relaxed text-muted-foreground">
-                {text}
-              </span>
-            </div>
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/** La section signature : une semaine de prospection, dessinée. */
-function Cost() {
-  return (
-    <section className="bg-[var(--ink)] text-white">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal>
-          <p className="field-label text-white/45">Ce que ça vous coûte aujourd’hui</p>
-          <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Prospecter vous prend une journée par semaine.
-          </h2>
-          <p className="reasoning mt-4 max-w-xl text-white/60">
-            Pas la partie qui rapporte — la partie qui prépare. Chercher, ouvrir, vérifier,
-            retrouver un numéro. Voici la même semaine, avant et après.
-          </p>
-        </Reveal>
-
-        <div className="mt-14">
-          <WeekCost />
-        </div>
-
-        <p className="mt-8 text-xs text-white/40">
-          Semaine type pour une prospection menée sérieusement, à raison d’une heure et demie
-          par jour ouvré. Ce sont des ordres de grandeur, pas une mesure.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/** Trois étapes, dont deux se passent sans vous. */
-function HowItWorks() {
-  return (
-    <section id="methode" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24">
-      <SectionTitle
-        eyebrow="Comment ça marche"
-        lead="Vous répondez à trois questions une fois. Le reste tourne sans vous, tous les jours."
-      >
-        Trois étapes, dont deux que vous ne faites pas
-      </SectionTitle>
-      <Steps />
-    </section>
-  );
-}
-
-/** Ce qu'un site en fin de vie donne à voir — montré, pas nommé. */
-function WhatWeFind() {
-  return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <SectionTitle
-          eyebrow="Ce que le moteur repère"
-          lead="Un site à refaire, ça se voit. Le moteur ne cherche pas les sites qu’il trouve laids : il cherche ceux qui font perdre des clients à leur propriétaire, et il peut le montrer."
-        >
-          Quand un site coûte des clients
-        </SectionTitle>
-
-        <Defects />
-
-        <Reveal>
-          <p className="mt-12 max-w-2xl border-t pt-8 text-sm leading-relaxed text-muted-foreground">
-            À cela s’ajoute ce que les entreprises annoncent elles-mêmes au journal officiel :
-            une ouverture, un rachat, un déménagement. Une entreprise qui vient de changer de
-            main refait son site dans l’année.
-          </p>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-/** Ce que vous recevez, en taille réelle. */
-function Delivered() {
-  return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
-      <SectionTitle
-        eyebrow="Ce que vous recevez"
-        lead="Un dossier par entreprise : le problème, ce qui le date, ce qu’il reste à vérifier, et le numéro. Vous savez quoi dire avant même de décrocher."
-      >
-        Voilà à quoi ressemble un dossier
-      </SectionTitle>
-
-      <div className="mt-14">
-        <DossierPreview />
-      </div>
-    </section>
-  );
-}
-
-/** Le paramétrage, montré comme il se présente. */
-function YourChoice() {
-  return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <div className="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-20">
-          <div>
-            <SectionTitle
-              eyebrow="Vos critères"
-              lead="Vous ne recevez que ce que vous savez faire et ce que vous acceptez de faire. Le reste ne vous est même pas montré."
-            >
-              Cinq dossiers, mais les vôtres
-            </SectionTitle>
-          </div>
-
-          <Reveal delay={80}>
-            <Filters />
-          </Reveal>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** L'exclusivité, isolée pour être crue. */
-function Exclusivity() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-24">
       <Reveal>
-        <Exclusive />
+        <p className="field-label">Ce que vous recevez</p>
+        <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+          Un dossier par entreprise, prêt à appeler
+        </h2>
       </Reveal>
+
+      {/* Les trois temps tiennent sur une ligne. Ils n'ont jamais mérité une
+          section : ce sont trois phrases, et deux d'entre elles disent
+          seulement « vous n'avez rien à faire ». */}
+      <ol className="mt-10 grid gap-6 border-y py-6 sm:grid-cols-3">
+        {beats.map(([n, title, detail]) => (
+          <li key={n} className="flex gap-3.5">
+            <span className="tabular shrink-0 font-mono text-xs text-[var(--brand)]">{n}</span>
+            <span>
+              <span className="block text-sm font-medium leading-snug">{title}</span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">{detail}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-12">
+        <DossierPreview />
+      </div>
+
+      <p className="mt-6 text-xs text-muted-foreground">
+        Dossier réel, produit par le moteur. Chaque constat se vérifie en ouvrant l’adresse du
+        site.
+      </p>
     </section>
   );
 }
 
-/** Les tarifs. */
+/** Combien ça coûte ? Et les trois objections, en une ligne chacune. */
 function Pricing() {
-  const plans = [
-    {
-      name: 'Solo',
-      tag: 'Le plus pris',
-      for: 'Pour un développeur seul.',
-      price: '39',
-      features: [
-        '5 entreprises par jour',
-        'Exclusives pendant 72 h',
-        'Suivi de vos appels et de vos devis',
-        'Tous les métiers, toute la France',
-      ],
-      cta: 'Commencer',
-      href: '/signup',
-      featured: true,
-    },
-    {
-      name: 'Atelier',
-      for: 'Pour un studio de deux à cinq personnes.',
-      price: '89',
-      features: [
-        '12 entreprises par jour',
-        'Répartition entre les membres',
-        'Exclusivité à l’échelle du studio',
-        'Export des dossiers',
-      ],
-      cta: 'Commencer',
-      href: '/signup',
-      featured: false,
-    },
+  const included = [
+    '5 entreprises par jour, choisies selon ce que vous savez faire',
+    'Exclusives 72 h : personne d’autre ne les reçoit',
+    'Suivi de vos appels, de vos devis et de vos clients',
+    'Toute la France, tous les secteurs, sans engagement',
+  ];
+
+  const answers = [
+    ['C’est légal ?', 'Aucune donnée personnelle n’est collectée. Le numéro est celui que l’entreprise publie.'],
+    ['C’est du démarchage automatique ?', 'Rien n’est envoyé à votre place. Vous décidez d’appeler, et quoi dire.'],
+    ['Et si ça ne me correspond pas ?', 'Vous choisissez vos prestations. Le reste ne vous est jamais proposé.'],
   ];
 
   return (
-    <section id="tarifs" className="scroll-mt-24 border-t bg-[var(--mist)]">
+    <section id="tarifs" className="scroll-mt-24 bg-[var(--ink)] text-white">
       <div className="mx-auto max-w-6xl px-6 py-24">
-        <SectionTitle
-          eyebrow="Tarifs"
-          lead="Le nombre de places est limité pour une raison simple : une entreprise n’est proposée qu’à une seule personne, et il en sort un nombre fini chaque jour."
-        >
-          Un prix, pas de palier caché
-        </SectionTitle>
+        <div className="grid gap-14 lg:grid-cols-[1fr_1fr] lg:gap-20">
+          <Reveal>
+            <p className="field-label text-white/45">Tarif</p>
+            <h2 className="mt-4 text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+              39 € par mois, sans engagement.
+            </h2>
+            <p className="reasoning mt-5 max-w-md text-white/60">
+              Le nombre de places est limité : une entreprise n’est proposée qu’à une seule
+              personne, et il en sort un nombre fini chaque jour.
+            </p>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-2">
-          {plans.map((plan, i) => (
-            <Reveal key={plan.name} delay={i * 90}>
-              <article
-                className={`flex h-full flex-col rounded-2xl border bg-card p-8 ${
-                  plan.featured
-                    ? 'border-[var(--brand)] shadow-[0_1px_2px_rgba(11,13,20,.04),0_28px_64px_-32px_rgba(44,75,255,.35)]'
-                    : ''
-                }`}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-lg font-semibold tracking-tight">{plan.name}</h3>
-                  {plan.tag ? (
-                    <span className="rounded-full bg-[var(--brand-wash)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--brand)]">
-                      {plan.tag}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1.5 text-sm text-muted-foreground">{plan.for}</p>
-
-                <p className="mt-7 flex items-baseline gap-1.5">
-                  <span className="tabular text-5xl font-semibold tracking-tight">
-                    {plan.price}
+            <ul className="mt-9 space-y-3.5">
+              {included.map((line) => (
+                <li key={line} className="flex gap-3 text-sm">
+                  <span aria-hidden className="text-[var(--brand)]">
+                    ✓
                   </span>
-                  <span className="text-sm text-muted-foreground">€ / mois</span>
-                </p>
+                  <span className="text-white/85">{line}</span>
+                </li>
+              ))}
+            </ul>
 
-                <ul className="mt-7 space-y-3">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex gap-3 text-sm">
-                      <span aria-hidden className="text-[var(--brand)]">
-                        ✓
-                      </span>
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <Link
+                href="/signup"
+                className="rounded-full bg-[var(--white)] px-7 py-3.5 text-sm font-medium text-[var(--ink)] transition-transform duration-200 hover:-translate-y-px"
+              >
+                Essayer gratuitement
+              </Link>
+              <span className="text-xs text-white/50">
+                Sans carte bancaire. Trois questions, une minute.
+              </span>
+            </div>
+          </Reveal>
 
-                <Link
-                  href={plan.href}
-                  className={`mt-9 rounded-full px-6 py-3.5 text-center text-sm font-medium transition-transform duration-200 hover:-translate-y-px ${
-                    plan.featured
-                      ? 'bg-[var(--brand)] text-white'
-                      : 'border hover:bg-[var(--mist)]'
-                  }`}
-                >
-                  {plan.cta}
+          <Reveal delay={90}>
+            <div className="lg:pt-16">
+              {answers.map(([question, answer]) => (
+                <div key={question} className="border-t border-white/12 py-5">
+                  <p className="text-sm font-medium">{question}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-white/60">{answer}</p>
+                </div>
+              ))}
+              <p className="border-t border-white/12 pt-5 text-xs text-white/40">
+                Le détail du traitement des données est sur la{' '}
+                <Link href="/confidentialite" className="underline underline-offset-2 hover:text-white/70">
+                  page Confidentialité
                 </Link>
-              </article>
-            </Reveal>
-          ))}
+                .
+              </p>
+            </div>
+          </Reveal>
         </div>
-
-        <p className="mt-8 text-xs text-muted-foreground">
-          Tarifs indicatifs pendant le lancement. Sans engagement, sans carte bancaire à
-          l’inscription.
-        </p>
       </div>
-    </section>
-  );
-}
-
-/** Les objections. */
-function Questions() {
-  return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
-      <SectionTitle eyebrow="Questions">Ce qu’on nous demande</SectionTitle>
-      <Faq />
     </section>
   );
 }
 
 /** Le pied de page. */
 function SiteFooter() {
-  const columns: Array<[string, Array<[string, string]>]> = [
-    ['Produit', [
-      ['Comment ça marche', '#methode'],
-      ['Tarifs', '#tarifs'],
-    ]],
-    ['Compte', [
-      ['Créer un compte', '/signup'],
-      ['Connexion', '/login'],
-    ]],
-    ['Données', [
-      ['Confidentialité', '/confidentialite'],
-    ]],
-  ];
-
   return (
     <footer className="border-t bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-          <div>
-            <span className="text-lg font-semibold tracking-[-0.03em]">
-              prospect<span className="text-[var(--brand)]">.ai</span>
-            </span>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Cinq entreprises à rappeler chaque matin, avec ce qui cloche sur leur site et de
-              quoi le vérifier en une minute.
-            </p>
-          </div>
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-6 py-10">
+        <span className="text-lg font-semibold tracking-[-0.03em]">
+          prospect<span className="text-[var(--brand)]">.ai</span>
+        </span>
 
-          {columns.map(([heading, links]) => (
-            <div key={heading}>
-              <p className="field-label">{heading}</p>
-              <ul className="mt-4 space-y-2.5">
-                {links.map(([label, href]) => (
-                  <li key={label}>
-                    <Link
-                      href={href}
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t pt-6 text-xs text-muted-foreground">
-          <span>Données publiques françaises</span>
-          <span>Aucune donnée nominative collectée</span>
+        <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
+          <Link href="/confidentialite" className="transition-colors hover:text-foreground">
+            Confidentialité
+          </Link>
+          <Link href="/login" className="transition-colors hover:text-foreground">
+            Connexion
+          </Link>
+          <span className="text-xs">Aucune donnée nominative collectée</span>
         </div>
       </div>
     </footer>
