@@ -91,11 +91,11 @@ const FAMILY_COLOR: Record<string, string> = {
 export function Feed() {
   return (
     <div className="mt-6 overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04),0_28px_64px_-32px_rgba(11,13,20,.2)]">
-      <div className="flex items-center justify-between gap-4 border-b bg-[var(--brand)] px-6 py-4 text-white">
+      <div className="flex items-center justify-between gap-4 border-b bg-[var(--brand)] px-5 py-4 text-white sm:px-6">
         <p className="field-label text-white">
-          {ENTRIES.length} entreprises · classées par score
+          {ENTRIES.length} prospects · classés par opportunité
         </p>
-        <p className="field-label hidden text-white/70 sm:block">Opportunité</p>
+        <p className="field-label hidden text-white/70 sm:block">Livrés à 8 h</p>
       </div>
 
       {ENTRIES.map((entry) => (

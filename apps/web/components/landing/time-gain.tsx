@@ -1,81 +1,66 @@
 /**
- * Le temps repris, en deux blocs.
+ * Le temps que ça prend, avant et après.
  *
- * Une première version détaillait la semaine tâche par tâche : six lignes,
- * des durées à la minute, et un lecteur noyé. Il n'y a qu'une chose à
- * comprendre, et elle tient dans la longueur de deux barres.
+ * Trois versions pour arriver ici. La première détaillait la semaine tâche
+ * par tâche : six lignes, des durées à la minute, un lecteur noyé. La
+ * deuxième mettait deux gros blocs pleins côte à côte — plus court, mais
+ * bruyant, et surtout les deux barres vivaient chacune dans sa carte, donc
+ * ne se comparaient pas.
  *
- * Les durées sont annoncées pour ce qu'elles sont — un ordre de grandeur,
- * pas une mesure. Ce produit vend le fait qu'on peut le vérifier ; un
- * chiffre inventé et présenté comme mesuré coûterait plus qu'il ne rapporte.
+ * Deux barres sur le MÊME axe suffisent, et c'est la seule disposition où le
+ * rapport se voit sans être calculé. Le reste — cadres, aplats, couleurs de
+ * fond — n'ajoutait rien à cette lecture.
+ *
+ * Les durées sont annoncées pour ce qu'elles sont : un ordre de grandeur,
+ * pas une mesure. Ce produit vend le fait qu'on peut le vérifier.
  */
 
-const BEFORE_HOURS = 8;
-const AFTER_HOURS = 1;
+const BEFORE = 8;
+const AFTER = 1;
 
 export function TimeGain() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <Block
-        eyebrow="Aujourd’hui"
-        hours={BEFORE_HOURS}
-        label="par semaine à chercher qui appeler, ouvrir les sites, retrouver un numéro."
-        width="100%"
-        tone="before"
-      />
-      <Block
-        eyebrow="Avec Prospect AI"
-        hours={AFTER_HOURS}
-        label="par semaine : lire cinq dossiers le matin, et décrocher."
-        width={`${(AFTER_HOURS / BEFORE_HOURS) * 100}%`}
-        tone="after"
-      />
-    </div>
-  );
-}
-
-function Block({
-  eyebrow, hours, label, width, tone,
-}: {
-  eyebrow: string;
-  hours: number;
-  label: string;
-  width: string;
-  tone: 'before' | 'after';
-}) {
-  const after = tone === 'after';
+  const rows = [
+    { label: 'Aujourd’hui', hours: BEFORE, color: 'var(--finding)' },
+    { label: 'Avec Prospect AI', hours: AFTER, color: 'var(--brand)' },
+  ];
 
   return (
-    <div
-      className={`rounded-2xl p-7 ${
-        after
-          ? 'bg-[var(--brand)] text-white'
-          : 'border border-[var(--finding)]/20 bg-[var(--finding-wash)]'
-      }`}
-    >
-      <p className={`field-label ${after ? 'text-white/70' : ''}`} style={after ? undefined : { color: 'var(--finding)' }}>
-        {eyebrow}
-      </p>
-
-      <p className="mt-4 flex items-baseline gap-2">
-        <span className="tabular text-5xl font-semibold tracking-tight">{hours} h</span>
-      </p>
-
-      <p className={`mt-2 max-w-xs text-sm leading-relaxed ${after ? 'text-white/80' : 'text-muted-foreground'}`}>
-        {label}
-      </p>
-
-      {/* Les deux barres partagent la même échelle : c'est le rapport entre
-          elles qui porte l'argument, pas leur longueur absolue. */}
-      <div
-        className={`mt-6 h-2.5 overflow-hidden rounded-full ${after ? 'bg-white/25' : 'bg-[var(--finding)]/15'}`}
-        aria-hidden
-      >
-        <div
-          className={`h-full rounded-full ${after ? 'bg-white' : 'bg-[var(--finding)]'}`}
-          style={{ width }}
-        />
+    <div className="rounded-2xl border bg-card p-7 sm:p-9">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+        <p className="field-label">Le temps que ça vous prend</p>
+        <p className="text-sm text-muted-foreground">
+          <span className="tabular font-medium text-foreground">{BEFORE - AFTER} h</span> reprises
+          chaque semaine
+        </p>
       </div>
+
+      <div className="mt-8 space-y-5">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center gap-4 sm:gap-6">
+            <span className="w-32 shrink-0 text-sm sm:w-44">{row.label}</span>
+
+            {/* Les deux barres partagent l'axe : c'est le rapport entre elles
+                qui porte l'argument, pas leur longueur absolue. */}
+            <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--line)]" aria-hidden>
+              <span
+                className="block h-full rounded-full"
+                style={{ width: `${(row.hours / BEFORE) * 100}%`, backgroundColor: row.color }}
+              />
+            </span>
+
+            <span className="tabular w-24 shrink-0 text-right text-sm">
+              <span className="font-medium">{row.hours} h</span>
+              <span className="text-muted-foreground"> / sem.</span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-7 border-t pt-5 text-sm leading-relaxed text-muted-foreground">
+        Chercher qui appeler, ouvrir les sites un par un, retrouver un numéro : c’est cette
+        partie-là qui disparaît. Il vous reste cinq dossiers à lire le matin, et des appels à
+        passer.
+      </p>
     </div>
   );
 }

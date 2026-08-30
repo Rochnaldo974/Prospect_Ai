@@ -130,15 +130,14 @@ function Hero() {
 }
 
 /**
- * Ce que le service livre : le temps repris, puis la livraison elle-même.
+ * Ce que le service livre, puis le temps que ça reprend.
  *
- * Les trois temps du service — vous répondez, le moteur cherche, les
- * dossiers arrivent — occupaient cette place. Ils décrivaient un mécanisme
- * là où le lecteur attend un bénéfice, et la liste juste en dessous les
- * démontrait déjà. Le temps repris dit la même chose en deux barres.
+ * La marchandise d'abord, le bénéfice ensuite : un lecteur à qui l'on parle
+ * d'heures gagnées avant de lui avoir montré ce qu'il achète n'a encore
+ * aucune raison d'y croire.
  *
- * La liste dit ensuite COMBIEN il y en a ; le dossier de la section
- * suivante dit à quoi ressemble L'UN d'eux.
+ * La liste dit COMBIEN il y en a ; le dossier de la section suivante dit à
+ * quoi ressemble L'UN d'eux.
  */
 function Market() {
   return (
@@ -147,7 +146,7 @@ function Market() {
         <Reveal>
           <p className="field-label">Chaque matin</p>
           <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Vos entreprises à prospecter ce matin
+            Vos prospects ce matin
           </h2>
           <p className="reasoning mt-4 max-w-xl text-muted-foreground">
             Le travail de recherche est déjà fait quand vous vous levez. Il ne vous reste que la
@@ -155,13 +154,13 @@ function Market() {
           </p>
         </Reveal>
 
-        <div className="mt-12">
-          <TimeGain />
-        </div>
-
         <Reveal>
           <Feed />
         </Reveal>
+
+        <div className="mt-6">
+          <TimeGain />
+        </div>
 
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
           Cas réels, identités retirées, scores conformes au barème du moteur. 828 des 1 572
