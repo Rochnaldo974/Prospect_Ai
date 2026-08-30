@@ -5,37 +5,43 @@ import { SiteAudit } from '@/components/landing/audit';
 import { WeekComparison } from '@/components/landing/comparison';
 import { Pipeline } from '@/components/landing/pipeline';
 import { Reveal } from '@/components/landing/reveal';
+import {
+  AlsoGrid, Changelog, Faq, Feature, FinalCall, Mechanism, Numbers, Readout, SectionTitle,
+} from '@/components/landing/sections';
 import { GoogleButton } from '@/components/google-button';
 
 export const metadata: Metadata = {
   title: 'Prospect AI — sache ce qui cloche avant d’appeler',
   description:
-    'Pour développeurs web et mobile freelances : chaque entreprise proposée est auditée — score du site, certificat, mobile, performances — et tu reçois le défaut à corriger avec de quoi le prouver.',
+    'Pour développeurs web et mobile freelances : cinq entreprises auditées chaque matin — certificat TLS, adaptation mobile, composants datés, temps de réponse — avec le défaut à corriger et le contact pour en parler.',
 };
 
 /**
  * La page d'accueil.
  *
- * Elle s'adresse à des développeurs web et mobile qui ont déjà essayé la
- * prospection et l'ont détestée. L'argument n'est donc pas « trouve plus de
- * clients » — ils l'ont entendu — mais « ne perds plus tes soirées à trier ».
+ * Elle s'adresse à des développeurs qui ont déjà essayé la prospection et
+ * l'ont détestée. L'argument n'est donc pas « trouve plus de clients » — ils
+ * l'ont entendu — mais « tu sauras quoi dire en décrochant ».
  *
- * Le héros ne décrit pas le produit, il le MONTRE en train de travailler : un
- * relevé qui se remplit sous les yeux du visiteur, avec des données réelles.
- * C'est la seule chose qui distingue ce service d'un fichier de contacts, et
- * elle se démontre mieux qu'elle ne s'explique.
+ * La densité est délibérée : une page qui ne paraît pas vide compte une
+ * quinzaine de blocs, et chacun doit apporter une information NOUVELLE.
+ * Le tutoiement est tenu partout, comme dans le reste du produit.
  */
 export default async function HomePage() {
   const profile = await getSessionProfile();
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-transparent bg-white/80 backdrop-blur-md transition-colors dark:bg-[var(--white)]/80">
+      <header className="sticky top-0 z-20 border-b border-transparent bg-white/85 backdrop-blur-md dark:bg-[var(--white)]/85">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <span className="font-mono text-sm font-medium tracking-tight">
             prospect<span className="text-[var(--brand)]">.ai</span>
           </span>
-          <nav className="flex items-center gap-6 text-sm">
+
+          <nav className="flex items-center gap-5 text-sm">
+            <Link href="#methode" className="hidden text-muted-foreground transition-colors hover:text-foreground md:inline">
+              Méthode
+            </Link>
             <Link href="#tarifs" className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline">
               Tarifs
             </Link>
@@ -48,8 +54,6 @@ export default async function HomePage() {
                 <Link href="/login" className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline">
                   Connexion
                 </Link>
-                {/* Google dans la barre : c'est le chemin le plus court vers
-                    un compte, et le seul où aucun mot de passe ne transite. */}
                 <div className="hidden md:block">
                   <GoogleButton label="Continuer avec Google" compact />
                 </div>
@@ -67,11 +71,16 @@ export default async function HomePage() {
 
       <main>
         <Hero />
-        <TimeSaved />
-        <Funnel />
+        <Numbers />
+        <Promise />
+        <Mechanism />
+        <Features />
         <Sources />
-        <HowItWorks />
+        <TimeCost />
+        <Funnel />
         <Pricing />
+        <Faq2 />
+        <Journal />
         <FinalCall />
       </main>
 
@@ -87,25 +96,25 @@ export default async function HomePage() {
 
 function Hero() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-24 pt-14 lg:pt-20">
-      <div className="grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-16">
-        <div className="max-w-xl motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both]">
+    <section className="mx-auto max-w-6xl px-6 pb-20 pt-14 lg:pt-20">
+      <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
+        <div className="motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both]">
           <p className="field-label">Développeurs web et mobile · freelances</p>
 
-          {/* Le passage à la ligne est imposé, pas laissé au hasard : la
-              coupure porte le sens — ce qui cloche / avant d'appeler. */}
-          <h1 className="mt-5 max-w-[16ch] text-[clamp(2.25rem,4.2vw,3.5rem)] font-semibold leading-[1.03] tracking-[-0.04em]">
-            Sache ce qui cloche sur leur site{' '}
-            <span className="text-[var(--brand)]">avant de décrocher.</span>
+          <h1 className="mt-5 max-w-[15ch] text-[clamp(2.375rem,4.4vw,3.625rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
+            Sache ce qui cloche{' '}
+            <span className="text-[var(--brand)]">avant d’appeler.</span>
           </h1>
 
+          {/* Le jargon vit ici, jamais dans le titre : c'est un badge
+              d'appartenance pour la cible, et un mur pour tous les autres. */}
           <p className="reasoning mt-6 max-w-lg text-muted-foreground">
-            Le moteur audite le site de chaque entreprise — mobile, certificat, performances,
-            technologies — et ne te la propose que si le défaut est réel et l’entreprise
-            joignable. Tu ouvres l’adresse, tu vois le problème, tu appelles.
+            Chaque matin, cinq entreprises françaises auditées : certificat TLS, adaptation
+            mobile, composants datés, temps de réponse. Avec le défaut à corriger et le numéro
+            pour en parler.
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center gap-4">
+          <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link
               href="/signup"
               className="group rounded-full bg-[var(--brand)] px-6 py-3.5 text-sm font-medium text-white transition-transform duration-200 hover:-translate-y-px"
@@ -115,10 +124,17 @@ function Hero() {
                 →
               </span>
             </Link>
-            <span className="text-sm text-muted-foreground">
-              Trois questions, une minute.
-            </span>
+            <Link
+              href="#methode"
+              className="rounded-full border px-6 py-3.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
+            >
+              Comment ça marche
+            </Link>
           </div>
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            Sans carte bancaire. Trois questions, une minute.
+          </p>
         </div>
 
         <div className="motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both] [animation-delay:150ms]">
@@ -129,124 +145,32 @@ function Hero() {
   );
 }
 
-/**
- * Ce que la prospection coûte, et ce qu'elle rapporte.
- *
- * Un développeur freelance ne manque pas de contacts : il manque de temps, et
- * il a déjà constaté qu'envoyer soixante e-mails à froid ne rapporte presque
- * rien. L'argument porte donc sur les heures, pas sur le volume.
- */
-function TimeSaved() {
-  return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal>
-          <h2 className="max-w-2xl text-[clamp(1.875rem,3.2vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Prospecter, ce n’est pas trouver.
-            <span className="block text-muted-foreground">C’est trier.</span>
-          </h2>
-          <p className="reasoning mt-5 text-muted-foreground">
-            Trouver dix mille entreprises prend cinq minutes. Savoir lesquelles valent un appel
-            prend des heures — et c’est cette partie-là qu’on te retire.
-          </p>
-        </Reveal>
-
-        <div className="mt-12">
-          <WeekComparison />
-        </div>
-
-        <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
-          Exemple d’une semaine type, donné à titre d’illustration. Le seul chiffre garanti est
-          l’exclusivité : une entreprise attribuée ne l’est qu’à une personne, et la base de
-          données l’impose.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Le tri, en chiffres réels.
- *
- * Ce que la section précédente affirme en heures, celle-ci le montre en
- * volumes : quatre maillons, chacun élimine, et ce qui arrive au bout a
- * survécu à tout le reste.
- */
-function Funnel() {
-  return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
-      <Reveal>
-        <p className="field-label">Du parc entier à tes cinq dossiers</p>
-        <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.2vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-          Quatre millions d’adresses. Cinq qui te concernent.
-        </h2>
-      </Reveal>
-
-      <div className="mt-12">
-        <Pipeline />
-      </div>
-    </section>
-  );
-}
-
-/**
- * Sur quoi reposent les analyses.
- *
- * La section qui décide de la confiance. Un développeur qui lit « intelligence
- * artificielle » sans savoir ce qui est mesuré part ; celui qui reconnaît
- * AFNIC, BODACC et un contrôle TLS sait exactement ce qu'il achète.
- */
-function Sources() {
-  const groups = [
+/** Trois cartes de promesse, juste après les chiffres. */
+function Promise() {
+  const cards = [
     {
-      title: 'Le site lui-même',
-      items: [
-        'Certificat TLS : validité, émetteur, date d’expiration',
-        'Composants datés — jQuery, Bootstrap, WordPress et leur version',
-        'Temps de réponse mesuré, poids de la page',
-        'Adaptation mobile, lue dans les feuilles de style',
-        'Formulaire de contact, e-commerce, réservation',
-      ],
+      title: 'Un fait daté, ou rien',
+      body: 'Un site vieux est un état, pas un événement. Sans fait daté, le service n’invente pas d’urgence : il laisse la case vide et le dit.',
     },
     {
-      title: 'Les registres publics',
-      items: [
-        'SIRENE — identité, activité, effectif, date de création',
-        'BODACC — créations, cessions, procédures collectives',
-        'AFNIC — les 4,59 millions de .fr et leur date de dépôt',
-        'BOAMP — marchés publics ouverts, avec leur date limite',
-        'Mentions légales — le SIREN qui relie un site à son exploitant',
-      ],
+      title: 'Jamais deux fois la même',
+      body: 'Une entreprise attribuée l’est à une seule personne, garanti par un index unique en base. Personne n’appelle après toi.',
+    },
+    {
+      title: 'Ce qu’on ignore est écrit',
+      body: 'Chaque dossier porte ses réserves. Un service qui annonce ce qu’il ne sait pas est un service dont on peut croire ce qu’il affirme.',
     },
   ];
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
-      <Reveal>
-        <p className="field-label">Sur quoi reposent les analyses</p>
-        <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em]">
-          Rien d’inventé. Tout se recoupe.
-        </h2>
-        <p className="reasoning mt-4 text-muted-foreground">
-          Chaque affirmation vient d’une mesure ou d’un registre officiel, et porte sa date.
-          Quand un fait manque, il est écrit qu’il manque — le produit ne comble pas les trous.
-        </p>
-      </Reveal>
-
-      <div className="mt-14 grid gap-10 md:grid-cols-2 md:gap-16">
-        {groups.map((group, i) => (
-          <Reveal key={group.title} delay={i * 100}>
-            <h3 className="text-sm font-semibold">{group.title}</h3>
-            <ul className="mt-4">
-              {group.items.map((item, index) => (
-                <li key={item} className="evidence">
-                  <span className="evidence__mark" aria-hidden>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span className="evidence__fact">{item}</span>
-                </li>
-              ))}
-            </ul>
+    <section className="mx-auto max-w-6xl px-6 py-20">
+      <div className="grid gap-x-10 gap-y-10 md:grid-cols-3">
+        {cards.map((card, i) => (
+          <Reveal key={card.title} delay={i * 80}>
+            <article className="border-t pt-5">
+              <h2 className="text-lg font-semibold tracking-tight">{card.title}</h2>
+              <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{card.body}</p>
+            </article>
           </Reveal>
         ))}
       </div>
@@ -254,57 +178,206 @@ function Sources() {
   );
 }
 
-function HowItWorks() {
-  const steps = [
+/** Quatre fonctionnalités développées, en alternance texte/visuel. */
+function Features() {
+  return (
+    <section id="methode" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-16">
+      <SectionTitle
+        eyebrow="Ce que le moteur regarde"
+        lead="Chaque contrôle produit un fait vérifiable en une minute. Un adjectif se conteste ; une version lue dans le code source, non."
+      >
+        Quatre familles de preuves
+      </SectionTitle>
+
+      <Feature
+        eyebrow="Certificat"
+        title="Le site que personne ne peut ouvrir"
+        body="Un certificat expiré ou auto-signé fait afficher un avertissement pleine page. Le propriétaire a cliqué « continuer » une fois pour toutes et ne voit plus rien ; ses clients, si."
+        points={[
+          'Validité, émetteur et date d’expiration lus directement',
+          'Distinction entre certificat refusé et absence de HTTPS',
+          'La date d’expiration est un fait daté : elle date l’opportunité',
+        ]}
+        visual={
+          <Readout
+            title="Sortie du contrôle TLS"
+            rows={[
+              { key: 'valid', value: 'false', flag: true },
+              { key: 'reason', value: 'CERT_HAS_EXPIRED', flag: true },
+              { key: 'valid_to', value: '2025-10-25' },
+              { key: 'issuer', value: "Let's Encrypt" },
+            ]}
+          />
+        }
+      />
+
+      <Feature
+        flip
+        eyebrow="Composants"
+        title="La version est écrite dans le code"
+        body="« Site vieux » est un jugement. « jQuery 1.7.2, sorti en 2011 » se lit dans le code source de la page et ne se discute pas."
+        points={[
+          'Versions extraites des URL de scripts et de feuilles de style',
+          'L’âge retenu est celui du composant le plus récent, jamais du plus ancien',
+          'Une version absente de la table n’est pas devinée',
+        ]}
+        visual={
+          <Readout
+            title="Composants datés"
+            rows={[
+              { key: 'jquery', value: '1.7.2 — 2011', flag: true },
+              { key: 'bootstrap', value: '3.3.7 — 2015', flag: true },
+              { key: 'wordpress', value: '5.x — 2018' },
+              { key: 'tech_year', value: '2018' },
+            ]}
+          />
+        }
+      />
+
+      <Feature
+        eyebrow="Mobile"
+        title="Mesuré dans le CSS, pas deviné"
+        body="Chercher des media queries dans le HTML annonçait 53 sites inadaptés sur 123. En lisant les feuilles de style du site, il en reste 2. Les 51 autres auraient été des accusations fausses."
+        points={[
+          'Les feuilles du site passent avant les polices et les jeux d’icônes',
+          'Aucune conclusion sans CSS effectivement lu',
+          'En 2026, c’est un angle rare — et le produit le dit',
+        ]}
+        visual={
+          <Readout
+            title="Adaptation mobile"
+            rows={[
+              { key: 'inline', value: 'aucune media query dans le HTML' },
+              { key: 'sheet 1', value: 'polices — ignorée' },
+              { key: 'sheet 2', value: 'site.css — 14 règles trouvées' },
+              { key: 'responsive', value: 'true' },
+            ]}
+          />
+        }
+      />
+
+      <Feature
+        flip
+        eyebrow="Registres"
+        title="Le SIREN relie le site à l’entreprise"
+        body="Un site professionnel français doit afficher son SIREN dans ses mentions légales. C’est le seul rattachement déterministe qui existe — tout le reste n’est qu’une correspondance de nom."
+        points={[
+          'SIREN présent sur plus de deux domaines : c’est une agence, pas l’exploitant',
+          'Plusieurs SIREN sur une page : propriété ambiguë, rien n’est créé',
+          'BODACC date les créations, cessions et procédures collectives',
+        ]}
+        visual={
+          <Readout
+            title="Rattachement légal"
+            rows={[
+              { key: 'siren', value: '493 118 274' },
+              { key: 'source', value: 'mentions légales' },
+              { key: 'domaines', value: '1 — exploitant probable' },
+              { key: 'confiance', value: '0.99' },
+            ]}
+          />
+        }
+      />
+
+      <SectionTitle eyebrow="Et aussi">Ce qui ne mérite pas sa propre section</SectionTitle>
+      <AlsoGrid />
+    </section>
+  );
+}
+
+function Sources() {
+  const groups = [
     {
-      title: 'Tu dis ce que tu fais',
-      body: 'Refonte, création, e-commerce, application mobile, maintenance. Trois questions, une minute.',
+      title: 'Le site lui-même',
+      items: [
+        'Certificat TLS : validité, émetteur, expiration',
+        'Composants datés — jQuery, Bootstrap, WordPress',
+        'Temps de réponse au premier octet, poids de la page',
+        'Adaptation mobile, lue dans les feuilles de style',
+        'Formulaire de contact, e-commerce, réservation',
+      ],
     },
     {
-      title: 'Le moteur travaille la nuit',
-      body: 'Il scanne, croise les registres, écarte les entreprises déjà démarchées et note ce qu’il trouve.',
-    },
-    {
-      title: 'Cinq dossiers t’attendent',
-      body: 'Avec le contact, la raison d’appeler et ce qu’on ignore encore. Tu dis ce que ça a donné, l’entreprise sort du circuit.',
+      title: 'Les registres publics',
+      items: [
+        'SIRENE — identité, activité, effectif, création',
+        'BODACC — créations, cessions, procédures collectives',
+        'AFNIC — 4,59 millions de .fr et leur date de dépôt',
+        'BOAMP — marchés publics ouverts et leur date limite',
+        'Mentions légales — le SIREN qui relie site et exploitant',
+      ],
     },
   ];
 
   return (
     <section className="border-y bg-[var(--mist)]">
       <div className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal>
-          <h2 className="max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em]">
-            Comment ça se passe
-          </h2>
-        </Reveal>
+        <SectionTitle
+          eyebrow="Sur quoi reposent les analyses"
+          lead="Chaque affirmation vient d’une mesure ou d’un registre officiel, et porte sa date. Quand un fait manque, il est écrit qu’il manque."
+        >
+          Rien d’inventé. Tout se recoupe.
+        </SectionTitle>
 
-        <ol className="mt-14 grid gap-8 md:grid-cols-3 md:gap-10">
-          {steps.map((step, index) => (
-            <Reveal key={step.title} delay={index * 90}>
-              <li className="border-t pt-5">
-                <span className="font-mono text-xs text-[var(--brand)]">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <h3 className="mt-3 text-lg font-semibold tracking-tight">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
-              </li>
+        <div className="mt-14 grid gap-10 md:grid-cols-2 md:gap-16">
+          {groups.map((group, i) => (
+            <Reveal key={group.title} delay={i * 100}>
+              <h3 className="text-sm font-semibold">{group.title}</h3>
+              <ul className="mt-4">
+                {group.items.map((item, index) => (
+                  <li key={item} className="evidence">
+                    <span className="evidence__mark" aria-hidden>
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="evidence__fact">{item}</span>
+                  </li>
+                ))}
+              </ul>
             </Reveal>
           ))}
-        </ol>
+        </div>
       </div>
     </section>
   );
 }
 
-/**
- * Les tarifs.
- *
- * Le nombre de places est réellement limité : l'exclusivité fait qu'une
- * entreprise attribuée ne l'est qu'une fois, et le stock se renouvelle à un
- * rythme mesurable. Le dire est plus honnête qu'une fausse rareté marketing,
- * et c'est aussi le seul argument qui justifie de s'inscrire maintenant.
- */
+function TimeCost() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-24">
+      <SectionTitle
+        lead="Trouver dix mille entreprises prend cinq minutes. Savoir lesquelles valent un appel prend des heures — et c’est cette partie-là qu’on te retire."
+      >
+        Prospecter, ce n’est pas trouver.
+        <span className="block text-muted-foreground">C’est trier.</span>
+      </SectionTitle>
+
+      <div className="mt-12">
+        <WeekComparison />
+      </div>
+
+      <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
+        Exemple d’une semaine type, donné à titre d’illustration. Le seul chiffre garanti est
+        l’exclusivité : une entreprise attribuée ne l’est qu’à une personne, et la base l’impose.
+      </p>
+    </section>
+  );
+}
+
+function Funnel() {
+  return (
+    <section className="border-y bg-[var(--mist)]">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <SectionTitle eyebrow="Du parc entier à tes cinq dossiers">
+          Quatre millions d’adresses. Cinq qui te concernent.
+        </SectionTitle>
+        <div className="mt-12">
+          <Pipeline />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Pricing() {
   const plans = [
     {
@@ -315,7 +388,7 @@ function Pricing() {
         '5 opportunités par jour',
         'Exclusivité 72 h sur chaque entreprise',
         'Suivi des appels et des issues',
-        'Tous les secteurs, toute la France',
+        'Toutes les familles, toute la France',
       ],
       cta: 'Commencer',
       featured: true,
@@ -327,7 +400,7 @@ function Pricing() {
       features: [
         '12 opportunités par jour',
         'Répartition entre les membres',
-        'Exclusivité partagée à l’échelle du studio',
+        'Exclusivité à l’échelle du studio',
         'Export des dossiers',
       ],
       cta: 'Nous écrire',
@@ -337,16 +410,12 @@ function Pricing() {
 
   return (
     <section id="tarifs" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-24">
-      <Reveal>
-        <p className="field-label">Tarifs</p>
-        <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em]">
-          Un prix, pas de palier caché
-        </h2>
-        <p className="reasoning mt-4 text-muted-foreground">
-          Le nombre de places est limité pour une raison mécanique : une entreprise n’est
-          proposée qu’à une seule personne, et le stock se renouvelle à un rythme fini.
-        </p>
-      </Reveal>
+      <SectionTitle
+        eyebrow="Tarifs"
+        lead="Le nombre de places est limité pour une raison mécanique : une entreprise n’est proposée qu’à une seule personne, et le stock se renouvelle à un rythme fini."
+      >
+        Un prix, pas de palier caché
+      </SectionTitle>
 
       <div className="mt-12 grid gap-6 md:grid-cols-2">
         {plans.map((plan, i) => (
@@ -370,7 +439,7 @@ function Pricing() {
               <p className="mt-1 text-sm text-muted-foreground">{plan.lead}</p>
 
               <p className="mt-6">
-                <span className="tabular text-5xl font-semibold tracking-[-0.04em]">
+                <span className="tabular text-5xl font-semibold tracking-[-0.045em]">
                   {plan.price}
                 </span>
                 <span className="ml-1 text-muted-foreground">€ / mois</span>
@@ -388,9 +457,7 @@ function Pricing() {
               <Link
                 href="/signup"
                 className={`mt-8 rounded-full px-5 py-3 text-center text-sm font-medium transition-transform duration-200 hover:-translate-y-px ${
-                  plan.featured
-                    ? 'bg-[var(--brand)] text-white'
-                    : 'border bg-transparent'
+                  plan.featured ? 'bg-[var(--brand)] text-white' : 'border'
                 }`}
               >
                 {plan.cta}
@@ -401,31 +468,34 @@ function Pricing() {
       </div>
 
       <p className="mt-6 text-xs text-muted-foreground">
-        Tarifs indicatifs pendant la phase de lancement. Sans engagement.
+        Tarifs indicatifs pendant le lancement. Sans engagement, sans carte bancaire à
+        l’inscription.
       </p>
     </section>
   );
 }
 
-function FinalCall() {
+function Faq2() {
   return (
-    <section className="border-t bg-[var(--ink)] text-[var(--white)]">
-      <div className="mx-auto max-w-6xl px-6 py-24 text-center">
-        <Reveal>
-          <h2 className="mx-auto max-w-2xl text-[clamp(1.875rem,3.5vw,2.75rem)] font-semibold leading-tight tracking-[-0.03em]">
-            Demain matin, cinq raisons d’appeler.
-          </h2>
-          <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed opacity-70">
-            Pas cinq cents contacts à trier. Cinq dossiers instruits, à traiter avant midi.
-          </p>
-          <Link
-            href="/signup"
-            className="mt-9 inline-block rounded-full bg-[var(--white)] px-7 py-3.5 text-sm font-medium text-[var(--ink)] transition-transform duration-200 hover:-translate-y-px"
-          >
-            Créer mon compte
-          </Link>
-        </Reveal>
+    <section className="border-t bg-[var(--mist)]">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <SectionTitle eyebrow="Questions">Ce qu’on nous demande</SectionTitle>
+        <Faq />
       </div>
+    </section>
+  );
+}
+
+function Journal() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-24">
+      <SectionTitle
+        eyebrow="Journal"
+        lead="Le produit bouge chaque semaine. Les entrées ci-dessous sont tirées du dépôt."
+      >
+        Dernières livraisons
+      </SectionTitle>
+      <Changelog />
     </section>
   );
 }
