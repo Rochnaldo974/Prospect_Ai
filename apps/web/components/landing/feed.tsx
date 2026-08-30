@@ -113,7 +113,7 @@ function Row({ entry }: { entry: Entry }) {
   const intensity = Math.min(1, Math.max(0.55, (entry.score - 45) / 45));
 
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-b px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--mist)] sm:px-6">
+    <div className="group flex flex-wrap items-center gap-x-5 gap-y-3 border-b px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--mist)] sm:px-6">
       {/* Le score d'opportunité, le seul que le moteur produise : il monte
           quand le site va mal. */}
       <span
@@ -135,6 +135,13 @@ function Row({ entry }: { entry: Entry }) {
         style={{ color, backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)` }}
       >
         {entry.propose}
+      </span>
+
+      <span
+        aria-hidden
+        className="hidden shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 sm:block"
+      >
+        →
       </span>
     </div>
   );

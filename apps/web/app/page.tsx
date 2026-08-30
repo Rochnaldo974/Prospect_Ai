@@ -16,6 +16,12 @@ export const metadata: Metadata = {
 /**
  * La page d'accueil.
  *
+ * Les sections ne sont plus des boîtes. Un fond plat posé entre deux filets
+ * découpe la page en rectangles empilés — c'est lisible, c'est partout, et
+ * ça se voit. Les fonds teintés se fondent donc en dégradé sur leurs quinze
+ * premiers pour cent, de sorte qu'aucune arête ne marque la frontière : le
+ * lecteur sent un changement de sujet sans voir de trait.
+ *
  * Quatre sections, et c'est une contrainte, pas un budget. La version
  * précédente en comptait onze et disait onze choses vraies — l'effet obtenu
  * n'était pas la richesse mais la fatigue : à la troisième section, le
@@ -140,8 +146,8 @@ function Hero() {
  */
 function Market() {
   return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-24">
+    <section className="bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_14%,var(--mist)_86%,var(--white)_100%)]">
+      <div className="mx-auto max-w-6xl px-6 pb-28 pt-24">
         <Reveal>
           <p className="field-label">Chaque matin</p>
           <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
@@ -180,7 +186,7 @@ function Market() {
  */
 function TimeSaved() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
+    <section className="mx-auto max-w-6xl px-6 pb-28 pt-28">
       <Reveal>
         <p className="field-label">Le temps que ça vous prend</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
@@ -240,8 +246,11 @@ function Pricing() {
   ];
 
   return (
-    <section id="tarifs" className="scroll-mt-24 border-t bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-24">
+    <section
+      id="tarifs"
+      className="scroll-mt-24 bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_12%,var(--mist)_100%)]"
+    >
+      <div className="mx-auto max-w-6xl px-6 pb-24 pt-28">
         <Reveal>
           <p className="field-label">Tarifs</p>
           <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
