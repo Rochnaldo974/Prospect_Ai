@@ -18,8 +18,15 @@ import { usePrefersReducedMotion } from '@/lib/hooks/use-reduced-motion';
  * et vaudrait moins — tout le produit repose sur le fait qu'on peut vérifier.
  */
 
-/** Le score du site audité. Bas, et c'est le sujet. */
-const SCORE = 42;
+/**
+ * Le score d'OPPORTUNITÉ, seul score que le moteur produise.
+ *
+ * Cette carte affichait une « note du site » sur 100. Elle se lisait bien et
+ * n'existait nulle part dans le produit : un abonné ne l'aurait jamais vue.
+ * Le moteur note l'opportunité, et cette note MONTE quand le site va mal —
+ * d'où le bleu, alors que les défauts restent en corail.
+ */
+const SCORE = 84;
 
 /**
  * Trois temps, pas quatre.
@@ -187,18 +194,18 @@ function Score({ active }: { active: boolean }) {
           <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--line)" strokeWidth="3" />
           <circle
             cx="18" cy="18" r="15.5" fill="none"
-            stroke="var(--finding)" strokeWidth="3" strokeLinecap="round"
+            stroke="var(--brand)" strokeWidth="3" strokeLinecap="round"
             strokeDasharray={`${(value / 100) * 97.4} 97.4`}
             style={{ transition: 'stroke-dasharray .1s linear' }}
           />
         </svg>
-        <span className="tabular text-2xl font-semibold tracking-tight text-[var(--finding)]">
+        <span className="tabular text-2xl font-semibold tracking-tight text-[var(--brand)]">
           {value}
         </span>
       </div>
 
       <div>
-        <p className="field-label">Score du site</p>
+        <p className="field-label">Opportunité</p>
         <p className="mt-1 text-sm leading-snug">
           <span className="tabular font-medium">{value}/100</span> — trois défauts visibles par
           ses clients.

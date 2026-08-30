@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
 import { SiteAudit } from '@/components/landing/audit';
-import { Examples } from '@/components/landing/examples';
+import { Feed } from '@/components/landing/feed';
 import { DossierPreview } from '@/components/landing/dossier';
 import { Reveal } from '@/components/landing/reveal';
 import { SiteHeader } from '@/components/landing/site-header';
@@ -10,7 +10,7 @@ import { SiteHeader } from '@/components/landing/site-header';
 export const metadata: Metadata = {
   title: 'Prospect AI — la prospection client, simple et rapide',
   description:
-    'Pour les développeurs web et mobile freelances : chaque matin, cinq entreprises françaises dont le site a besoin d’être refait, avec ce qui cloche et le numéro pour en parler.',
+    'Pour les développeurs web et mobile freelances : chaque matin, cinq entreprises françaises dont le site est à refaire ou à créer, avec ce qui cloche et le numéro pour en parler.',
 };
 
 /**
@@ -45,13 +45,6 @@ export default async function HomePage() {
           </Link>
 
           <nav className="flex items-center gap-6 text-sm">
-            <Link
-              href="#tarifs"
-              className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
-            >
-              Tarifs
-            </Link>
-
             {profile ? (
               <Link href="/dashboard" className="font-medium transition-opacity hover:opacity-70">
                 Mes opportunités
@@ -100,8 +93,8 @@ function Hero() {
 
           <p className="reasoning mt-6 max-w-lg text-muted-foreground">
             Notre moteur analyse des sites d’entreprises françaises en continu. Chaque matin,
-            il vous en propose cinq dont le site a besoin d’être refait — avec ce qui cloche et
-            le numéro pour en parler.
+            il vous en propose cinq dont le site est à refaire — ou à créer — avec ce qui cloche
+            et le numéro pour en parler.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -123,7 +116,7 @@ function Hero() {
           </div>
 
           <p className="mt-4 text-xs text-muted-foreground">
-            Une heure par semaine au lieu d’une journée. Sans carte bancaire.
+            Dix minutes le matin, pas une journée par semaine. Sans carte bancaire.
           </p>
         </div>
 
@@ -136,41 +129,14 @@ function Hero() {
 }
 
 /**
- * Reste-t-il du marché ? Quatre cas plutôt qu'un pourcentage.
+ * Ce que le service livre, en volume.
  *
- * « 53 % des sites ont un défaut » demande au lecteur un effort de
- * projection ; « ce restaurant n'a pas de site du tout » est immédiatement
- * une facture qu'il sait établir. Le chiffre reste, mais en note, à sa
- * place — il sert à dire que les quatre cas ne sont pas des exceptions.
+ * La liste dit combien il y en a ; le dossier qui suit dit à quoi ressemble
+ * l'un d'eux. Quatre cartes détaillées suivies d'un dossier complet
+ * racontaient deux fois la même histoire — c'est la redondance qui donnait à
+ * ces deux sections leur air de doublon.
  */
 function Market() {
-  return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <Reveal>
-          <p className="field-label">Ce que le moteur trouve</p>
-          <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Quatre entreprises trouvées cette semaine
-          </h2>
-          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-            Chacune a un problème que ses clients voient et qu’elle ne voit pas. C’est le
-            genre de dossier qui vous arrive le matin.
-          </p>
-        </Reveal>
-
-        <Examples />
-
-        <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-          Cas réels, identités retirées. Sur les 1 572 sites d’entreprises françaises analysés
-          à ce jour, 828 présentent au moins un de ces défauts — plus d’un sur deux.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/** Qu'est-ce que je reçois ? Un dossier, montré en taille réelle. */
-function Delivered() {
   const beats = [
     ['1', 'Vous dites ce que vous faites', 'Trois questions, une minute.'],
     ['2', 'Le moteur cherche sans vous', 'Il tourne pendant que vous travaillez.'],
@@ -178,31 +144,53 @@ function Delivered() {
   ];
 
   return (
+    <section className="border-y bg-[var(--mist)]">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <Reveal>
+          <p className="field-label">Une journée type</p>
+          <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+            Vos cinq dossiers de demain matin
+          </h2>
+        </Reveal>
+
+        <ol className="mt-10 grid gap-6 border-y py-6 sm:grid-cols-3">
+          {beats.map(([n, title, detail]) => (
+            <li key={n} className="flex gap-3.5">
+              <span className="tabular shrink-0 font-mono text-xs text-[var(--brand)]">{n}</span>
+              <span>
+                <span className="block text-sm font-medium leading-snug">{title}</span>
+                <span className="mt-0.5 block text-sm text-muted-foreground">{detail}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <Feed />
+
+        <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+          Cas réels, identités retirées, scores conformes au barème du moteur. Sur les 1 572
+          sites d’entreprises françaises déjà analysés, 828 présentent au moins un défaut
+          visible — plus d’un sur deux. Les entreprises sans site s’y ajoutent.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/** Un dossier ouvert : le détail, après le volume. */
+function Delivered() {
+  return (
     <section className="mx-auto max-w-6xl px-6 py-24">
       <Reveal>
         <p className="field-label">Ce que vous recevez</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-          Un dossier par entreprise, prêt à appeler
+          Ouvrons le premier
         </h2>
         <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-          Voici le quatrième cas ci-dessus, en entier — tel qu’il vous arriverait demain matin.
+          Chaque ligne de la liste s’ouvre sur ceci : le problème, ce qui le date, ce qu’il
+          reste à vérifier, et le numéro. Vous savez quoi dire avant même de décrocher.
         </p>
       </Reveal>
-
-      {/* Les trois temps tiennent sur une ligne. Ils n'ont jamais mérité une
-          section : ce sont trois phrases, et deux d'entre elles disent
-          seulement « vous n'avez rien à faire ». */}
-      <ol className="mt-10 grid gap-6 border-y py-6 sm:grid-cols-3">
-        {beats.map(([n, title, detail]) => (
-          <li key={n} className="flex gap-3.5">
-            <span className="tabular shrink-0 font-mono text-xs text-[var(--brand)]">{n}</span>
-            <span>
-              <span className="block text-sm font-medium leading-snug">{title}</span>
-              <span className="mt-0.5 block text-sm text-muted-foreground">{detail}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
 
       <div className="mt-12">
         <DossierPreview />
@@ -259,14 +247,14 @@ function Pricing() {
   ];
 
   return (
-    <section id="tarifs" className="scroll-mt-24 bg-[var(--ink)] text-white">
+    <section id="tarifs" className="scroll-mt-24 border-t bg-[var(--mist)]">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <Reveal>
-          <p className="field-label text-white/45">Tarifs</p>
+          <p className="field-label">Tarifs</p>
           <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
             Sans engagement, sans palier caché.
           </h2>
-          <p className="reasoning mt-4 max-w-xl text-white/60">
+          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
             Le nombre de places est limité : une entreprise n’est proposée qu’à une seule
             personne, et il en sort un nombre fini chaque jour.
           </p>
@@ -276,42 +264,36 @@ function Pricing() {
           {plans.map((plan, i) => (
             <Reveal key={plan.name} delay={i * 90}>
               <article
-                className={`flex h-full flex-col rounded-2xl p-8 ${
+                className={`flex h-full flex-col rounded-2xl border bg-card p-8 ${
                   plan.featured
-                    ? 'bg-[var(--brand)]'
-                    : 'border border-white/12 bg-white/[0.04]'
+                    ? 'border-[var(--brand)] shadow-[0_1px_2px_rgba(11,13,20,.04),0_28px_64px_-32px_rgba(44,75,255,.32)]'
+                    : ''
                 }`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <h3 className="text-lg font-semibold tracking-tight">{plan.name}</h3>
                   {plan.tag ? (
-                    <span className="rounded-full bg-white/20 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em]">
+                    <span className="rounded-full bg-[var(--brand-wash)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--brand)]">
                       {plan.tag}
                     </span>
                   ) : null}
                 </div>
-                <p className={`mt-1.5 text-sm ${plan.featured ? 'text-white/75' : 'text-white/50'}`}>
-                  {plan.audience}
-                </p>
+                <p className="mt-1.5 text-sm text-muted-foreground">{plan.audience}</p>
 
                 <p className="mt-7 flex items-baseline gap-1.5">
                   <span className="tabular text-5xl font-semibold tracking-tight">
                     {plan.price}
                   </span>
-                  <span className={`text-sm ${plan.featured ? 'text-white/75' : 'text-white/50'}`}>
-                    € / mois
-                  </span>
+                  <span className="text-sm text-muted-foreground">€ / mois</span>
                 </p>
 
                 <ul className="mt-7 space-y-3">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex gap-3 text-sm">
-                      <span aria-hidden className={plan.featured ? 'text-white' : 'text-[var(--brand)]'}>
+                      <span aria-hidden className="text-[var(--brand)]">
                         ✓
                       </span>
-                      <span className={plan.featured ? 'text-white/90' : 'text-white/80'}>
-                        {feature}
-                      </span>
+                      <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -320,8 +302,8 @@ function Pricing() {
                   href="/signup"
                   className={`mt-9 rounded-full px-6 py-3.5 text-center text-sm font-medium transition-transform duration-200 hover:-translate-y-px ${
                     plan.featured
-                      ? 'bg-[var(--white)] text-[var(--ink)]'
-                      : 'border border-white/25 hover:bg-white/10'
+                      ? 'bg-[var(--brand)] text-white'
+                      : 'border hover:bg-[var(--white)]'
                   }`}
                 >
                   Essayer gratuitement
@@ -331,23 +313,23 @@ function Pricing() {
           ))}
         </div>
 
-        <p className="mt-6 text-xs text-white/40">
+        <p className="mt-6 text-xs text-muted-foreground">
           Sans carte bancaire à l’inscription. Trois questions, une minute. Tarifs indicatifs
           pendant le lancement.
         </p>
 
-        <div className="mt-16 grid gap-x-12 gap-y-0 border-t border-white/12 pt-4 md:grid-cols-3">
+        <div className="mt-16 grid gap-x-12 gap-y-0 border-t pt-4 md:grid-cols-3">
           {answers.map(([question, answer]) => (
             <div key={question} className="py-5">
               <p className="text-sm font-medium">{question}</p>
-              <p className="mt-1.5 text-sm leading-relaxed text-white/60">{answer}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{answer}</p>
             </div>
           ))}
         </div>
 
-        <p className="mt-2 text-xs text-white/40">
+        <p className="mt-2 text-xs text-muted-foreground">
           Le détail du traitement des données est sur la{' '}
-          <Link href="/confidentialite" className="underline underline-offset-2 hover:text-white/70">
+          <Link href="/confidentialite" className="underline underline-offset-2 hover:text-foreground">
             page Confidentialité
           </Link>
           .
