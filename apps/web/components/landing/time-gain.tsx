@@ -5,77 +5,85 @@ import { useInView } from '@/lib/hooks/use-in-view';
 /**
  * Ce que la prospection coûte, et ce que le service en retire.
  *
- * Deux colonnes en vis-à-vis, une ligne par grief. La disposition n'est pas
- * décorative : chaque plainte a sa réponse EN FACE, sur la même ligne, et
- * c'est la seule mise en page où l'on n'a pas à se souvenir de la gauche en
- * lisant la droite. Deux listes empilées auraient dit la même chose et
- * n'auraient rien démontré.
+ * Deux niveaux de lecture, et c'est la correction demandée : la version
+ * précédente exigeait de lire douze phrases complètes pour comprendre la
+ * section. Chaque cellule commence maintenant par un verdict en gras de
+ * deux à quatre mots — « Chercher au hasard. » / « Cinq dossiers prêts. » —
+ * et l'œil peut ne lire que ces paires. La phrase qui suit ne sert qu'à qui
+ * veut vérifier.
  *
- * Les durées sont annoncées pour ce qu'elles sont : un ordre de grandeur,
- * pas une mesure. Ce produit vend le fait qu'on peut le vérifier — un
- * chiffre inventé et présenté comme mesuré coûterait plus qu'il ne rapporte.
+ * La colonne de droite est posée sur un voile bleu continu : le camp
+ * gagnant se voit avant de se lire. Les marques ✕/✓ passent en pastilles
+ * pleines pour ancrer chaque ligne.
+ *
+ * Les durées restent annoncées pour ce qu'elles sont : un ordre de
+ * grandeur, pas une mesure.
  */
 
 const BEFORE = 8;
 const AFTER = 1;
 
-/** Chaque grief avec sa réponse. L'ordre suit celui d'une journée de travail. */
-const PAIRS: Array<[string, string]> = [
-  [
-    'Chercher des entreprises au hasard, sans savoir si l’une d’elles a le moindre besoin.',
-    'Cinq entreprises par matin, dont le problème est déjà constaté et daté.',
-  ],
-  [
-    'Ouvrir vingt sites à la main pour en trouver un seul qui cloche.',
-    'Le site est analysé avant vous. Le défaut est nommé, et vérifiable en une minute.',
-  ],
-  [
-    'Retrouver le bon numéro, le bon formulaire, la bonne personne.',
-    'Le numéro que l’entreprise publie elle-même est dans le dossier.',
-  ],
-  [
-    'Ne pas savoir quoi dire, et se rabattre sur un message générique.',
-    'Un angle d’appel écrit pour ce dossier : par quoi commencer, et pourquoi maintenant.',
-  ],
-  [
-    'Appeler un dirigeant que trois autres ont déjà démarché cette semaine.',
-    'Exclusif 72 heures. Personne d’autre ne reçoit cette entreprise.',
-  ],
-  [
-    'Perdre le fil de qui a été appelé, relancé, oublié.',
-    'Vous notez l’issue en un clic ; l’entreprise sort du circuit ou y revient.',
-  ],
+/** Chaque grief avec sa réponse. L'ordre suit celui d'une journée. */
+const PAIRS: Array<{
+  pain: [string, string];
+  answer: [string, string];
+}> = [
+  {
+    pain: ['Chercher au hasard.', 'Des heures à lister des entreprises sans savoir si une seule a un besoin.'],
+    answer: ['Cinq dossiers prêts.', 'Le problème est constaté, daté, et choisi selon ce que vous savez faire.'],
+  },
+  {
+    pain: ['Vingt sites à ouvrir.', 'Pour en trouver un seul qui cloche, à l’œil.'],
+    answer: ['Déjà analysés.', 'Le défaut est nommé, et vérifiable en une minute.'],
+  },
+  {
+    pain: ['Le contact introuvable.', 'Le bon numéro, le bon formulaire, la bonne personne.'],
+    answer: ['Le numéro est dans le dossier.', 'Celui que l’entreprise publie elle-même.'],
+  },
+  {
+    pain: ['Quoi dire ?', 'Faute d’accroche, le message générique part — et reste sans réponse.'],
+    answer: ['L’angle est écrit.', 'Par quoi commencer, et pourquoi appeler maintenant.'],
+  },
+  {
+    pain: ['Quatrième à appeler.', 'Le dirigeant a déjà été démarché trois fois cette semaine.'],
+    answer: ['Seul pendant 72 h.', 'Personne d’autre ne reçoit cette entreprise.'],
+  },
+  {
+    pain: ['Le fil se perd.', 'Qui a été appelé, relancé, oublié.'],
+    answer: ['Suivi en un clic.', 'L’issue est notée ; l’entreprise sort du circuit ou y revient.'],
+  },
 ];
 
 export function TimeGain() {
   const { ref, inView } = useInView<HTMLDivElement>();
 
   return (
-    <div ref={ref} className="mt-16">
-      <div className="grid border-b md:grid-cols-2">
-        <Column
-          side="before"
-          eyebrow="Aujourd’hui"
-          hours={BEFORE}
-          width="100%"
-          color="var(--finding)"
-          grown={inView}
-        />
-        <Column
-          side="after"
-          eyebrow="Avec Prospect AI"
-          hours={AFTER}
-          width={`${(AFTER / BEFORE) * 100}%`}
-          color="var(--brand)"
-          grown={inView}
-        />
+    <div ref={ref} className="mt-14">
+      <div className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04),0_24px_60px_-32px_rgba(11,13,20,.2)]">
+        <div className="grid md:grid-cols-2">
+          <ColumnHead
+            eyebrow="Aujourd’hui"
+            hours={BEFORE}
+            width="100%"
+            color="var(--finding)"
+            grown={inView}
+          />
+          <ColumnHead
+            eyebrow="Avec Prospect AI"
+            hours={AFTER}
+            width={`${(AFTER / BEFORE) * 100}%`}
+            color="var(--brand)"
+            grown={inView}
+            highlighted
+          />
 
-        {PAIRS.map(([pain, answer]) => (
-          <Fragment key={pain} pain={pain} answer={answer} />
-        ))}
+          {PAIRS.map(({ pain, answer }) => (
+            <Pair key={pain[0]} pain={pain} answer={answer} />
+          ))}
+        </div>
       </div>
 
-      <p className="mt-10 text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
         Une heure contre huit : ordre de grandeur pour une prospection menée sérieusement, pas
         une mesure.
       </p>
@@ -83,65 +91,91 @@ export function TimeGain() {
   );
 }
 
-function Column({
-  side, eyebrow, hours, width, color, grown,
+function ColumnHead({
+  eyebrow, hours, width, color, grown, highlighted = false,
 }: {
-  side: 'before' | 'after';
   eyebrow: string;
   hours: number;
   width: string;
   color: string;
   grown: boolean;
+  highlighted?: boolean;
 }) {
   return (
-    <div className={`pb-7 ${side === 'after' ? 'pt-10 md:border-l md:pl-10 md:pt-0' : 'md:pr-10'}`}>
-      <p className="field-label" style={{ color }}>
-        {eyebrow}
-      </p>
-
-      <p className="mt-3 flex items-baseline gap-2">
-        <span className="tabular text-4xl font-semibold tracking-tight" style={{ color }}>
-          {hours} h
-        </span>
-        <span className="text-sm text-muted-foreground">par semaine</span>
-      </p>
+    <div
+      className="border-b px-6 py-6 sm:px-7"
+      style={{ backgroundColor: highlighted ? 'color-mix(in srgb, var(--brand) 5%, var(--white))' : undefined }}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <p className="field-label" style={{ color }}>
+          {eyebrow}
+        </p>
+        <p className="flex items-baseline gap-1.5">
+          <span className="tabular text-3xl font-semibold tracking-tight" style={{ color }}>
+            {hours} h
+          </span>
+          <span className="text-xs text-muted-foreground">/ semaine</span>
+        </p>
+      </div>
 
       {/* Les deux barres partagent l'échelle et poussent ensemble à l'entrée
           dans le champ : voir la petite s'arrêter tôt pendant que la grande
           continue, c'est l'argument joué plutôt qu'affiché. */}
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--line)]" aria-hidden>
+      <div
+        className="mt-4 h-2 overflow-hidden rounded-full"
+        style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)` }}
+        aria-hidden
+      >
         <div
           className="h-full origin-left rounded-full transition-transform duration-[1100ms] ease-[cubic-bezier(.22,.9,.32,1)]"
           style={{ width, backgroundColor: color, transform: grown ? 'scaleX(1)' : 'scaleX(0)' }}
         />
       </div>
+      {/* Réserve le vide à droite de la petite barre : sans piste visible,
+          1/8 ressemble à une barre pleine plus courte, pas à un ratio. */}
     </div>
   );
 }
 
 /**
- * Une ligne, deux cellules.
- *
- * Les deux cellules sont émises dans la même grille plutôt que dans deux
- * colonnes séparées : c'est ce qui garantit que la réponse reste alignée sur
- * son grief quelle que soit la longueur des textes.
+ * Une ligne, deux cellules émises dans la même grille : la réponse reste
+ * alignée sur son grief quelle que soit la longueur des textes.
  */
-function Fragment({ pain, answer }: { pain: string; answer: string }) {
+function Pair({ pain, answer }: { pain: [string, string]; answer: [string, string] }) {
   return (
     <>
-      <div className="flex gap-3.5 border-t py-5 md:pr-10">
-        <span aria-hidden className="shrink-0 text-sm text-[var(--finding)]">
-          ✕
-        </span>
-        <p className="text-[15px] leading-relaxed text-muted-foreground">{pain}</p>
-      </div>
-
-      <div className="flex gap-3.5 border-t py-5 md:border-l md:pl-10">
-        <span aria-hidden className="shrink-0 text-sm text-[var(--brand)]">
-          ✓
-        </span>
-        <p className="text-[15px] leading-relaxed">{answer}</p>
-      </div>
+      <Cell mark="✕" color="var(--finding)" wash="var(--finding-wash)" lead={pain[0]} rest={pain[1]} />
+      <Cell mark="✓" color="var(--brand)" wash="var(--brand-wash)" lead={answer[0]} rest={answer[1]} highlighted />
     </>
+  );
+}
+
+function Cell({
+  mark, color, wash, lead, rest, highlighted = false,
+}: {
+  mark: string;
+  color: string;
+  wash: string;
+  lead: string;
+  rest: string;
+  highlighted?: boolean;
+}) {
+  return (
+    <div
+      className="flex gap-4 border-b px-6 py-5 last:border-b-0 sm:px-7 md:[&:nth-last-child(2)]:border-b-0"
+      style={{ backgroundColor: highlighted ? 'color-mix(in srgb, var(--brand) 5%, var(--white))' : undefined }}
+    >
+      <span
+        aria-hidden
+        className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold"
+        style={{ color, backgroundColor: wash }}
+      >
+        {mark}
+      </span>
+      <p className="text-[15px] leading-relaxed">
+        <span className="font-semibold">{lead}</span>{' '}
+        <span className="text-muted-foreground">{rest}</span>
+      </p>
+    </div>
   );
 }
