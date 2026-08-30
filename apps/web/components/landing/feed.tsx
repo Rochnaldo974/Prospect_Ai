@@ -75,43 +75,66 @@ const ENTRIES: Entry[] = [
   },
 ];
 
+/**
+ * La couleur porte deux informations, pas une humeur.
+ *
+ * La pastille de score se fonce à mesure que l'opportunité monte : le
+ * classement se lit sans comparer cinq nombres. La prestation prend la
+ * couleur de sa famille — bleu pour une refonte, vert pour une création —
+ * de sorte qu'un lecteur voit d'un coup d'œil ce qu'il aurait à vendre.
+ */
+const FAMILY_COLOR: Record<string, string> = {
+  'Refonte de site': 'var(--brand)',
+  'Création de site': 'var(--success)',
+};
+
 export function Feed() {
   return (
-    <div className="mt-12 overflow-hidden rounded-2xl border bg-card">
-      <div className="flex items-center justify-between gap-4 border-b bg-[var(--white)] px-6 py-4">
-        <p className="field-label">5 dossiers · classés par score</p>
-        <p className="field-label hidden sm:block">Opportunité</p>
+    <div className="mt-6 overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04),0_28px_64px_-32px_rgba(11,13,20,.2)]">
+      <div className="flex items-center justify-between gap-4 border-b bg-[var(--brand)] px-6 py-4 text-white">
+        <p className="field-label text-white">
+          {ENTRIES.length} entreprises · classées par score
+        </p>
+        <p className="field-label hidden text-white/70 sm:block">Opportunité</p>
       </div>
 
-      {ENTRIES.map((entry, i) => (
-        <Row key={entry.trade + entry.city} entry={entry} index={i + 1} />
+      {ENTRIES.map((entry) => (
+        <Row key={entry.trade + entry.city} entry={entry} />
       ))}
     </div>
   );
 }
 
-function Row({ entry, index }: { entry: Entry; index: number }) {
+function Row({ entry }: { entry: Entry }) {
+  const color = FAMILY_COLOR[entry.propose] ?? 'var(--brand)';
+
+  // De 60 à 90, l'opacité va de 0,55 à 1 : l'écart se voit sans écraser les
+  // scores bas, qui restent de vraies opportunités.
+  const intensity = Math.min(1, Math.max(0.55, (entry.score - 45) / 45));
+
   return (
-    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b px-6 py-5 transition-colors last:border-b-0 hover:bg-[var(--mist)]">
-      <span className="tabular w-6 shrink-0 font-mono text-[11px] text-muted-foreground">
-        {String(index).padStart(2, '0')}
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-b px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--mist)] sm:px-6">
+      {/* Le score d'opportunité, le seul que le moteur produise : il monte
+          quand le site va mal. */}
+      <span
+        className="tabular grid size-12 shrink-0 place-items-center rounded-xl font-mono text-sm font-medium text-white"
+        style={{ backgroundColor: 'var(--brand)', opacity: intensity }}
+      >
+        {entry.score}
       </span>
 
       <div className="min-w-0 flex-1">
-        <p className="field-label">
-          {entry.trade} · {entry.city}
+        <p className="text-sm font-semibold tracking-tight">
+          {entry.trade} <span className="font-normal text-muted-foreground">· {entry.city}</span>
         </p>
-        <p className="mt-1.5 text-[15px] leading-snug">{entry.finding}</p>
+        <p className="mt-1 text-[15px] leading-snug text-muted-foreground">{entry.finding}</p>
       </div>
 
-      <span className="shrink-0 text-sm font-medium text-[var(--brand)]">{entry.propose}</span>
-
-      {/* Le score d'opportunité, le seul que le moteur produise : il monte
-          quand le site va mal. Une « note du site » se lirait mieux et
-          n'existerait nulle part dans le produit. */}
-      <span className="tabular w-14 shrink-0 text-right font-mono text-sm">
-        {entry.score}
-        <span className="text-muted-foreground">/100</span>
+      <span
+        className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-medium"
+        style={{ color, backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)` }}
+      >
+        {entry.propose}
       </span>
     </div>
   );

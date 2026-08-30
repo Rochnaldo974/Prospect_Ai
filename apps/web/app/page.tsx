@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
 import { SiteAudit } from '@/components/landing/audit';
 import { Feed } from '@/components/landing/feed';
+import { TimeGain } from '@/components/landing/time-gain';
 import { DossierPreview } from '@/components/landing/dossier';
 import { Reveal } from '@/components/landing/reveal';
 import { SiteHeader } from '@/components/landing/site-header';
@@ -129,48 +130,43 @@ function Hero() {
 }
 
 /**
- * Ce que le service livre, en volume.
+ * Ce que le service livre : le temps repris, puis la livraison elle-même.
  *
- * La liste dit combien il y en a ; le dossier qui suit dit à quoi ressemble
- * l'un d'eux. Quatre cartes détaillées suivies d'un dossier complet
- * racontaient deux fois la même histoire — c'est la redondance qui donnait à
- * ces deux sections leur air de doublon.
+ * Les trois temps du service — vous répondez, le moteur cherche, les
+ * dossiers arrivent — occupaient cette place. Ils décrivaient un mécanisme
+ * là où le lecteur attend un bénéfice, et la liste juste en dessous les
+ * démontrait déjà. Le temps repris dit la même chose en deux barres.
+ *
+ * La liste dit ensuite COMBIEN il y en a ; le dossier de la section
+ * suivante dit à quoi ressemble L'UN d'eux.
  */
 function Market() {
-  const beats = [
-    ['1', 'Vous dites ce que vous faites', 'Trois questions, une minute.'],
-    ['2', 'Le moteur cherche sans vous', 'Il tourne pendant que vous travaillez.'],
-    ['3', 'Cinq dossiers vous attendent', 'Chaque matin, prêts à appeler.'],
-  ];
-
   return (
     <section className="border-y bg-[var(--mist)]">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <Reveal>
-          <p className="field-label">Une journée type</p>
+          <p className="field-label">Chaque matin</p>
           <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Vos cinq dossiers de demain matin
+            Vos entreprises à prospecter ce matin
           </h2>
+          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+            Le travail de recherche est déjà fait quand vous vous levez. Il ne vous reste que la
+            partie qui rapporte.
+          </p>
         </Reveal>
 
-        <ol className="mt-10 grid gap-6 border-y py-6 sm:grid-cols-3">
-          {beats.map(([n, title, detail]) => (
-            <li key={n} className="flex gap-3.5">
-              <span className="tabular shrink-0 font-mono text-xs text-[var(--brand)]">{n}</span>
-              <span>
-                <span className="block text-sm font-medium leading-snug">{title}</span>
-                <span className="mt-0.5 block text-sm text-muted-foreground">{detail}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div className="mt-12">
+          <TimeGain />
+        </div>
 
-        <Feed />
+        <Reveal>
+          <Feed />
+        </Reveal>
 
         <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-          Cas réels, identités retirées, scores conformes au barème du moteur. Sur les 1 572
-          sites d’entreprises françaises déjà analysés, 828 présentent au moins un défaut
-          visible — plus d’un sur deux. Les entreprises sans site s’y ajoutent.
+          Cas réels, identités retirées, scores conformes au barème du moteur. 828 des 1 572
+          sites déjà analysés présentent au moins un défaut visible. Une heure contre huit :
+          ordre de grandeur, pas une mesure.
         </p>
       </div>
     </section>
