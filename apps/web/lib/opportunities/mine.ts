@@ -1,7 +1,7 @@
 import 'server-only';
 import {
-  diagnoseEmptyDay, getServiceClient, getTodayOpportunities,
-  type EmptyDiagnosis, type TodayOpportunity,
+  diagnoseEmptyDay, getFollowUps, getOutcomeStats, getServiceClient, getTodayOpportunities,
+  type EmptyDiagnosis, type FollowUp, type OutcomeStats, type TodayOpportunity,
 } from '@prospect/core';
 import { requireOnboardedUser } from '@/lib/auth/session';
 
@@ -17,24 +17,65 @@ import { requireOnboardedUser } from '@/lib/auth/session';
  * `server-only` fait échouer le build si ce module est importé depuis un
  * composant client : la clé service_role ne doit jamais approcher le navigateur.
  */
+/**
+ * Une opportunité du jour, avec le temps d'exclusivité déjà calculé.
+ *
+ * L'heure est lue ici et non pendant le rendu : une horloge appelée dans un
+ * composant rend celui-ci impur, ce que le compilateur React refuse à juste
+ * titre — deux rendus successifs du même arbre ne donneraient pas le même
+ * résultat.
+ */
+export type DailyOpportunity = TodayOpportunity & { hoursLeft: number };
+
 export async function getMyOpportunities(): Promise<{
   firstName: string;
   role: string;
-  opportunities: TodayOpportunity[];
+  opportunities: DailyOpportunity[];
   /** Renseigné seulement quand la journée est vide : dire POURQUOI. */
   diagnosis: EmptyDiagnosis | null;
+  /** Le nombre de dossiers rouverts, pour que le matin ne les fasse pas oublier. */
+  followUpCount: number;
 }> {
   const profile = await requireOnboardedUser();
   const db = getServiceClient();
 
-  const opportunities = await getTodayOpportunities(db, profile.id);
+  const [opportunities, followUps] = await Promise.all([
+    getTodayOpportunities(db, profile.id),
+    getFollowUps(db, profile.id),
+  ]);
+
+  const now = Date.now();
 
   return {
     firstName: profile.full_name?.split(' ')[0] ?? '',
     role: profile.role,
-    opportunities,
+    opportunities: opportunities.map((opportunity) => ({
+      ...opportunity,
+      hoursLeft: Math.floor(
+        (new Date(opportunity.exclusiveUntil).getTime() - now) / 3_600_000,
+      ),
+    })),
     // Le diagnostic n'est calculé que s'il sert : trois requêtes de plus pour
     // expliquer une page pleine seraient du gaspillage.
     diagnosis: opportunities.length === 0 ? await diagnoseEmptyDay(db, profile.id) : null,
+    followUpCount: followUps.length,
   };
+}
+
+/** Le suivi : ce qui a été appelé et qui attend une suite. */
+export async function getMyFollowUps(): Promise<{
+  firstName: string;
+  role: string;
+  followUps: FollowUp[];
+  stats: OutcomeStats;
+}> {
+  const profile = await requireOnboardedUser();
+  const db = getServiceClient();
+
+  const [followUps, stats] = await Promise.all([
+    getFollowUps(db, profile.id),
+    getOutcomeStats(db, profile.id),
+  ]);
+
+  return { firstName: profile.full_name?.split(' ')[0] ?? '', role: profile.role, followUps, stats };
 }
