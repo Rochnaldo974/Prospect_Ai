@@ -4,7 +4,7 @@ import { OPPORTUNITY_TYPE_LABELS, type FollowUp, type OutcomeStats } from '@pros
 import { getMyFollowUps } from '@/lib/opportunities/mine';
 import { FollowUpForm } from '@/components/dashboard/follow-up-form';
 
-export const metadata: Metadata = { title: 'À relancer — Prospect AI' };
+export const metadata: Metadata = { title: 'À relancer' };
 
 /**
  * Ce qui a été appelé et qui attend une suite.

@@ -4,7 +4,7 @@ import { getMyOpportunities } from '@/lib/opportunities/mine';
 import { OpportunityRow } from '@/components/dashboard/opportunity-row';
 import { EmptyDay } from '@/components/empty-day';
 
-export const metadata: Metadata = { title: 'Ce matin — Prospect AI' };
+export const metadata: Metadata = { title: 'Ce matin' };
 
 /**
  * Ce qui arrive ce matin.
