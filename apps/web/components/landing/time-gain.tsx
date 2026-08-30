@@ -1,3 +1,7 @@
+'use client';
+
+import { useInView } from '@/lib/hooks/use-in-view';
+
 /**
  * Ce que la prospection coûte, et ce que le service en retire.
  *
@@ -44,8 +48,10 @@ const PAIRS: Array<[string, string]> = [
 ];
 
 export function TimeGain() {
+  const { ref, inView } = useInView<HTMLDivElement>();
+
   return (
-    <div className="mt-16">
+    <div ref={ref} className="mt-16">
       <div className="grid border-b md:grid-cols-2">
         <Column
           side="before"
@@ -53,6 +59,7 @@ export function TimeGain() {
           hours={BEFORE}
           width="100%"
           color="var(--finding)"
+          grown={inView}
         />
         <Column
           side="after"
@@ -60,6 +67,7 @@ export function TimeGain() {
           hours={AFTER}
           width={`${(AFTER / BEFORE) * 100}%`}
           color="var(--brand)"
+          grown={inView}
         />
 
         {PAIRS.map(([pain, answer]) => (
@@ -76,13 +84,14 @@ export function TimeGain() {
 }
 
 function Column({
-  side, eyebrow, hours, width, color,
+  side, eyebrow, hours, width, color, grown,
 }: {
   side: 'before' | 'after';
   eyebrow: string;
   hours: number;
   width: string;
   color: string;
+  grown: boolean;
 }) {
   return (
     <div className={`pb-7 ${side === 'after' ? 'pt-10 md:border-l md:pl-10 md:pt-0' : 'md:pr-10'}`}>
@@ -97,10 +106,14 @@ function Column({
         <span className="text-sm text-muted-foreground">par semaine</span>
       </p>
 
-      {/* Les deux barres partagent l'échelle : c'est le rapport entre elles
-          qui porte l'argument, pas leur longueur absolue. */}
+      {/* Les deux barres partagent l'échelle et poussent ensemble à l'entrée
+          dans le champ : voir la petite s'arrêter tôt pendant que la grande
+          continue, c'est l'argument joué plutôt qu'affiché. */}
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--line)]" aria-hidden>
-        <div className="h-full rounded-full" style={{ width, backgroundColor: color }} />
+        <div
+          className="h-full origin-left rounded-full transition-transform duration-[1100ms] ease-[cubic-bezier(.22,.9,.32,1)]"
+          style={{ width, backgroundColor: color, transform: grown ? 'scaleX(1)' : 'scaleX(0)' }}
+        />
       </div>
     </div>
   );

@@ -156,6 +156,11 @@
 
   /* Accessibilité : la mise au point clavier doit être visible partout, et
      elle emprunte le vert de validation plutôt qu'un bleu système. */
+  ::selection {
+    background: var(--brand);
+    color: #ffffff;
+  }
+
   :focus-visible {
     outline: 2px solid var(--brand);
     outline-offset: 2px;
@@ -192,6 +197,26 @@
 @keyframes revealUp {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: none; }
+}
+
+/* L'entrée du héros : chaque élément arrive net après un flou court.
+   Le flou est ce qui distingue une arrivée d'un simple déplacement — l'œil
+   lit une mise au point, pas un glissement. */
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(18px); filter: blur(10px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+/* La fenêtre produit, qui se pose plutôt qu'elle n'apparaît. */
+@keyframes heroCard {
+  from { opacity: 0; transform: translateY(22px) scale(0.965); filter: blur(8px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+/* Les points du parc qui s'allument : un défaut trouvé quelque part. */
+@keyframes emberPulse {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.9; }
 }
 
 @layer components {

@@ -1,3 +1,5 @@
+import { Reveal } from '@/components/landing/reveal';
+
 /**
  * La livraison du matin, telle qu'elle arrive.
  *
@@ -98,9 +100,15 @@ export function Feed() {
         <p className="field-label hidden text-white/70 sm:block">Livrés à 8 h</p>
       </div>
 
-      {ENTRIES.map((entry) => (
-        <Row key={entry.trade + entry.city} entry={entry} />
-      ))}
+      {/* Chaque ligne arrive séparément, comme si la liste se remplissait :
+          c'est la seule animation de la section, et elle mime le produit. */}
+      <div className="divide-y">
+        {ENTRIES.map((entry, index) => (
+          <Reveal key={entry.trade + entry.city} delay={index * 90}>
+            <Row entry={entry} />
+          </Reveal>
+        ))}
+      </div>
     </div>
   );
 }
@@ -113,7 +121,7 @@ function Row({ entry }: { entry: Entry }) {
   const intensity = Math.min(1, Math.max(0.55, (entry.score - 45) / 45));
 
   return (
-    <div className="group flex flex-wrap items-center gap-x-5 gap-y-3 border-b px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--mist)] sm:px-6">
+    <div className="group flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4 transition-colors hover:bg-[var(--mist)] sm:px-6">
       {/* Le score d'opportunité, le seul que le moteur produise : il monte
           quand le site va mal. */}
       <span

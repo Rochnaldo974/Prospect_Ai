@@ -83,8 +83,15 @@ export function SiteAudit() {
   const index = PHASES.indexOf(phase);
 
   return (
-    <figure className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04),0_24px_64px_-24px_rgba(11,13,20,.22)]">
-      <figcaption className="flex items-center gap-2.5 border-b px-5 py-3.5">
+    <figure className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.05),0_18px_50px_-18px_rgba(44,75,255,.22),0_36px_90px_-36px_rgba(11,13,20,.3)]">
+      {/* Le châssis du navigateur : trois pastilles, puis l'adresse. La
+          fenêtre doit se lire comme un outil ouvert, pas comme une carte. */}
+      <figcaption className="flex items-center gap-2.5 border-b bg-[var(--mist)]/60 px-5 py-3.5">
+        <span aria-hidden className="mr-1 flex gap-1.5">
+          <span className="size-2.5 rounded-full bg-[var(--line)]" />
+          <span className="size-2.5 rounded-full bg-[var(--line)]" />
+          <span className="size-2.5 rounded-full bg-[var(--line)]" />
+        </span>
         <span
           aria-hidden
           className={`size-1.5 rounded-full transition-colors duration-300 ${

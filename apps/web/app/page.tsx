@@ -6,6 +6,7 @@ import { Feed } from '@/components/landing/feed';
 import { TimeGain } from '@/components/landing/time-gain';
 import { Reveal } from '@/components/landing/reveal';
 import { SiteHeader } from '@/components/landing/site-header';
+import { HeroBackdrop } from '@/components/landing/backdrop';
 
 export const metadata: Metadata = {
   title: 'Prospect AI — la prospection client, simple et rapide',
@@ -62,7 +63,7 @@ export default async function HomePage() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-medium text-[var(--white)] transition-transform duration-200 hover:-translate-y-px"
+                  className="rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-medium text-[var(--white)] shadow-[0_6px_18px_-8px_rgba(11,13,20,.5)] transition-all duration-200 hover:-translate-y-px hover:shadow-[0_10px_24px_-8px_rgba(11,13,20,.55)]"
                 >
                   Essayer gratuitement
                 </Link>
@@ -84,50 +85,100 @@ export default async function HomePage() {
   );
 }
 
-/** Ce que le service fait, et l'audit qui le fait sous les yeux. */
+/**
+ * Le héros : la promesse, et le produit qui travaille à côté.
+ *
+ * L'entrée est orchestrée en un seul geste — badge, titre, texte, boutons,
+ * relevé, puis la fenêtre produit qui se pose — chaque temps arrivant net
+ * après un flou court. Une séquence unique et courte vaut mieux que des
+ * effets dispersés : l'œil suit une mise au point, pas un feu d'artifice.
+ *
+ * Sous les boutons, le relevé du moteur : trois nombres mesurés, en mono,
+ * avec le point de vie qui pulse. C'est la ligne qui parle le mieux à un
+ * développeur — précise, vérifiable, sans adjectif.
+ */
 function Hero() {
+  const stagger = (ms: number) => ({ animationDelay: `${ms}ms` });
+
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-24 pt-14 lg:pt-20">
-      <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
-        <div className="motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both]">
-          <p className="field-label">Pour les développeurs web et mobile freelances</p>
+    <section className="relative">
+      <HeroBackdrop />
 
-          <h1 className="mt-5 max-w-[16ch] text-[clamp(2.375rem,4.6vw,3.75rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
-            La prospection client,{' '}
-            <span className="text-[var(--brand)]">simple et rapide.</span>
-          </h1>
-
-          <p className="reasoning mt-6 max-w-lg text-muted-foreground">
-            Notre moteur analyse des sites d’entreprises françaises en continu. Chaque matin,
-            il vous en propose cinq dont le site est à refaire — ou à créer — avec ce qui cloche
-            et le numéro pour en parler.
-          </p>
-
-          <div className="mt-9 flex flex-wrap items-center gap-3">
-            <Link
-              href="/signup"
-              className="group rounded-full bg-[var(--brand)] px-6 py-3.5 text-sm font-medium text-white transition-transform duration-200 hover:-translate-y-px"
+      <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-16 lg:pt-24">
+        <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
+          <div>
+            <p
+              className="inline-flex items-center gap-2 rounded-full border bg-[var(--white)]/80 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground backdrop-blur motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
             >
-              Essayer gratuitement
-              <span className="ml-2 inline-block transition-transform duration-200 group-hover:translate-x-0.5">
-                →
+              Développeurs web &amp; mobile freelances
+            </p>
+
+            <h1
+              className="mt-6 max-w-[16ch] text-[clamp(2.5rem,5.2vw,4.25rem)] font-semibold leading-[0.99] tracking-[-0.05em] motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
+              style={stagger(80)}
+            >
+              La prospection client,{' '}
+              <span className="text-[var(--brand)]">simple et rapide.</span>
+            </h1>
+
+            <p
+              className="reasoning mt-6 max-w-lg text-muted-foreground motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
+              style={stagger(160)}
+            >
+              Notre moteur analyse des sites d’entreprises françaises en continu. Chaque matin,
+              il vous en propose cinq dont le site est à refaire — ou à créer — avec ce qui
+              cloche et le numéro pour en parler.
+            </p>
+
+            <div
+              className="mt-9 flex flex-wrap items-center gap-3 motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
+              style={stagger(240)}
+            >
+              <Link
+                href="/signup"
+                className="group rounded-full bg-[var(--brand)] px-7 py-3.5 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-12px_rgba(44,75,255,.6)] active:translate-y-0 active:scale-[.98]"
+              >
+                Essayer gratuitement
+                <span className="ml-2 inline-block transition-transform duration-200 group-hover:translate-x-0.5">
+                  →
+                </span>
+              </Link>
+              <Link
+                href="#tarifs"
+                className="rounded-full border bg-[var(--white)]/70 px-7 py-3.5 text-sm font-medium backdrop-blur transition-colors hover:bg-[var(--mist)]"
+              >
+                Voir les tarifs
+              </Link>
+            </div>
+
+            <p
+              className="mt-4 text-xs text-muted-foreground motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
+              style={stagger(300)}
+            >
+              Dix minutes le matin, pas une journée par semaine. Sans carte bancaire.
+            </p>
+
+            {/* Le relevé du moteur. Chiffres mesurés en base, jamais arrondis
+                vers le haut : leur précision EST l'argument. */}
+            <div
+              className="mt-10 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] text-muted-foreground motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
+              style={stagger(380)}
+            >
+              <span className="relative flex size-2" aria-hidden>
+                <span className="absolute inline-flex size-full rounded-full bg-[var(--brand)] opacity-60 motion-safe:animate-ping [animation-duration:2.2s]" />
+                <span className="relative inline-flex size-2 rounded-full bg-[var(--brand)]" />
               </span>
-            </Link>
-            <Link
-              href="#tarifs"
-              className="rounded-full border px-6 py-3.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
-            >
-              Voir les tarifs
-            </Link>
+              <span>moteur en ligne</span>
+              <span aria-hidden className="text-[var(--line)]">|</span>
+              <span className="tabular">4 590 189 sites suivis</span>
+              <span aria-hidden className="text-[var(--line)]">|</span>
+              <span className="tabular">828 défauts détectés</span>
+            </div>
           </div>
 
-          <p className="mt-4 text-xs text-muted-foreground">
-            Dix minutes le matin, pas une journée par semaine. Sans carte bancaire.
-          </p>
-        </div>
-
-        <div className="motion-safe:animate-[revealUp_.7s_cubic-bezier(.16,.84,.44,1)_both] [animation-delay:150ms]">
-          <SiteAudit />
+          <div className="motion-safe:animate-[heroCard_.9s_cubic-bezier(.16,.84,.44,1)_both]" style={stagger(200)}>
+            <SiteAudit />
+          </div>
         </div>
       </div>
     </section>
@@ -304,7 +355,7 @@ function Pricing() {
                   href="/signup"
                   className={`mt-9 rounded-full px-6 py-3.5 text-center text-sm font-medium transition-transform duration-200 hover:-translate-y-px ${
                     plan.featured
-                      ? 'bg-[var(--brand)] text-white'
+                      ? 'bg-[var(--brand)] text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] hover:shadow-[0_14px_34px_-10px_rgba(44,75,255,.6)]'
                       : 'border hover:bg-[var(--white)]'
                   }`}
                 >
