@@ -1,6 +1,6 @@
 import 'server-only';
 import { getServiceClient, getTodayOpportunities, type TodayOpportunity } from '@prospect/core';
-import { requireUser } from '@/lib/auth/session';
+import { requireOnboardedUser } from '@/lib/auth/session';
 
 /**
  * Les opportunités du jour de l'utilisateur connecté.
@@ -19,7 +19,7 @@ export async function getMyOpportunities(): Promise<{
   role: string;
   opportunities: TodayOpportunity[];
 }> {
-  const profile = await requireUser();
+  const profile = await requireOnboardedUser();
 
   return {
     firstName: profile.full_name?.split(' ')[0] ?? '',

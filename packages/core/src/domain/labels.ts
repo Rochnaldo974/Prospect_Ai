@@ -61,3 +61,25 @@ export const OUTCOME_FUNNEL: readonly AssignmentOutcome[] = [
   'proposal',
   'client',
 ] as const;
+
+/**
+ * Grandes familles de secteurs, pour l'écran de paramétrage.
+ *
+ * Regroupements de préfixes NAF, pas la nomenclature complète : on demande à
+ * un freelance ce qu'il ne veut pas voir, pas de connaître le code 56.10A. Le
+ * filtre d'exclusion applique les préfixes de façon hiérarchique, donc
+ * exclure « 56 » écarte bien toute la restauration.
+ */
+export const INDUSTRY_GROUPS: { codes: string[]; label: string }[] = [
+  { codes: ['56'],             label: 'Restauration, bars' },
+  { codes: ['47'],             label: 'Commerce de détail' },
+  { codes: ['96.02'],          label: 'Coiffure, esthétique' },
+  { codes: ['45'],             label: 'Automobile, garages' },
+  { codes: ['41', '42', '43'], label: 'Bâtiment, artisanat' },
+  { codes: ['86', '87', '88'], label: 'Santé, social' },
+  { codes: ['68'],             label: 'Immobilier' },
+  { codes: ['69', '70'],       label: 'Conseil, juridique, comptabilité' },
+  { codes: ['55', '79'],       label: 'Hébergement, tourisme' },
+  { codes: ['85'],             label: 'Enseignement, formation' },
+  { codes: ['84'],             label: 'Administration, collectivités' },
+];

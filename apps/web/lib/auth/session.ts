@@ -46,6 +46,22 @@ export async function requireUser(): Promise<SessionProfile> {
 }
 
 /**
+ * Exige un compte paramétré.
+ *
+ * Le moteur d'attribution écarte les comptes dont l'onboarding n'est pas
+ * terminé : sans cette redirection, l'utilisateur verrait un tableau de bord
+ * vide sans comprendre qu'il lui manque trois réponses.
+ *
+ * À n'utiliser que sur les pages qui livrent des opportunités — pas sur la
+ * page de paramétrage elle-même, qui bouclerait.
+ */
+export async function requireOnboardedUser(): Promise<SessionProfile> {
+  const profile = await requireUser();
+  if (!profile.onboarding_completed) redirect('/onboarding');
+  return profile;
+}
+
+/**
  * Exige le rôle admin, vérifié côté serveur contre la base.
  *
  * Ne jamais se fier à une information de rôle venue du client ou d'un cookie :

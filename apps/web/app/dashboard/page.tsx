@@ -22,6 +22,12 @@ export default async function DashboardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href="/onboarding?modifier"
+            className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent"
+          >
+            Préférences
+          </a>
           {role === 'admin' ? (
             <a
               href="/admin"

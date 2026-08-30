@@ -84,7 +84,9 @@ export async function signUp(
   }
 
   revalidatePath('/', 'layout');
-  redirect('/dashboard');
+  // Un compte neuf n'a pas de préférences : l'envoyer au tableau de bord
+  // l'accueillerait par une page vide, alors qu'il lui manque trois réponses.
+  redirect('/onboarding');
 }
 
 export async function signOut(): Promise<never> {
