@@ -459,32 +459,18 @@ function Pricing() {
       className="scroll-mt-24 bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_12%,var(--mist)_100%)]"
     >
       <div className="mx-auto max-w-6xl px-6 pb-24 pt-28">
-        <div className="grid items-end gap-x-16 gap-y-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="grid items-end gap-x-16 gap-y-4 lg:grid-cols-[1fr_0.8fr]">
           <Reveal>
             <p className="field-label">Tarifs</p>
             <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
               Sans engagement, sans palier caché.
             </h2>
-            <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+          </Reveal>
+          <Reveal delay={80}>
+            <p className="reasoning text-muted-foreground lg:pb-1">
               Le nombre de places est limité : une entreprise n’est proposée qu’à une seule
               personne, et il en sort un nombre fini chaque jour.
             </p>
-          </Reveal>
-
-          {/* Les objections, à côté du prix — c'est là qu'elles se posent. */}
-          <Reveal delay={100}>
-            <div className="divide-y rounded-2xl border bg-card px-5">
-              {[
-                ['C’est légal ?', 'Aucune donnée personnelle collectée. Le numéro est celui que l’entreprise publie.'],
-                ['C’est du démarchage automatique ?', 'Rien ne part sans vous. Vous décidez d’appeler ou d’envoyer, et quoi dire.'],
-                ['Et si ça ne me correspond pas ?', 'Vous choisissez vos prestations. Le reste ne vous est jamais proposé.'],
-              ].map(([q, a]) => (
-                <div key={q} className="py-3.5">
-                  <p className="text-sm font-medium">{q}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{a}</p>
-                </div>
-              ))}
-            </div>
           </Reveal>
         </div>
 
@@ -565,7 +551,24 @@ function Pricing() {
           </div>
         </Reveal>
 
-        <p className="mt-6 text-xs text-muted-foreground">
+        {/* Les objections, en pied de section : trois colonnes de texte
+            léger, sans boîte — elles rassurent, elles ne rivalisent pas. */}
+        <Reveal>
+          <div className="mt-14 grid gap-x-12 gap-y-6 border-t pt-8 md:grid-cols-3">
+            {[
+              ['C’est légal ?', 'Aucune donnée personnelle collectée. Le numéro est celui que l’entreprise publie.'],
+              ['C’est du démarchage automatique ?', 'Rien ne part sans vous. Vous décidez d’appeler ou d’envoyer, et quoi dire.'],
+              ['Et si ça ne me correspond pas ?', 'Vous choisissez vos prestations. Le reste ne vous est jamais proposé.'],
+            ].map(([q, a]) => (
+              <div key={q}>
+                <p className="text-sm font-medium">{q}</p>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{a}</p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+
+        <p className="mt-8 text-xs text-muted-foreground">
           Sans carte bancaire à l’inscription. Trois questions, une minute. Tarifs indicatifs
           pendant le lancement. Le détail du traitement des données est sur la{' '}
           <Link href="/confidentialite" className="underline underline-offset-2 hover:text-foreground">
