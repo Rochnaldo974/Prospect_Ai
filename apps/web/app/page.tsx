@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
-import { EngineShow } from '@/components/landing/engine-show';
+import { MorningShow } from '@/components/landing/morning-show';
 import { EmailShow } from '@/components/landing/email-show';
 import { Feed } from '@/components/landing/feed';
 import { TimeGain } from '@/components/landing/time-gain';
@@ -79,7 +79,6 @@ export default async function HomePage() {
 
       <main>
         <Hero />
-        <Audiences />
         <Engine />
         <TimeSaved />
         <EmailFeature />
@@ -181,7 +180,7 @@ function Hero() {
           </div>
 
           <div className="motion-safe:animate-[heroCard_.9s_cubic-bezier(.16,.84,.44,1)_both]" style={stagger(200)}>
-            <EngineShow />
+            <MorningShow />
           </div>
         </div>
       </div>
@@ -190,115 +189,72 @@ function Hero() {
 }
 
 /**
- * Pour qui : les métiers du web, nommés. Un freelance doit se reconnaître
- * en une seconde — c'est une liste de miroirs, pas une liste de features.
- */
-function Audiences() {
-  const audiences = [
-    ['Sites vitrine & refonte', 'Le plus grand marché : un site d’entreprise sur deux a un défaut visible.'],
-    ['E-commerce', 'Les commerces qui vendent en boutique et pas encore en ligne.'],
-    ['Applications web & mobile', 'Les entreprises qui mûrissent un outil ou une app.'],
-    ['SEO & visibilité', 'Les sites invisibles sur Google, mesurablement.'],
-    ['Automatisation & IA', 'Les process manuels qui attendent d’être outillés.'],
-  ];
-
-  return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-20">
-        <Reveal>
-          <p className="field-label">Fait pour vous</p>
-          <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Quel que soit votre terrain de jeu
-          </h2>
-          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-            À l’inscription, vous dites ce que vous faites. Le moteur ne vous propose que ça.
-          </p>
-        </Reveal>
-
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {audiences.map(([title, body], i) => (
-            <Reveal key={title} delay={i * 70}>
-              <article className="h-full rounded-2xl border bg-card p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_40px_-20px_rgba(11,13,20,.25)]">
-                <h3 className="font-semibold tracking-tight">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
-              </article>
-            </Reveal>
-          ))}
-          <Reveal delay={350}>
-            <Link
-              href="/signup"
-              className="grid h-full place-items-center rounded-2xl border border-dashed border-[var(--brand)]/40 bg-[var(--brand-wash)]/50 p-6 text-center transition-all duration-200 hover:-translate-y-1"
-            >
-              <span>
-                <span className="block font-semibold tracking-tight text-[var(--brand)]">
-                  Votre spécialité →
-                </span>
-                <span className="mt-1.5 block text-sm text-[var(--brand)]/75">
-                  Trois questions à l’inscription, et le moteur travaille pour vous.
-                </span>
-              </span>
-            </Link>
-          </Reveal>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Le moteur : la force du produit, argumentée en trois temps. C'est la
- * seule section « comment ça marche » — et chaque affirmation porte son
- * chiffre, parce que le lecteur est développeur.
+ * Le moteur, en trois étapes — et vos métiers dedans.
+ *
+ * Deux sections vivaient ici : une grille de cartes « pour qui » et une
+ * grille de colonnes « notre force ». Même forme deux fois, et l'ennui
+ * qui va avec. Fusionnées en un seul récit vertical : trois étapes
+ * reliées par un fil, des MOTS plutôt que des chiffres — le lecteur veut
+ * comprendre ce que le moteur fait, pas auditer ses métriques — et les
+ * métiers arrivent à l'étape où ils jouent : quand le moteur choisit.
  */
 function Engine() {
-  const arguments_ = [
+  const steps = [
     {
-      title: 'Il analyse, chaque nuit',
-      body: 'Dix-huit contrôles par site — réponse, sécurité, âge des composants, lisibilité mobile, vitesse — croisés avec les registres publics français.',
-      figure: '18',
-      caption: 'contrôles par site',
+      title: 'Chaque nuit, il analyse',
+      body: 'Le moteur parcourt les sites d’entreprises françaises pendant que vous dormez : est-ce que le site répond, est-il sûr, lisible sur téléphone, à jour, rapide.',
     },
     {
-      title: 'Il n’approuve que le vérifiable',
-      body: 'Pas de « site vieillissant » au jugé : un défaut daté, constaté, que vous pouvez vérifier en une minute avant d’appeler. Ce qu’il ignore, il l’écrit.',
-      figure: '1 min',
-      caption: 'pour vérifier chaque constat',
+      title: 'Il ne garde que le prouvable',
+      body: 'Pas de « site vieillissant » au jugé. Un défaut daté, constaté, que vous pouvez vérifier vous-même avant d’appeler — et ce que le moteur ignore, il l’écrit.',
     },
     {
-      title: 'Il choisit pour vous',
-      body: 'Vos prestations, votre zone, vos exclusions : chaque dossier livré est un dossier que vous pouvez signer. Et il n’est livré qu’à vous — 72 h d’exclusivité.',
-      figure: '5',
-      caption: 'prospects approuvés par matin',
+      title: 'Il choisit selon votre métier',
+      body: 'Vos prestations, votre zone, vos exclusions : chaque dossier livré est un dossier que vous pouvez signer. Et il n’est livré qu’à vous.',
+      trades: ['Sites vitrine & refonte', 'E-commerce', 'Apps web & mobile', 'SEO & visibilité', 'Automatisation & IA'],
     },
   ];
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
+    <section className="mx-auto max-w-4xl px-6 py-24">
       <Reveal>
         <p className="field-label">Notre force</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
           Un moteur qui prospecte pendant que vous dormez
         </h2>
-        <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-          La prospection n’est pas un carnet d’adresses, c’est un tri. Le moteur le fait en
-          continu, à une échelle qu’aucun humain ne tient.
-        </p>
       </Reveal>
 
-      <div className="mt-14 grid gap-x-8 gap-y-10 md:grid-cols-3">
-        {arguments_.map((argument, i) => (
-          <Reveal key={argument.title} delay={i * 90}>
-            <article className="border-t pt-6">
-              <p className="tabular font-mono text-4xl font-semibold tracking-tight text-[var(--brand)]">
-                {argument.figure}
-              </p>
-              <p className="field-label mt-1">{argument.caption}</p>
-              <h3 className="mt-5 text-lg font-semibold tracking-tight">{argument.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{argument.body}</p>
-            </article>
+      <ol className="relative mt-14 space-y-12">
+        {/* Le fil qui relie les trois temps de la nuit. */}
+        <span aria-hidden className="absolute bottom-6 left-[1.3125rem] top-6 w-px bg-[var(--line)]" />
+
+        {steps.map((step, i) => (
+          <Reveal key={step.title} delay={i * 120}>
+            <li className="relative flex gap-6">
+              <span className="tabular relative z-10 grid size-11 shrink-0 place-items-center rounded-full border bg-card font-mono text-sm font-medium text-[var(--brand)]">
+                {i + 1}
+              </span>
+              <div className="pt-1.5">
+                <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
+                <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+                  {step.body}
+                </p>
+                {step.trades ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {step.trades.map((trade, j) => (
+                      <Reveal key={trade} delay={200 + j * 80}>
+                        <span className="inline-block rounded-full border bg-card px-3.5 py-1.5 text-[13px] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--brand-wash)] hover:text-[var(--brand)]">
+                          {trade}
+                        </span>
+                      </Reveal>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </li>
           </Reveal>
         ))}
-      </div>
+      </ol>
     </section>
   );
 }

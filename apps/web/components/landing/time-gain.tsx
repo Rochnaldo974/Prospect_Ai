@@ -20,7 +20,7 @@ import { useInView } from '@/lib/hooks/use-in-view';
  * grandeur, pas une mesure.
  */
 
-const BEFORE = 8;
+const BEFORE = 10;
 const AFTER = 1;
 
 /** Chaque grief avec sa réponse. L'ordre suit celui d'une journée. */
@@ -91,8 +91,8 @@ export function TimeGain() {
       </div>
 
       <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-        Une heure contre huit : ordre de grandeur pour une prospection menée sérieusement, pas
-        une mesure.
+        Une heure contre dix, e-mails compris : ordre de grandeur pour une prospection menée
+        sérieusement, pas une mesure.
       </p>
     </div>
   );
