@@ -107,11 +107,6 @@ export function TimeGain() {
         </div>
       </div>
 
-      <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-        Le compte : chercher 45 min, évaluer les sites 1 h, retrouver les contacts 25 min,
-        rédiger cinq e-mails 1 h 15 — contre dix minutes de lecture et cinq d’envoi. Des ordres
-        de grandeur honnêtes, pas un chronomètre.
-      </p>
     </div>
   );
 }

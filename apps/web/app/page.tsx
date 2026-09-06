@@ -54,6 +54,15 @@ export default async function HomePage() {
           </Link>
 
           <nav className="flex items-center gap-4 text-sm sm:gap-6">
+            <Link href="#moteur" className="hidden text-muted-foreground transition-colors hover:text-foreground lg:inline">
+              Le moteur
+            </Link>
+            <Link href="#temps" className="hidden text-muted-foreground transition-colors hover:text-foreground lg:inline">
+              Le temps gagné
+            </Link>
+            <Link href="#tarifs" className="hidden text-muted-foreground transition-colors hover:text-foreground md:inline">
+              Tarifs
+            </Link>
             {profile ? (
               <Link href="/dashboard" className="font-medium transition-opacity hover:opacity-70">
                 Mes opportunités
@@ -85,6 +94,7 @@ export default async function HomePage() {
         <EmailFeature />
         <Market />
         <Pricing />
+        <FinalCall />
       </main>
 
       <SiteFooter />
@@ -190,14 +200,10 @@ function Hero() {
 }
 
 /**
- * Le moteur, en trois étapes — et vos métiers dedans.
- *
- * Deux sections vivaient ici : une grille de cartes « pour qui » et une
- * grille de colonnes « notre force ». Même forme deux fois, et l'ennui
- * qui va avec. Fusionnées en un seul récit vertical : trois étapes
- * reliées par un fil, des MOTS plutôt que des chiffres — le lecteur veut
- * comprendre ce que le moteur fait, pas auditer ses métriques — et les
- * métiers arrivent à l'étape où ils jouent : quand le moteur choisit.
+ * Le moteur : deux colonnes — la revendication reste en vue à gauche
+ * pendant que les étapes défilent à droite. La version précédente calait
+ * tout dans une colonne étroite : la moitié droite de l'écran restait
+ * déserte, et la section semblait inachevée.
  */
 function Engine() {
   const steps = [
@@ -217,48 +223,58 @@ function Engine() {
   ];
 
   return (
-    <section className="relative overflow-hidden">
+    <section id="moteur" className="relative scroll-mt-20 overflow-hidden">
       <Glow className="-right-40 -top-32 size-[34rem]" />
       <Glow tint="finding" className="-bottom-40 -left-48 size-[28rem]" />
-      <div className="relative mx-auto max-w-4xl px-6 py-24">
-      <Reveal>
-        <p className="field-label">Notre force</p>
-        <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-          Un moteur qui prospecte pendant que vous dormez
-        </h2>
-      </Reveal>
-
-      <ol className="relative mt-14 space-y-12">
-        {/* Le fil qui relie les trois temps de la nuit. */}
-        <span aria-hidden className="absolute bottom-6 left-[1.3125rem] top-6 w-px bg-[var(--line)]" />
-
-        {steps.map((step, i) => (
-          <Reveal key={step.title} delay={i * 120}>
-            <li className="relative flex gap-6">
-              <span className="tabular relative z-10 grid size-11 shrink-0 place-items-center rounded-full border bg-card font-mono text-sm font-medium text-[var(--brand)]">
-                {i + 1}
-              </span>
-              <div className="pt-1.5">
-                <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
-                <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-                  {step.body}
-                </p>
-                {step.trades ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {step.trades.map((trade, j) => (
-                      <Reveal key={trade} delay={200 + j * 80}>
-                        <span className="inline-block rounded-full border bg-card px-3.5 py-1.5 text-[13px] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--brand-wash)] hover:text-[var(--brand)]">
-                          {trade}
-                        </span>
-                      </Reveal>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </li>
+      <div className="relative mx-auto grid max-w-6xl gap-x-16 gap-y-12 px-6 py-24 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <Reveal>
+            <p className="field-label">Notre force</p>
+            <h2 className="mt-4 text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+              Un moteur qui prospecte pendant que vous dormez
+            </h2>
+            <p className="reasoning mt-5 max-w-md text-muted-foreground">
+              La prospection n’est pas un carnet d’adresses, c’est un tri. Le moteur le fait en
+              continu, à une échelle qu’aucun humain ne tient — et il vous en rend compte.
+            </p>
+            <Link
+              href="/signup"
+              className="mt-7 inline-flex rounded-full border px-6 py-3 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
+            >
+              Le voir travailler pour vous →
+            </Link>
           </Reveal>
-        ))}
-      </ol>
+        </div>
+
+        <ol className="relative space-y-10">
+          <span aria-hidden className="absolute bottom-6 left-[1.3125rem] top-6 w-px bg-[var(--line)]" />
+          {steps.map((step, i) => (
+            <Reveal key={step.title} delay={i * 120}>
+              <li className="relative flex gap-6">
+                <span className="tabular relative z-10 grid size-11 shrink-0 place-items-center rounded-full border bg-card font-mono text-sm font-medium text-[var(--brand)]">
+                  {i + 1}
+                </span>
+                <div className="pt-1.5">
+                  <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+                    {step.body}
+                  </p>
+                  {step.trades ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {step.trades.map((trade, j) => (
+                        <Reveal key={trade} delay={200 + j * 80}>
+                          <span className="inline-block rounded-full border bg-card px-3.5 py-1.5 text-[13px] transition-colors hover:border-[var(--brand)]/40 hover:bg-[var(--brand-wash)] hover:text-[var(--brand)]">
+                            {trade}
+                          </span>
+                        </Reveal>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </li>
+            </Reveal>
+          ))}
+        </ol>
       </div>
     </section>
   );
@@ -322,16 +338,30 @@ function Market() {
     <section className="relative overflow-hidden bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_14%,var(--mist)_86%,var(--white)_100%)]">
       <Glow className="-top-24 right-1/4 size-[26rem]" />
       <div className="relative mx-auto max-w-6xl px-6 pb-28 pt-24">
-        <Reveal>
-          <p className="field-label">Concrètement</p>
-          <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Votre matinée type, en vrai
-          </h2>
-          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-            Le travail de recherche est déjà fait quand vous vous levez. Il ne vous reste que la
-            partie qui rapporte.
-          </p>
-        </Reveal>
+        <div className="flex flex-wrap items-end justify-between gap-x-12 gap-y-6">
+          <Reveal>
+            <p className="field-label">Concrètement</p>
+            <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+              Votre matinée type, en vrai
+            </h2>
+            <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+              Le travail de recherche est déjà fait quand vous vous levez. Il ne vous reste que
+              la partie qui rapporte.
+            </p>
+          </Reveal>
+
+          {/* Les trois règles du lot, en repères : elles occupaient l'air. */}
+          <Reveal delay={100}>
+            <div className="flex flex-wrap gap-2.5">
+              {[['5', 'par matin'], ['72 h', 'd’exclusivité'], ['8 h 00', 'heure de livraison']].map(([n, label]) => (
+                <span key={label} className="rounded-full border bg-card px-4 py-2 text-[13px]">
+                  <span className="tabular font-mono font-semibold text-[var(--brand)]">{n}</span>{' '}
+                  <span className="text-muted-foreground">{label}</span>
+                </span>
+              ))}
+            </div>
+          </Reveal>
+        </div>
 
         <Reveal>
           <Feed />
@@ -347,36 +377,70 @@ function Market() {
 }
 
 /**
- * Le temps repris.
- *
- * Cette place revenait au dossier grand format. Il montrait bien ce qu'on
- * achète, mais la liste juste au-dessus le montrait déjà — cinq fois, en
- * plus court. Deux sections pour dire « voilà une entreprise et son
- * problème » en faisaient une de trop.
- *
- * Ce qui manquait, à l'inverse, c'était la raison d'acheter : ce que le
- * lecteur récupère. Elle occupe donc la section entière plutôt qu'une carte
- * coincée sous la liste.
+ * Le temps repris. Le reçu du calcul occupe la droite de l'en-tête — le
+ * détail honnête, posé là où il se vérifie d'un œil, au lieu d'une moitié
+ * d'écran vide au-dessus du tableau.
  */
 function TimeSaved() {
+  const receipt: Array<[string, string, boolean]> = [
+    ['Chercher des candidates', '45 min', false],
+    ['Évaluer leurs sites', '1 h 00', false],
+    ['Retrouver les contacts', '25 min', false],
+    ['Rédiger cinq e-mails', '1 h 15', false],
+    ['Lire cinq dossiers prêts', '10 min', true],
+    ['Envoyer cinq e-mails prêts', '5 min', true],
+  ];
+
   return (
-    <section className="relative overflow-hidden">
+    <section id="temps" className="relative scroll-mt-20 overflow-hidden">
       <Glow tint="finding" className="-left-40 top-10 size-[26rem]" />
       <Glow className="-right-44 bottom-0 size-[30rem]" />
       <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-24">
-      <Reveal>
-        <p className="field-label">Le temps que ça vous prend</p>
-        <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-          Cinq entreprises prospectées en 15 minutes
-        </h2>
-        <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-          À la main, prospecter cinq entreprises prend l’après-midi : chercher, évaluer chaque
-          site, retrouver les contacts, rédiger. Ici, tout est prêt au réveil — il reste un
-          quart d’heure, et c’est la partie qui rapporte.
-        </p>
+        <div className="grid items-end gap-x-16 gap-y-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <Reveal>
+            <p className="field-label">Le temps que ça vous prend</p>
+            <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+              Cinq entreprises prospectées en 15 minutes
+            </h2>
+            <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+              À la main, prospecter cinq entreprises prend l’après-midi. Ici, tout est prêt au
+              réveil — il reste un quart d’heure, et c’est la partie qui rapporte.
+            </p>
+          </Reveal>
 
-        <TimeGain />
-      </Reveal>
+          <Reveal delay={100}>
+            <div className="rounded-2xl border bg-card p-5 font-mono text-[12px] shadow-[0_1px_2px_rgba(11,13,20,.04)]">
+              <p className="field-label">Le compte, pour 5 entreprises</p>
+              <div className="mt-3 space-y-1.5">
+                {receipt.map(([label, time, ours]) => (
+                  <p key={label} className="flex items-baseline justify-between gap-4">
+                    <span className={ours ? 'text-[var(--brand)]' : 'text-muted-foreground'}>
+                      {ours ? '+ ' : '− '}{label}
+                    </span>
+                    <span className={`tabular ${ours ? 'text-[var(--brand)]' : 'text-muted-foreground'}`}>
+                      {time}
+                    </span>
+                  </p>
+                ))}
+              </div>
+              <div className="mt-3 space-y-1 border-t pt-3">
+                <p className="flex items-baseline justify-between text-[var(--finding)]">
+                  <span>À la main</span><span className="tabular font-semibold">3 h 30</span>
+                </p>
+                <p className="flex items-baseline justify-between text-[var(--brand)]">
+                  <span>Avec Prospect AI</span><span className="tabular font-semibold">15 min</span>
+                </p>
+              </div>
+              <p className="mt-3 border-t pt-2.5 text-[10px] leading-relaxed text-muted-foreground">
+                Ordres de grandeur honnêtes, pas un chronomètre.
+              </p>
+            </div>
+          </Reveal>
+        </div>
+
+        <Reveal>
+          <TimeGain />
+        </Reveal>
       </div>
     </section>
   );
@@ -418,11 +482,6 @@ function Pricing() {
     },
   ];
 
-  const answers = [
-    ['C’est légal ?', 'Aucune donnée personnelle n’est collectée. Le numéro est celui que l’entreprise publie.'],
-    ['C’est du démarchage automatique ?', 'Rien n’est envoyé à votre place. Vous décidez d’appeler, et quoi dire.'],
-    ['Et si ça ne me correspond pas ?', 'Vous choisissez vos prestations. Le reste ne vous est jamais proposé.'],
-  ];
 
   return (
     <section
@@ -430,16 +489,34 @@ function Pricing() {
       className="scroll-mt-24 bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_12%,var(--mist)_100%)]"
     >
       <div className="mx-auto max-w-6xl px-6 pb-24 pt-28">
-        <Reveal>
-          <p className="field-label">Tarifs</p>
-          <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Sans engagement, sans palier caché.
-          </h2>
-          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-            Le nombre de places est limité : une entreprise n’est proposée qu’à une seule
-            personne, et il en sort un nombre fini chaque jour.
-          </p>
-        </Reveal>
+        <div className="grid items-end gap-x-16 gap-y-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <Reveal>
+            <p className="field-label">Tarifs</p>
+            <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+              Sans engagement, sans palier caché.
+            </h2>
+            <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+              Le nombre de places est limité : une entreprise n’est proposée qu’à une seule
+              personne, et il en sort un nombre fini chaque jour.
+            </p>
+          </Reveal>
+
+          {/* Les objections, à côté du prix — c'est là qu'elles se posent. */}
+          <Reveal delay={100}>
+            <div className="divide-y rounded-2xl border bg-card px-5">
+              {[
+                ['C’est légal ?', 'Aucune donnée personnelle collectée. Le numéro est celui que l’entreprise publie.'],
+                ['C’est du démarchage automatique ?', 'Rien ne part sans vous. Vous décidez d’appeler ou d’envoyer, et quoi dire.'],
+                ['Et si ça ne me correspond pas ?', 'Vous choisissez vos prestations. Le reste ne vous est jamais proposé.'],
+              ].map(([q, a]) => (
+                <div key={q} className="py-3.5">
+                  <p className="text-sm font-medium">{q}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{a}</p>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
 
         <div className="mt-14 grid gap-5 md:grid-cols-2">
           {plans.map((plan, i) => (
@@ -520,25 +597,53 @@ function Pricing() {
 
         <p className="mt-6 text-xs text-muted-foreground">
           Sans carte bancaire à l’inscription. Trois questions, une minute. Tarifs indicatifs
-          pendant le lancement.
-        </p>
-
-        <div className="mt-16 grid gap-x-12 gap-y-0 border-t pt-4 md:grid-cols-3">
-          {answers.map(([question, answer]) => (
-            <div key={question} className="py-5">
-              <p className="text-sm font-medium">{question}</p>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{answer}</p>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-2 text-xs text-muted-foreground">
-          Le détail du traitement des données est sur la{' '}
+          pendant le lancement. Le détail du traitement des données est sur la{' '}
           <Link href="/confidentialite" className="underline underline-offset-2 hover:text-foreground">
             page Confidentialité
           </Link>
           .
         </p>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * L'appel final : la page se terminait sur une note de bas de tarif — un
+ * anticlimax. Une bande sombre referme le récit sur la promesse du matin.
+ */
+function FinalCall() {
+  return (
+    <section className="relative overflow-hidden bg-[var(--ink)] text-[var(--white)]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 left-1/2 size-[36rem] -translate-x-1/2 rounded-full blur-[120px]"
+        style={{ backgroundColor: 'rgba(44, 75, 255, 0.35)' }}
+      />
+      <div className="relative mx-auto max-w-6xl px-6 py-24 text-center">
+        <Reveal>
+          <h2 className="mx-auto max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+            Demain matin, cinq entreprises vous attendent.
+          </h2>
+          <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed opacity-70">
+            Trois questions pour commencer, et le moteur travaille pour vous cette nuit.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/signup"
+              className="rounded-full bg-[var(--white)] px-7 py-3.5 text-sm font-medium text-[var(--ink)] transition-transform duration-200 hover:-translate-y-px"
+            >
+              Essayer gratuitement
+            </Link>
+            <Link
+              href="#tarifs"
+              className="rounded-full border border-white/25 px-7 py-3.5 text-sm font-medium transition-colors hover:bg-white/10"
+            >
+              Voir les tarifs
+            </Link>
+          </div>
+          <p className="mt-5 text-xs opacity-55">Sans carte bancaire. Un dossier par semaine en gratuit.</p>
+        </Reveal>
       </div>
     </section>
   );
