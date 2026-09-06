@@ -8,6 +8,7 @@ import { TimeGain } from '@/components/landing/time-gain';
 import { Reveal } from '@/components/landing/reveal';
 import { SiteHeader } from '@/components/landing/site-header';
 import { HeroBackdrop } from '@/components/landing/backdrop';
+import { Glow } from '@/components/landing/glow';
 
 export const metadata: Metadata = {
   title: 'Prospect AI — l’outil indispensable des freelances du web',
@@ -158,7 +159,7 @@ function Hero() {
               className="mt-4 text-xs text-muted-foreground motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
               style={stagger(300)}
             >
-              Dix minutes le matin, pas une journée par semaine. Sans carte bancaire.
+              Quinze minutes le matin, pas trois heures. Sans carte bancaire.
             </p>
 
             {/* Le relevé du moteur. Chiffres mesurés en base, jamais arrondis
@@ -216,7 +217,10 @@ function Engine() {
   ];
 
   return (
-    <section className="mx-auto max-w-4xl px-6 py-24">
+    <section className="relative overflow-hidden">
+      <Glow className="-right-40 -top-32 size-[34rem]" />
+      <Glow tint="finding" className="-bottom-40 -left-48 size-[28rem]" />
+      <div className="relative mx-auto max-w-4xl px-6 py-24">
       <Reveal>
         <p className="field-label">Notre force</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
@@ -255,6 +259,7 @@ function Engine() {
           </Reveal>
         ))}
       </ol>
+      </div>
     </section>
   );
 }
@@ -264,8 +269,9 @@ function Engine() {
  */
 function EmailFeature() {
   return (
-    <section className="border-y bg-[var(--mist)]">
-      <div className="mx-auto max-w-6xl px-6 py-24">
+    <section className="relative overflow-hidden border-y bg-[var(--mist)]">
+      <Glow className="-right-32 top-1/2 size-[32rem] -translate-y-1/2" />
+      <div className="relative mx-auto max-w-6xl px-6 py-24">
         <div className="grid items-center gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:gap-20">
           <Reveal>
             <p className="field-label">Inclus dans le plan Solo</p>
@@ -313,8 +319,9 @@ function EmailFeature() {
  */
 function Market() {
   return (
-    <section className="bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_14%,var(--mist)_86%,var(--white)_100%)]">
-      <div className="mx-auto max-w-6xl px-6 pb-28 pt-24">
+    <section className="relative overflow-hidden bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_14%,var(--mist)_86%,var(--white)_100%)]">
+      <Glow className="-top-24 right-1/4 size-[26rem]" />
+      <div className="relative mx-auto max-w-6xl px-6 pb-28 pt-24">
         <Reveal>
           <p className="field-label">Concrètement</p>
           <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
@@ -353,19 +360,24 @@ function Market() {
  */
 function TimeSaved() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-24 pt-24">
+    <section className="relative overflow-hidden">
+      <Glow tint="finding" className="-left-40 top-10 size-[26rem]" />
+      <Glow className="-right-44 bottom-0 size-[30rem]" />
+      <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-24">
       <Reveal>
         <p className="field-label">Le temps que ça vous prend</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-          Récupérez une journée par semaine
+          Cinq entreprises prospectées en 15 minutes
         </h2>
         <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-          Chercher, trier, vérifier, rédiger : c’est la partie qui ne rapporte rien, et elle
-          est déjà faite quand vous vous levez. Il vous reste les appels — et les réponses.
+          À la main, prospecter cinq entreprises prend l’après-midi : chercher, évaluer chaque
+          site, retrouver les contacts, rédiger. Ici, tout est prêt au réveil — il reste un
+          quart d’heure, et c’est la partie qui rapporte.
         </p>
 
         <TimeGain />
       </Reveal>
+      </div>
     </section>
   );
 }

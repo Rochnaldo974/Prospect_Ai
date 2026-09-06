@@ -20,8 +20,21 @@ import { useInView } from '@/lib/hooks/use-in-view';
  * grandeur, pas une mesure.
  */
 
-const BEFORE = 10;
-const AFTER = 1;
+/**
+ * Le compte, pour CINQ entreprises — la journée type, pas la semaine.
+ *
+ * À la main : chercher des candidates (45 min), évaluer leurs sites pour
+ * trouver un vrai angle (60), retrouver les contacts (25), rédiger cinq
+ * e-mails personnalisés (75). Trois heures et demie. Avec les dossiers et
+ * les e-mails prêts : les lire (10) et les envoyer (5). Un quart d'heure.
+ */
+const BEFORE = 210;
+const AFTER = 15;
+
+const asLabel = (minutes: number): string =>
+  minutes >= 60
+    ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${String(minutes % 60).padStart(2, '0')}` : ''}`
+    : `${minutes} min`;
 
 /** Chaque grief avec sa réponse. L'ordre suit celui d'une journée. */
 /**
@@ -52,6 +65,10 @@ const PAIRS: Array<{
     answer: ['L’angle est écrit.', 'Et pourquoi appeler maintenant.'],
   },
   {
+    pain: ['Cinq e-mails à rédiger.', 'Un quart d’heure chacun, à la main.'],
+    answer: ['Ils s’écrivent tout seuls.', 'Personnalisés, signés, envoyés en un clic.'],
+  },
+  {
     pain: ['Quatrième à appeler.', 'Déjà démarché trois fois.'],
     answer: ['Seul pendant 72 h.', 'Personne d’autre ne la reçoit.'],
   },
@@ -69,15 +86,15 @@ export function TimeGain() {
       <div className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(11,13,20,.04),0_24px_60px_-32px_rgba(11,13,20,.2)]">
         <div className="grid md:grid-cols-2">
           <ColumnHead
-            eyebrow="Aujourd’hui"
-            hours={BEFORE}
+            eyebrow="À la main"
+            minutes={BEFORE}
             width="100%"
             color="var(--finding)"
             grown={inView}
           />
           <ColumnHead
             eyebrow="Avec Prospect AI"
-            hours={AFTER}
+            minutes={AFTER}
             width={`${(AFTER / BEFORE) * 100}%`}
             color="var(--brand)"
             grown={inView}
@@ -91,18 +108,19 @@ export function TimeGain() {
       </div>
 
       <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-        Une heure contre dix, e-mails compris : ordre de grandeur pour une prospection menée
-        sérieusement, pas une mesure.
+        Le compte : chercher 45 min, évaluer les sites 1 h, retrouver les contacts 25 min,
+        rédiger cinq e-mails 1 h 15 — contre dix minutes de lecture et cinq d’envoi. Des ordres
+        de grandeur honnêtes, pas un chronomètre.
       </p>
     </div>
   );
 }
 
 function ColumnHead({
-  eyebrow, hours, width, color, grown, highlighted = false,
+  eyebrow, minutes, width, color, grown, highlighted = false,
 }: {
   eyebrow: string;
-  hours: number;
+  minutes: number;
   width: string;
   color: string;
   grown: boolean;
@@ -119,9 +137,9 @@ function ColumnHead({
         </p>
         <p className="flex items-baseline gap-1.5">
           <span className="tabular text-2xl font-semibold tracking-tight" style={{ color }}>
-            {hours} h
+            {asLabel(minutes)}
           </span>
-          <span className="text-xs text-muted-foreground">/ semaine</span>
+          <span className="text-xs text-muted-foreground">pour 5 entreprises</span>
         </p>
       </div>
 

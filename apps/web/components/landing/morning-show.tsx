@@ -80,7 +80,7 @@ export function MorningShow() {
               Cette entreprise ? Prospectée en 1 minute.
             </p>
             <p className="mt-1 text-sm text-[var(--brand)]/75">
-              Il vous en reste 4 — dix minutes en tout, et votre matinée est à vous.
+              Il vous en reste 4 — un quart d’heure en tout, et la matinée est à vous.
             </p>
           </div>
         ) : null}
