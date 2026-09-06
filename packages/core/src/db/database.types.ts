@@ -70,6 +70,44 @@ export type Database = {
           },
         ]
       }
+      assignment_emails: {
+        Row: {
+          assignment_id: string
+          body: string
+          id: string
+          sent_at: string
+          subject: string
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          body: string
+          id?: string
+          sent_at?: string
+          subject: string
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          body?: string
+          id?: string
+          sent_at?: string
+          subject?: string
+          to_email?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_emails_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           assigned_at: string
@@ -890,6 +928,42 @@ export type Database = {
           tls_valid_to?: string | null
           ttfb_ms?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      email_identities: {
+        Row: {
+          company: string
+          created_at: string
+          from_name: string
+          logo_url: string | null
+          phone: string
+          title: string
+          updated_at: string
+          user_id: string
+          website: string
+        }
+        Insert: {
+          company?: string
+          created_at?: string
+          from_name?: string
+          logo_url?: string | null
+          phone?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          website?: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          from_name?: string
+          logo_url?: string | null
+          phone?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          website?: string
         }
         Relationships: []
       }

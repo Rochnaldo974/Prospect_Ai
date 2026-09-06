@@ -37,7 +37,6 @@ const SUBJECTS: Record<string, (city: string | null) => string> = {
 
 export function draftProspectingEmail(
   opportunity: Pick<TodayOpportunity, 'type' | 'company' | 'explanation'>,
-  senderFirstName: string,
 ): EmailDraft {
   const { company, explanation } = opportunity;
   const firstFact = explanation.signals[0];
@@ -68,8 +67,9 @@ export function draftProspectingEmail(
   // La question ouverte : elle appelle une réponse courte, pas un engagement.
   lines.push('Est-ce un sujet dont vous aimeriez parler dix minutes cette semaine ?');
   lines.push('');
-  lines.push(`Bien à vous,`);
-  lines.push(senderFirstName || 'Un développeur web indépendant');
+  // La formule seule : la signature — nom, métier, logo, coordonnées — est
+  // ajoutée par l'identité d'expéditeur au rendu, pas par le brouillon.
+  lines.push('Bien à vous,');
 
   return {
     subject: (SUBJECTS[opportunity.type] ?? SUBJECTS.other!)(company.city),

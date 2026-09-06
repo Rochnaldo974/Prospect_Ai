@@ -98,6 +98,9 @@ export function Sidebar({
             </span>
           ) : null}
         </SecondaryLink>
+        <SecondaryLink href="/dashboard/signature" active={pathname === '/dashboard/signature'}>
+          Signature e-mail
+        </SecondaryLink>
         <SecondaryLink href="/onboarding?modifier" active={false}>Préférences</SecondaryLink>
         {isAdmin ? <SecondaryLink href="/admin" active={false}>Admin</SecondaryLink> : null}
         <form action={signOutAction}>

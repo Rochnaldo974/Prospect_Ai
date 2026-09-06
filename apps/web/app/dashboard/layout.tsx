@@ -49,6 +49,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </Link>
             <div className="flex items-center gap-4 text-sm">
               <Link
+                href="/dashboard/signature"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Signature
+              </Link>
+              <Link
                 href="/dashboard/abonnement"
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >

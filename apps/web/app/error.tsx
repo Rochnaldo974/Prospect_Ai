@@ -31,7 +31,7 @@ export default function ErrorBoundary({
             Cette page n&apos;a pas pu s&apos;afficher
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            La plupart de ces interruptions sont passagères. Réessaie — si elle revient, c&apos;est
+            La plupart de ces interruptions sont passagères. Réessayez — si elle revient, c&apos;est
             que le problème est de notre côté.
           </p>
           <button

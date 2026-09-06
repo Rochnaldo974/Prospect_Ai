@@ -27,15 +27,17 @@ const base = {
 
 describe('brouillon de prospection', () => {
   it('ancre le message dans le premier constat du dossier', () => {
-    const draft = draftProspectingEmail(base, 'Eliott');
+    const draft = draftProspectingEmail(base);
     expect(draft.body).toContain('Le Vieux Pressoir');
     expect(draft.body).toContain('le site ne répond pas (erreur HTTP 503)');
     expect(draft.body).toContain(base.explanation.angle);
-    expect(draft.body).toContain('Eliott');
+    // La signature n'est PAS dans le brouillon : l'identité d'expéditeur
+    // l'ajoute au rendu — un seul endroit fait foi.
+    expect(draft.body.trim().endsWith('Bien à vous,')).toBe(true);
   });
 
   it('reste court : un dirigeant ne lit pas une plaquette', () => {
-    const draft = draftProspectingEmail(base, 'Eliott');
+    const draft = draftProspectingEmail(base);
     expect(draft.body.split('\n').length).toBeLessThanOrEqual(12);
     expect(draft.body.length).toBeLessThan(700);
   });
@@ -45,7 +47,7 @@ describe('brouillon de prospection', () => {
       ...base,
       company: { ...base.company, city: null },
       explanation: { ...base.explanation, signals: [] },
-    }, '');
+    });
     expect(draft.body).toContain('Le Vieux Pressoir');
     expect(draft.body).not.toContain('undefined');
     expect(draft.body).not.toContain('null');
@@ -56,7 +58,7 @@ describe('brouillon de prospection', () => {
     // Un objet en majuscules ou à point d'exclamation part en spam et y
     // emmène la réputation de l'expéditeur.
     for (const type of ['website_redesign', 'website_creation', 'ecommerce', 'seo'] as const) {
-      const draft = draftProspectingEmail({ ...base, type }, 'E');
+      const draft = draftProspectingEmail({ ...base, type });
       expect(draft.subject).not.toMatch(/!|GRATUIT|OFFRE|URGENT/i);
     }
   });

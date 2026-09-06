@@ -107,7 +107,7 @@ const CASES = [
   {
     // Score fort, exclusivité NORMALE, site en panne avec réserve.
     name: 'Le Vieux Pressoir', fields: { industry_label: 'Restaurant', city: 'Angers', phone: '+33241887702', domain: 'demo-pressoir.fr', website_url: 'https://demo-pressoir.fr' },
-    domain: { status: 'broken', http_status: 503, tls_reason: 'DEPTH_ZERO_SELF_SIGNED_CERT', has_ssl: true },
+    domain: { status: 'broken', http_status: 503, tls_reason: 'DEPTH_ZERO_SELF_SIGNED_CERT', has_ssl: true, emails_found: ['contact@demo-pressoir.fr'] },
     opp: { type: 'website_redesign', trigger: 'website_found_down', occurred: daysAgoIso(2), needs: [['website_broken', 55], ['invalid_certificate', 40]] },
     assign: { rank: 1, score: 91, exclusive: hours(61) },
   },

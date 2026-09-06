@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { OPPORTUNITY_TYPE_LABELS, draftProspectingEmail } from '@prospect/core';
+import { OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { toggleSnooze } from '@/app/dashboard/actions';
 import { OutcomeForm } from '@/components/outcome-form';
 import { SitePreview } from '@/components/dashboard/site-preview';
-import { EmailComposer } from '@/components/dashboard/email-composer';
 
 export const metadata: Metadata = { title: 'Dossier' };
 
@@ -33,9 +32,8 @@ export default async function OpportunityPage({
   const found = await getMyOpportunity(id);
   if (!found) notFound();
 
-  const { opportunity, plan, firstName } = found;
+  const { opportunity } = found;
   const { company, explanation } = opportunity;
-  const draft = draftProspectingEmail(opportunity, firstName);
   const snoozed = opportunity.snoozedAt !== null;
 
   return (
@@ -82,9 +80,15 @@ export default async function OpportunityPage({
             Appeler · {formatPhone(company.phone)}
           </a>
         ) : null}
-        {company.email ? (
-          <ActionLink href={`mailto:${company.email}`}>Écrire · {company.email}</ActionLink>
-        ) : null}
+        {/* L'e-mail vit sur sa propre page : brouillon, signature, aperçu
+            fidèle et envoi direct — un bloc dans le dossier était trop
+            petit pour tout ça. */}
+        <Link
+          href={`/dashboard/opportunite/${opportunity.assignmentId}/email`}
+          className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-6 py-3 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5"
+        >
+          E-mail personnalisé
+        </Link>
         {company.contactFormUrl ? (
           <ActionLink href={company.contactFormUrl} external>Formulaire de contact</ActionLink>
         ) : null}
@@ -194,11 +198,6 @@ export default async function OpportunityPage({
             </dl>
           </section>
         </div>
-      </div>
-
-      {/* ── Écrire : l'e-mail pré-rédigé, le cœur du plan payant ── */}
-      <div className="mt-10">
-        <EmailComposer premium={plan === 'premium'} email={company.email} draft={draft} />
       </div>
 
       {/* ── Vérifier : le site tel que ses clients le voient ── */}
