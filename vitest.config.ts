@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     setupFiles: ['tests/setup/load-env.ts'],
+    globalSetup: ['tests/setup/global-clean.ts'],
 
     // Les tests d'intégration partagent une seule base Postgres : les exécuter
     // en parallèle les ferait s'effacer mutuellement leurs données. Le coût est
