@@ -5,6 +5,7 @@ export interface SessionProfile {
   id: string;
   full_name: string | null;
   role: 'user' | 'admin';
+  plan: 'free' | 'premium';
   onboarding_completed: boolean;
   daily_opportunity_limit: number;
   email: string;
@@ -26,7 +27,7 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, role, onboarding_completed, daily_opportunity_limit')
+    .select('id, full_name, role, plan, onboarding_completed, daily_opportunity_limit')
     .eq('id', user.id)
     .single();
 

@@ -75,7 +75,7 @@ export async function runAllocation(
 
   let profileQuery = db
     .from('profiles')
-    .select('id, city, region, daily_opportunity_limit')
+    .select('id, city, region, daily_opportunity_limit, plan')
     .eq('onboarding_completed', true);
 
   if (options.userId) profileQuery = profileQuery.eq('id', options.userId);
@@ -170,7 +170,7 @@ async function loadCandidates(db: Db): Promise<CandidateRow[]> {
 
 async function allocateFor(
   db: Db,
-  profile: { id: string; city: string | null; region: string | null; daily_opportunity_limit: number },
+  profile: { id: string; city: string | null; region: string | null; daily_opportunity_limit: number; plan: 'free' | 'premium' },
   candidates: CandidateRow[],
   taken: Set<string>,
   report: AllocationReport,
@@ -181,15 +181,22 @@ async function allocateFor(
   const today = new Date();
   const dayStart = new Date(Date.UTC(
     today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(),
-  )).toISOString();
+  ));
 
-  // Rejouable : relancer l'attribution deux fois dans la journée ne double
+  // Le gratuit vit à la semaine : un dossier tous les sept jours, assez pour
+  // juger le produit sur pièce, pas assez pour prospecter avec. La fenêtre
+  // du payant reste la journée.
+  const windowStart = profile.plan === 'free'
+    ? new Date(dayStart.getTime() - 6 * 86_400_000).toISOString()
+    : dayStart.toISOString();
+
+  // Rejouable : relancer l'attribution deux fois dans la fenêtre ne double
   // pas les lots, et un incident nocturne se rattrape sans précaution.
   const { count } = await db
     .from('assignments')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', profile.id)
-    .gte('assigned_at', dayStart);
+    .gte('assigned_at', windowStart);
 
   if ((count ?? 0) > 0) return null;
 
@@ -197,7 +204,7 @@ async function allocateFor(
   const eligible = candidates.filter((c) => isEligible(c, preferences));
   if (eligible.length === 0) return 0;
 
-  const limit = profile.daily_opportunity_limit;
+  const limit = profile.plan === 'free' ? 1 : profile.daily_opportunity_limit;
   const ranked = eligible
     .map((c) => ({ candidate: c, score: matchScore(c, preferences) }))
     .sort((a, b) => b.score - a.score);
@@ -225,7 +232,7 @@ async function allocateFor(
     .from('daily_batches')
     .insert({
       user_id: profile.id,
-      batch_date: dayStart.slice(0, 10),
+      batch_date: dayStart.toISOString().slice(0, 10),
       algorithm_version: version,
       requested_count: limit,
       delivered_count: 0,

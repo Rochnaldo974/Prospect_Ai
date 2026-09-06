@@ -110,3 +110,47 @@ export async function getOutcomeStats(db: Db, userId: string): Promise<OutcomeSt
     client: count('client'),
   };
 }
+
+export interface HistoryEntry {
+  assignmentId: string;
+  outcome: string;
+  outcomeAt: string;
+  notes: string | null;
+  type: OpportunityType;
+  company: { name: string; city: string | null };
+}
+
+/**
+ * Tout ce qui a été traité, du plus récent au plus ancien.
+ *
+ * Les relances montrent ce qui ATTEND ; l'historique montre ce qui est
+ * PASSÉ — refus, silences, clients compris. Sans lui, un « pas de
+ * réponse » disparaissait de l'écran à la seconde où on le déclarait,
+ * et rien ne permettait de retrouver qui on avait déjà eu au bout du fil.
+ */
+export async function getHistory(db: Db, userId: string): Promise<HistoryEntry[]> {
+  const { data, error } = await db
+    .from('assignments')
+    .select('id, outcome, outcome_at, notes, opportunities!inner(opportunity_type), companies!inner(legal_name, commercial_name, city)')
+    .eq('user_id', userId)
+    .not('outcome', 'is', null)
+    .order('outcome_at', { ascending: false })
+    .limit(200);
+
+  if (error) throw new Error(`getHistory : ${error.message}`);
+
+  return (data ?? []).map((row) => {
+    const company = row.companies as unknown as {
+      legal_name: string; commercial_name: string | null; city: string | null;
+    };
+    const opportunity = row.opportunities as unknown as { opportunity_type: OpportunityType };
+    return {
+      assignmentId: row.id as string,
+      outcome: row.outcome as string,
+      outcomeAt: row.outcome_at as string,
+      notes: (row.notes as string | null) ?? null,
+      type: opportunity.opportunity_type,
+      company: { name: company.commercial_name ?? company.legal_name, city: company.city },
+    };
+  });
+}

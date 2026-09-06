@@ -1089,6 +1089,7 @@ export type Database = {
           full_name: string | null
           id: string
           onboarding_completed: boolean
+          plan: Database["public"]["Enums"]["profile_plan"]
           region: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
@@ -1102,6 +1103,7 @@ export type Database = {
           full_name?: string | null
           id: string
           onboarding_completed?: boolean
+          plan?: Database["public"]["Enums"]["profile_plan"]
           region?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -1115,6 +1117,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean
+          plan?: Database["public"]["Enums"]["profile_plan"]
           region?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
@@ -1732,6 +1735,7 @@ export type Database = {
         | "maintenance"
         | "other"
         | "tender_response"
+      profile_plan: "free" | "premium"
       signal_category: "need" | "timing" | "risk" | "quality"
       signal_kind: "trigger" | "modifier"
     }
@@ -1918,6 +1922,7 @@ export const Constants = {
         "other",
         "tender_response",
       ],
+      profile_plan: ["free", "premium"],
       signal_category: ["need", "timing", "risk", "quality"],
       signal_kind: ["trigger", "modifier"],
     },

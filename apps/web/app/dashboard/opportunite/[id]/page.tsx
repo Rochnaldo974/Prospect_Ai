@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
+import { OPPORTUNITY_TYPE_LABELS, draftProspectingEmail } from '@prospect/core';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { toggleSnooze } from '@/app/dashboard/actions';
 import { OutcomeForm } from '@/components/outcome-form';
 import { SitePreview } from '@/components/dashboard/site-preview';
+import { EmailComposer } from '@/components/dashboard/email-composer';
 
 export const metadata: Metadata = { title: 'Dossier' };
 
@@ -29,10 +30,12 @@ export default async function OpportunityPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const opportunity = await getMyOpportunity(id);
-  if (!opportunity) notFound();
+  const found = await getMyOpportunity(id);
+  if (!found) notFound();
 
+  const { opportunity, plan, firstName } = found;
   const { company, explanation } = opportunity;
+  const draft = draftProspectingEmail(opportunity, firstName);
   const snoozed = opportunity.snoozedAt !== null;
 
   return (
@@ -191,6 +194,11 @@ export default async function OpportunityPage({
             </dl>
           </section>
         </div>
+      </div>
+
+      {/* ── Écrire : l'e-mail pré-rédigé, le cœur du plan payant ── */}
+      <div className="mt-10">
+        <EmailComposer premium={plan === 'premium'} email={company.email} draft={draft} />
       </div>
 
       {/* ── Vérifier : le site tel que ses clients le voient ── */}

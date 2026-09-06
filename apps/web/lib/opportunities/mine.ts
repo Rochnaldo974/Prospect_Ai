@@ -30,6 +30,7 @@ export type DailyOpportunity = TodayOpportunity & { hoursLeft: number };
 export async function getMyOpportunities(): Promise<{
   firstName: string;
   role: string;
+  plan: 'free' | 'premium';
   opportunities: DailyOpportunity[];
   /** Renseigné seulement quand la journée est vide : dire POURQUOI. */
   diagnosis: EmptyDiagnosis | null;
@@ -53,6 +54,7 @@ export async function getMyOpportunities(): Promise<{
   return {
     firstName: profile.full_name?.split(' ')[0] ?? '',
     role: profile.role,
+    plan: profile.plan,
     opportunities: opportunities.map((opportunity) => ({
       ...opportunity,
       hoursLeft: Math.floor(
@@ -73,9 +75,14 @@ export async function getMyOpportunities(): Promise<{
  * cinq lignes, et une seule définition de « ce qu'est un dossier » vaut
  * mieux qu'une seconde qui divergera.
  */
-export async function getMyOpportunity(assignmentId: string): Promise<DailyOpportunity | null> {
-  const { opportunities } = await getMyOpportunities();
-  return opportunities.find((o) => o.assignmentId === assignmentId) ?? null;
+export async function getMyOpportunity(assignmentId: string): Promise<{
+  opportunity: DailyOpportunity;
+  plan: 'free' | 'premium';
+  firstName: string;
+} | null> {
+  const { opportunities, plan, firstName } = await getMyOpportunities();
+  const opportunity = opportunities.find((o) => o.assignmentId === assignmentId);
+  return opportunity ? { opportunity, plan, firstName } : null;
 }
 
 /** Le suivi : ce qui a été appelé et qui attend une suite. */

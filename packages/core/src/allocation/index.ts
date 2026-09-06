@@ -7,3 +7,4 @@ export * from './onboarding';
 export * from './availability';
 export * from './diagnose';
 export * from './follow-up';
+export * from './email-draft';

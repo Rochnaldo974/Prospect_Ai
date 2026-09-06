@@ -369,6 +369,30 @@ function Pricing() {
           ))}
         </div>
 
+        {/* La marche d'entrée : le gratuit dit « jugez sur pièce » — un vrai
+            dossier par semaine, le même que celui des payants. Une offre
+            d'essai qui n'expire pas vaut mieux qu'un essai de 14 jours :
+            elle laisse le produit faire ses preuves à son rythme. */}
+        <Reveal>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-6 py-5">
+            <div>
+              <p className="text-sm font-semibold tracking-tight">
+                Gratuit — un dossier par semaine
+              </p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Le même dossier complet que les plans payants. Pour juger sur pièce, sans
+                carte et sans limite de durée.
+              </p>
+            </div>
+            <Link
+              href="/signup"
+              className="rounded-full border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
+            >
+              Commencer gratuitement
+            </Link>
+          </div>
+        </Reveal>
+
         <p className="mt-6 text-xs text-muted-foreground">
           Sans carte bancaire à l’inscription. Trois questions, une minute. Tarifs indicatifs
           pendant le lancement.

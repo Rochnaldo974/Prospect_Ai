@@ -14,6 +14,7 @@ const TABS = [
   ['/dashboard', 'Ce matin'],
   ['/dashboard/plus-tard', 'Plus tard'],
   ['/dashboard/suivi', 'À relancer'],
+  ['/dashboard/historique', 'Historique'],
 ] as const;
 
 export function DashboardNav({
@@ -30,7 +31,7 @@ export function DashboardNav({
   };
 
   return (
-    <nav className="flex items-center gap-6 text-sm">
+    <nav className="flex items-center gap-6 whitespace-nowrap pb-0 text-sm">
       {TABS.map(([href, label]) => {
         // La page dossier appartient à « Ce matin » : on y arrive par elle.
         const active = pathname === href
@@ -42,7 +43,7 @@ export function DashboardNav({
             key={href}
             href={href}
             aria-current={active ? 'page' : undefined}
-            className={`-mb-3.5 flex items-center gap-1.5 border-b-2 pb-3.5 transition-colors ${
+            className={`flex items-center gap-1.5 border-b-2 pb-2.5 pt-1 transition-colors ${
               active
                 ? 'border-[var(--brand)] font-medium text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'

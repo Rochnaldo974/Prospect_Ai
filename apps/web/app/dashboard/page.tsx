@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: 'Ce matin' };
  * ne peut plus rien apprendre.
  */
 export default async function DashboardPage() {
-  const { firstName, opportunities, diagnosis, followUpCount } = await getMyOpportunities();
+  const { firstName, opportunities, diagnosis, followUpCount, plan } = await getMyOpportunities();
 
   // Les dossiers mis de côté vivent sous « Plus tard » : les laisser ici
   // ferait de la mise de côté un simple marquage, pas un rangement.
@@ -56,6 +56,23 @@ export default async function DashboardPage() {
           ))}
         </div>
       )}
+
+      {plan === 'free' ? (
+        <Link
+          href="/dashboard/abonnement"
+          className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--brand)]/30 bg-[var(--brand-wash)] px-6 py-5 transition-transform duration-200 hover:-translate-y-0.5"
+        >
+          <div>
+            <p className="text-sm font-medium text-[var(--brand)]">
+              Plan gratuit — un dossier par semaine
+            </p>
+            <p className="mt-0.5 text-sm text-[var(--brand)]/75">
+              Le plan Solo en livre cinq par jour, avec l’e-mail prêt à envoyer.
+            </p>
+          </div>
+          <span aria-hidden className="text-[var(--brand)]">→</span>
+        </Link>
+      ) : null}
 
       {followUpCount > 0 ? (
         <Link
