@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
-import { SiteAudit } from '@/components/landing/audit';
+import { EngineShow } from '@/components/landing/engine-show';
+import { EmailShow } from '@/components/landing/email-show';
 import { Feed } from '@/components/landing/feed';
 import { TimeGain } from '@/components/landing/time-gain';
 import { Reveal } from '@/components/landing/reveal';
@@ -9,7 +10,7 @@ import { SiteHeader } from '@/components/landing/site-header';
 import { HeroBackdrop } from '@/components/landing/backdrop';
 
 export const metadata: Metadata = {
-  title: 'Prospect AI — la prospection client, simple et rapide',
+  title: 'Prospect AI — l’outil indispensable des freelances du web',
   description:
     'Pour les développeurs web et mobile freelances : chaque matin, cinq entreprises françaises dont le site est à refaire ou à créer, avec ce qui cloche et le numéro pour en parler.',
 };
@@ -78,8 +79,11 @@ export default async function HomePage() {
 
       <main>
         <Hero />
-        <Market />
+        <Audiences />
+        <Engine />
         <TimeSaved />
+        <EmailFeature />
+        <Market />
         <Pricing />
       </main>
 
@@ -89,16 +93,12 @@ export default async function HomePage() {
 }
 
 /**
- * Le héros : la promesse, et le produit qui travaille à côté.
+ * Le héros : la revendication, et le moteur qui la prouve à côté.
  *
- * L'entrée est orchestrée en un seul geste — badge, titre, texte, boutons,
- * relevé, puis la fenêtre produit qui se pose — chaque temps arrivant net
- * après un flou court. Une séquence unique et courte vaut mieux que des
- * effets dispersés : l'œil suit une mise au point, pas un feu d'artifice.
- *
- * Sous les boutons, le relevé du moteur : trois nombres mesurés, en mono,
- * avec le point de vie qui pulse. C'est la ligne qui parle le mieux à un
- * développeur — précise, vérifiable, sans adjectif.
+ * Le titre revendique — « l'outil indispensable » — et tout ce qui suit le
+ * gagne : le moteur tourne sous les yeux à droite, les chiffres mesurés en
+ * dessous, et le reste de la page argumente. Une revendication qu'on prouve
+ * dans la seconde n'est plus un slogan.
  */
 function Hero() {
   const stagger = (ms: number) => ({ animationDelay: `${ms}ms` });
@@ -113,24 +113,25 @@ function Hero() {
             <p
               className="inline-flex items-center gap-2 rounded-full border bg-[var(--white)]/80 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground backdrop-blur motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
             >
-              Développeurs web &amp; mobile freelances
+              Prospection pour freelances du web
             </p>
 
             <h1
-              className="mt-6 max-w-[16ch] text-[clamp(2.5rem,5.2vw,4.25rem)] font-semibold leading-[0.99] tracking-[-0.05em] motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
+              className="mt-6 max-w-[17ch] text-[clamp(2.5rem,5.2vw,4.25rem)] font-semibold leading-[0.99] tracking-[-0.05em] motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
               style={stagger(80)}
             >
-              La prospection client,{' '}
-              <span className="text-[var(--brand)]">simple et rapide.</span>
+              L’outil{' '}
+              <span className="text-[var(--brand)]">indispensable</span>{' '}
+              des freelances du web.
             </h1>
 
             <p
               className="reasoning mt-6 max-w-lg text-muted-foreground motion-safe:animate-[heroIn_.7s_cubic-bezier(.16,.84,.44,1)_both]"
               style={stagger(160)}
             >
-              Notre moteur analyse des sites d’entreprises françaises en continu. Chaque matin,
-              il vous en propose cinq dont le site est à refaire — ou à créer — avec ce qui
-              cloche et le numéro pour en parler.
+              Notre moteur analyse des milliers de sites d’entreprises chaque nuit. Au matin,
+              il vous livre cinq prospects approuvés, choisis pour vous — avec l’e-mail
+              personnalisé prêt à envoyer.
             </p>
 
             <div
@@ -173,15 +174,171 @@ function Hero() {
               </span>
               <span>moteur en ligne</span>
               <span aria-hidden className="text-[var(--line)]">|</span>
-              <span className="tabular">4 590 189 sites suivis</span>
+              <span className="tabular">4 590 194 sites suivis</span>
               <span aria-hidden className="text-[var(--line)]">|</span>
               <span className="tabular">828 défauts détectés</span>
             </div>
           </div>
 
           <div className="motion-safe:animate-[heroCard_.9s_cubic-bezier(.16,.84,.44,1)_both]" style={stagger(200)}>
-            <SiteAudit />
+            <EngineShow />
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Pour qui : les métiers du web, nommés. Un freelance doit se reconnaître
+ * en une seconde — c'est une liste de miroirs, pas une liste de features.
+ */
+function Audiences() {
+  const audiences = [
+    ['Sites vitrine & refonte', 'Le plus grand marché : un site d’entreprise sur deux a un défaut visible.'],
+    ['E-commerce', 'Les commerces qui vendent en boutique et pas encore en ligne.'],
+    ['Applications web & mobile', 'Les entreprises qui mûrissent un outil ou une app.'],
+    ['SEO & visibilité', 'Les sites invisibles sur Google, mesurablement.'],
+    ['Automatisation & IA', 'Les process manuels qui attendent d’être outillés.'],
+  ];
+
+  return (
+    <section className="border-y bg-[var(--mist)]">
+      <div className="mx-auto max-w-6xl px-6 py-20">
+        <Reveal>
+          <p className="field-label">Fait pour vous</p>
+          <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+            Quel que soit votre terrain de jeu
+          </h2>
+          <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+            À l’inscription, vous dites ce que vous faites. Le moteur ne vous propose que ça.
+          </p>
+        </Reveal>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {audiences.map(([title, body], i) => (
+            <Reveal key={title} delay={i * 70}>
+              <article className="h-full rounded-2xl border bg-card p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_40px_-20px_rgba(11,13,20,.25)]">
+                <h3 className="font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+              </article>
+            </Reveal>
+          ))}
+          <Reveal delay={350}>
+            <Link
+              href="/signup"
+              className="grid h-full place-items-center rounded-2xl border border-dashed border-[var(--brand)]/40 bg-[var(--brand-wash)]/50 p-6 text-center transition-all duration-200 hover:-translate-y-1"
+            >
+              <span>
+                <span className="block font-semibold tracking-tight text-[var(--brand)]">
+                  Votre spécialité →
+                </span>
+                <span className="mt-1.5 block text-sm text-[var(--brand)]/75">
+                  Trois questions à l’inscription, et le moteur travaille pour vous.
+                </span>
+              </span>
+            </Link>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Le moteur : la force du produit, argumentée en trois temps. C'est la
+ * seule section « comment ça marche » — et chaque affirmation porte son
+ * chiffre, parce que le lecteur est développeur.
+ */
+function Engine() {
+  const arguments_ = [
+    {
+      title: 'Il analyse, chaque nuit',
+      body: 'Dix-huit contrôles par site — réponse, sécurité, âge des composants, lisibilité mobile, vitesse — croisés avec les registres publics français.',
+      figure: '18',
+      caption: 'contrôles par site',
+    },
+    {
+      title: 'Il n’approuve que le vérifiable',
+      body: 'Pas de « site vieillissant » au jugé : un défaut daté, constaté, que vous pouvez vérifier en une minute avant d’appeler. Ce qu’il ignore, il l’écrit.',
+      figure: '1 min',
+      caption: 'pour vérifier chaque constat',
+    },
+    {
+      title: 'Il choisit pour vous',
+      body: 'Vos prestations, votre zone, vos exclusions : chaque dossier livré est un dossier que vous pouvez signer. Et il n’est livré qu’à vous — 72 h d’exclusivité.',
+      figure: '5',
+      caption: 'prospects approuvés par matin',
+    },
+  ];
+
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-24">
+      <Reveal>
+        <p className="field-label">Notre force</p>
+        <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+          Un moteur qui prospecte pendant que vous dormez
+        </h2>
+        <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+          La prospection n’est pas un carnet d’adresses, c’est un tri. Le moteur le fait en
+          continu, à une échelle qu’aucun humain ne tient.
+        </p>
+      </Reveal>
+
+      <div className="mt-14 grid gap-x-8 gap-y-10 md:grid-cols-3">
+        {arguments_.map((argument, i) => (
+          <Reveal key={argument.title} delay={i * 90}>
+            <article className="border-t pt-6">
+              <p className="tabular font-mono text-4xl font-semibold tracking-tight text-[var(--brand)]">
+                {argument.figure}
+              </p>
+              <p className="field-label mt-1">{argument.caption}</p>
+              <h3 className="mt-5 text-lg font-semibold tracking-tight">{argument.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{argument.body}</p>
+            </article>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * L'e-mail personnalisé : la moitié du travail d'approche, faite.
+ */
+function EmailFeature() {
+  return (
+    <section className="border-y bg-[var(--mist)]">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="grid items-center gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:gap-20">
+          <Reveal>
+            <p className="field-label">Inclus dans le plan Solo</p>
+            <h2 className="mt-4 max-w-xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+              L’e-mail personnalisé, prêt à envoyer
+            </h2>
+            <p className="reasoning mt-4 max-w-lg text-muted-foreground">
+              Choisissez ce que vous proposez — un appel, un audit gratuit, une présentation —
+              et le message s’écrit depuis les constats du dossier. Votre nom, votre logo,
+              votre CV en pièce jointe. Un clic, c’est envoyé, et la réponse arrive dans
+              votre boîte.
+            </p>
+            <ul className="mt-7 space-y-2.5">
+              {[
+                'Rédigé depuis les faits du dossier — jamais générique',
+                'Signé à votre nom, avec votre logo',
+                'Envoyé directement, réponses dans votre boîte mail',
+              ].map((line) => (
+                <li key={line} className="flex gap-3 text-sm">
+                  <span aria-hidden className="text-[var(--brand)]">✓</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+
+          <Reveal delay={100}>
+            <EmailShow />
+          </Reveal>
         </div>
       </div>
     </section>
@@ -203,9 +360,9 @@ function Market() {
     <section className="bg-[linear-gradient(180deg,var(--white)_0%,var(--mist)_14%,var(--mist)_86%,var(--white)_100%)]">
       <div className="mx-auto max-w-6xl px-6 pb-28 pt-24">
         <Reveal>
-          <p className="field-label">Chaque matin</p>
+          <p className="field-label">Concrètement</p>
           <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-            Vos prospects ce matin
+            Votre matinée type, en vrai
           </h2>
           <p className="reasoning mt-4 max-w-xl text-muted-foreground">
             Le travail de recherche est déjà fait quand vous vous levez. Il ne vous reste que la
@@ -244,11 +401,11 @@ function TimeSaved() {
       <Reveal>
         <p className="field-label">Le temps que ça vous prend</p>
         <h2 className="mt-4 max-w-2xl text-[clamp(1.75rem,3vw,2.5rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
-          Sept heures reprises, chaque semaine
+          Récupérez une journée par semaine
         </h2>
         <p className="reasoning mt-4 max-w-xl text-muted-foreground">
-          Ce n’est pas la partie qui rapporte que le service vous enlève, c’est celle qui
-          prépare. Elle est déjà faite quand vous vous levez.
+          Chercher, trier, vérifier, rédiger : c’est la partie qui ne rapporte rien, et elle
+          est déjà faite quand vous vous levez. Il vous reste les appels — et les réponses.
         </p>
 
         <TimeGain />

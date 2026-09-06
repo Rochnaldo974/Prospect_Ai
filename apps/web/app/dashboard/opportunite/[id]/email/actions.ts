@@ -54,25 +54,33 @@ export async function sendProspectingEmail(
   // booléen, jamais un chemin.
   let attachments: EmailAttachment[] = [];
   if (formData.get('attachCv') === 'true' && identity.cvUrl) {
-    const response = await fetch(identity.cvUrl);
-    if (response.ok) {
+    const response = await fetch(identity.cvUrl).catch(() => null);
+    if (response?.ok) {
       attachments = [{
         filename: `CV - ${identity.fromName}.pdf`,
         content: Buffer.from(await response.arrayBuffer()),
         contentType: 'application/pdf',
       }];
+    } else {
+      return { problem: 'Votre CV n’a pas pu être récupéré — vérifiez-le dans Signature e-mail.' };
     }
   }
 
-  await sendEmail({
-    to,
-    replyTo: profile.email ?? '',
-    fromName: identity.fromName,
-    subject,
-    text: renderEmailText(body, identity),
-    html: renderEmailHtml(body, identity),
-    attachments,
-  });
+  try {
+    await sendEmail({
+      to,
+      replyTo: profile.email ?? '',
+      fromName: identity.fromName,
+      subject,
+      text: renderEmailText(body, identity),
+      html: renderEmailHtml(body, identity),
+      attachments,
+    });
+  } catch {
+    // Le serveur d'envoi est injoignable : rien n'est parti, rien n'est
+    // tracé — l'utilisateur retrouve son texte intact et réessaie.
+    return { problem: 'L’envoi a échoué — le serveur d’e-mail ne répond pas. Votre texte est conservé, réessayez.' };
+  }
 
   const db = getServiceClient();
   await db.from('assignment_emails').insert({

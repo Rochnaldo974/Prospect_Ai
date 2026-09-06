@@ -213,6 +213,13 @@
   to   { opacity: 1; transform: none; filter: none; }
 }
 
+/* La vague de balayage du moteur : chaque contrôle passe et repasse. */
+@keyframes sweep {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(220%); }
+  100% { transform: translateX(220%); }
+}
+
 /* Les points du parc qui s'allument : un défaut trouvé quelque part. */
 @keyframes emberPulse {
   0%, 100% { opacity: 0.15; }

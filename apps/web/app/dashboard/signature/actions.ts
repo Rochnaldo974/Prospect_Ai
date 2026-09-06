@@ -11,7 +11,15 @@ import { requireUser } from '@/lib/auth/session';
  * une image de signature doit être servie par une URL stable, pas incrustée
  * en base64 — les clients mail coupent les pièces trop lourdes.
  */
-export async function saveIdentity(formData: FormData): Promise<void> {
+export interface IdentityState {
+  saved?: boolean;
+  problem?: string;
+}
+
+export async function saveIdentity(
+  _previous: IdentityState,
+  formData: FormData,
+): Promise<IdentityState> {
   const profile = await requireUser();
   const db = getServiceClient();
 
@@ -20,9 +28,11 @@ export async function saveIdentity(formData: FormData): Promise<void> {
   let logoUrl: string | null = null;
   const logo = formData.get('logo');
   if (logo instanceof File && logo.size > 0) {
-    if (logo.size > 512 * 1024) throw new Error('Logo trop lourd (512 Ko maximum).');
+    if (logo.size > 512 * 1024) {
+      return { problem: 'Le logo dépasse 512 Ko — compressez-le ou choisissez-en un plus léger.' };
+    }
     if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(logo.type)) {
-      throw new Error('Format de logo non pris en charge.');
+      return { problem: 'Le logo doit être un PNG, JPG, WebP ou SVG.' };
     }
 
     // Idempotent : le bucket existe ou se crée, l'erreur « déjà là » est un état.
@@ -31,7 +41,7 @@ export async function saveIdentity(formData: FormData): Promise<void> {
     const extension = logo.type === 'image/svg+xml' ? 'svg' : logo.type.split('/')[1];
     const path = `${profile.id}/logo.${extension}`;
     const { error } = await db.storage.from('logos').upload(path, logo, { upsert: true });
-    if (error) throw new Error(`Téléversement du logo : ${error.message}`);
+    if (error) return { problem: 'Le logo n’a pas pu être enregistré — réessayez.' };
 
     logoUrl = db.storage.from('logos').getPublicUrl(path).data.publicUrl;
   }
@@ -39,13 +49,15 @@ export async function saveIdentity(formData: FormData): Promise<void> {
   let cvUrl: string | null = null;
   const cv = formData.get('cv');
   if (cv instanceof File && cv.size > 0) {
-    if (cv.size > 2 * 1024 * 1024) throw new Error('CV trop lourd (2 Mo maximum).');
-    if (cv.type !== 'application/pdf') throw new Error('Le CV doit être un PDF.');
+    if (cv.size > 2 * 1024 * 1024) {
+      return { problem: 'Le CV dépasse 2 Mo — exportez-le en PDF allégé.' };
+    }
+    if (cv.type !== 'application/pdf') return { problem: 'Le CV doit être un PDF.' };
 
     await db.storage.createBucket('documents', { public: true }).catch(() => undefined);
     const path = `${profile.id}/cv.pdf`;
     const { error: cvError } = await db.storage.from('documents').upload(path, cv, { upsert: true });
-    if (cvError) throw new Error(`Téléversement du CV : ${cvError.message}`);
+    if (cvError) return { problem: 'Le CV n’a pas pu être enregistré — réessayez.' };
     cvUrl = db.storage.from('documents').getPublicUrl(path).data.publicUrl;
   }
 
@@ -60,7 +72,8 @@ export async function saveIdentity(formData: FormData): Promise<void> {
     ...(cvUrl ? { cv_url: cvUrl } : {}),
     updated_at: new Date().toISOString(),
   });
-  if (error) throw new Error(`Enregistrement : ${error.message}`);
+  if (error) return { problem: 'L’enregistrement a échoué — réessayez dans un instant.' };
 
   revalidatePath('/dashboard/signature');
+  return { saved: true };
 }
