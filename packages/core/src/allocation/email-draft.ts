@@ -1,21 +1,26 @@
 import type { TodayOpportunity } from './today';
 
 /**
- * Le brouillon d'e-mail de prospection, généré depuis le dossier.
+ * Les brouillons d'e-mail de prospection, générés depuis le dossier.
  *
- * Parti pris : l'e-mail part de la MESSAGERIE DU FREELANCE, jamais de nos
- * serveurs. Trois raisons, chacune suffisante. La délivrabilité — un
- * message envoyé depuis sa vraie adresse, avec son historique, passe ;
- * le même envoyé par un domaine mutualisé de SaaS finit en spam. Le
- * droit — c'est SA prospection, sous son nom, vers une adresse générique
- * d'entreprise : le régime B2B français l'autorise, et nous n'avons rien
- * à détenir. L'infrastructure — rien à héberger, rien à réchauffer.
+ * L'utilisateur choisit d'abord son INTENTION — proposer un appel, offrir
+ * un audit, se présenter — et le texte suit. Trois intentions, trois
+ * registres, une même colonne vertébrale : le constat du dossier en
+ * ouverture (la seule chose qu'un inconnu ne peut pas ignorer, parce
+ * qu'elle parle de lui et se vérifie), la proposition, une question courte.
  *
- * Le texte suit la règle du produit : des faits, pas des adjectifs. Le
- * constat vient du dossier, la proposition de l'angle calculé, et le tout
- * tient en six phrases — un dirigeant ne lit pas plus, et un e-mail court
- * qui pose une question obtient plus de réponses qu'une plaquette.
+ * Parti pris inchangé : l'e-mail part sous le nom du freelance, la
+ * signature — nom, métier, logo — est ajoutée au rendu par son identité.
+ * Six phrases maximum : un dirigeant ne lit pas une plaquette.
  */
+
+export type EmailIntent = 'call' | 'audit' | 'intro';
+
+export const EMAIL_INTENTS: Array<{ id: EmailIntent; label: string; hint: string }> = [
+  { id: 'call', label: 'Proposer un appel', hint: 'Dix minutes cette semaine, sans engagement.' },
+  { id: 'audit', label: 'Offrir un audit', hint: 'Trois constats concrets, envoyés gratuitement.' },
+  { id: 'intro', label: 'Me présenter', hint: 'Qui vous êtes, avec votre CV en pièce jointe.' },
+];
 
 export interface EmailDraft {
   subject: string;
@@ -37,39 +42,56 @@ const SUBJECTS: Record<string, (city: string | null) => string> = {
 
 export function draftProspectingEmail(
   opportunity: Pick<TodayOpportunity, 'type' | 'company' | 'explanation'>,
+  intent: EmailIntent = 'call',
+  options: { hasCv?: boolean; title?: string } = {},
 ): EmailDraft {
   const { company, explanation } = opportunity;
   const firstFact = explanation.signals[0];
 
-  const lines: string[] = [];
-  lines.push('Bonjour,');
-  lines.push('');
-
-  // Le constat d'abord : c'est la seule chose qu'un inconnu ne peut pas
-  // ignorer, parce qu'elle parle de LUI et qu'elle se vérifie.
-  if (firstFact) {
-    lines.push(
-      `En préparant une étude sur les sites de ${company.city ?? 'votre secteur'}, `
+  // L'ouverture commune : le constat, formulé comme une observation de
+  // passage — pas comme un rapport de surveillance.
+  const opening = firstFact
+    ? `En préparant une étude sur les sites de ${company.city ?? 'votre secteur'}, `
       + `j'ai remarqué un point concernant ${company.name} : `
-      + `${firstFact.charAt(0).toLowerCase()}${firstFact.slice(1)}.`,
-    );
-  } else {
-    lines.push(
-      `Je me suis penché sur la présence en ligne de ${company.name}, et un point m'a interpellé.`,
-    );
+      + `${firstFact.charAt(0).toLowerCase()}${firstFact.slice(1)}.`
+    : `Je me suis penché sur la présence en ligne de ${company.name}, et un point m'a interpellé.`;
+
+  const lines: string[] = ['Bonjour,', '', opening, ''];
+
+  switch (intent) {
+    case 'audit':
+      // L'offre : un livrable concret et gratuit — la réciprocité avant la
+      // vente, et une promesse assez petite pour être crédible.
+      lines.push(
+        'Si le sujet vous intéresse, je peux vous envoyer un court audit — trois constats '
+        + 'concrets et vérifiables sur votre site, avec ce que chacun coûte à vos visiteurs. '
+        + 'Gratuit, sans engagement.',
+      );
+      lines.push('');
+      lines.push('Voulez-vous que je vous l’envoie ?');
+      break;
+
+    case 'intro': {
+      const role = options.title?.trim() || 'développeur web indépendant';
+      lines.push(
+        `Je suis ${role.charAt(0).toLowerCase()}${role.slice(1)}, et j'accompagne des `
+        + `entreprises comme la vôtre sur exactement ce type de sujet`
+        + `${options.hasCv ? ' — mon CV est joint à ce message' : ''}.`,
+      );
+      lines.push('');
+      lines.push(explanation.angle);
+      lines.push('');
+      lines.push('Seriez-vous ouvert à un échange, au moment qui vous arrange ?');
+      break;
+    }
+
+    default:
+      lines.push(explanation.angle);
+      lines.push('');
+      lines.push('Est-ce un sujet dont vous aimeriez parler dix minutes cette semaine ?');
   }
-  lines.push('');
 
-  // La proposition, depuis l'angle du moteur — une phrase, pas une plaquette.
-  lines.push(explanation.angle);
-  lines.push('');
-
-  // La question ouverte : elle appelle une réponse courte, pas un engagement.
-  lines.push('Est-ce un sujet dont vous aimeriez parler dix minutes cette semaine ?');
-  lines.push('');
-  // La formule seule : la signature — nom, métier, logo, coordonnées — est
-  // ajoutée par l'identité d'expéditeur au rendu, pas par le brouillon.
-  lines.push('Bien à vous,');
+  lines.push('', 'Bien à vous,');
 
   return {
     subject: (SUBJECTS[opportunity.type] ?? SUBJECTS.other!)(company.city),

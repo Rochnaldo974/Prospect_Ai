@@ -15,6 +15,12 @@ import nodemailer from 'nodemailer';
  * délivrabilité/propriété tant que l'envoi via la messagerie de
  * l'utilisateur (OAuth Gmail) n'est pas branché.
  */
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+}
+
 export interface OutgoingEmail {
   to: string;
   replyTo: string;
@@ -22,6 +28,7 @@ export interface OutgoingEmail {
   subject: string;
   text: string;
   html: string;
+  attachments?: EmailAttachment[];
 }
 
 export async function sendEmail(message: OutgoingEmail): Promise<void> {
@@ -43,5 +50,6 @@ export async function sendEmail(message: OutgoingEmail): Promise<void> {
     subject: message.subject,
     text: message.text,
     html: message.html,
+    attachments: message.attachments ?? [],
   });
 }

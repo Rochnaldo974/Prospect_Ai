@@ -935,6 +935,7 @@ export type Database = {
         Row: {
           company: string
           created_at: string
+          cv_url: string | null
           from_name: string
           logo_url: string | null
           phone: string
@@ -946,6 +947,7 @@ export type Database = {
         Insert: {
           company?: string
           created_at?: string
+          cv_url?: string | null
           from_name?: string
           logo_url?: string | null
           phone?: string
@@ -957,6 +959,7 @@ export type Database = {
         Update: {
           company?: string
           created_at?: string
+          cv_url?: string | null
           from_name?: string
           logo_url?: string | null
           phone?: string

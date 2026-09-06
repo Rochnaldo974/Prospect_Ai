@@ -54,11 +54,33 @@ describe('brouillon de prospection', () => {
     expect(draft.subject.length).toBeGreaterThan(0);
   });
 
+  it('chaque intention a son registre, sur la même colonne vertébrale', () => {
+    const call = draftProspectingEmail(base, 'call');
+    const audit = draftProspectingEmail(base, 'audit');
+    const intro = draftProspectingEmail(base, 'intro', { hasCv: true, title: 'Développeur web' });
+
+    // Le constat ouvre les trois : c'est lui qui rend l'e-mail non ignorable.
+    for (const draft of [call, audit, intro]) {
+      expect(draft.body).toContain('le site ne répond pas (erreur HTTP 503)');
+    }
+
+    expect(call.body).toContain('dix minutes');
+    expect(audit.body).toContain('audit');
+    expect(audit.body).toContain('Gratuit, sans engagement');
+    expect(intro.body).toContain('développeur web');
+    expect(intro.body).toContain('mon CV est joint');
+  });
+
+  it('ne promet pas de CV joint quand il n’y en a pas', () => {
+    const intro = draftProspectingEmail(base, 'intro', { hasCv: false });
+    expect(intro.body).not.toContain('CV');
+  });
+
   it('n’écrit jamais un objet racoleur', () => {
     // Un objet en majuscules ou à point d'exclamation part en spam et y
     // emmène la réputation de l'expéditeur.
     for (const type of ['website_redesign', 'website_creation', 'ecommerce', 'seo'] as const) {
-      const draft = draftProspectingEmail({ ...base, type });
+      const draft = draftProspectingEmail({ ...base, type }, 'call');
       expect(draft.subject).not.toMatch(/!|GRATUIT|OFFRE|URGENT/i);
     }
   });

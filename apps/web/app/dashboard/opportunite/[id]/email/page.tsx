@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { draftProspectingEmail, getServiceClient } from '@prospect/core';
+import { EMAIL_INTENTS, draftProspectingEmail, getServiceClient, type EmailIntent } from '@prospect/core';
 import { requireUser } from '@/lib/auth/session';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { getIdentity, identityReady } from '@/lib/email/identity';
@@ -59,7 +59,15 @@ export default async function EmailPage({
           email={company.email}
           contactFormUrl={company.contactFormUrl}
           assignmentId={opportunity.assignmentId}
-          draft={draftProspectingEmail(opportunity)}
+          drafts={Object.fromEntries(
+            EMAIL_INTENTS.map(({ id }) => [
+              id,
+              draftProspectingEmail(opportunity, id, {
+                hasCv: identity.cvUrl !== null,
+                title: identity.title,
+              }),
+            ]),
+          ) as Record<EmailIntent, { subject: string; body: string }>}
           identity={identity}
           sentBefore={await lastSend(opportunity.assignmentId)}
           firstName={firstName}
@@ -81,14 +89,14 @@ async function lastSend(assignmentId: string): Promise<string | null> {
 }
 
 function EmailPageBody({
-  plan, identityOk, email, contactFormUrl, assignmentId, draft, identity, sentBefore, firstName,
+  plan, identityOk, email, contactFormUrl, assignmentId, drafts, identity, sentBefore, firstName,
 }: {
   plan: 'free' | 'premium';
   identityOk: boolean;
   email: string | null;
   contactFormUrl: string | null;
   assignmentId: string;
-  draft: { subject: string; body: string };
+  drafts: Record<EmailIntent, { subject: string; body: string }>;
   identity: Awaited<ReturnType<typeof getIdentity>>;
   sentBefore: string | null;
   firstName: string;
@@ -163,7 +171,7 @@ function EmailPageBody({
       <EmailSendForm
         assignmentId={assignmentId}
         to={email}
-        draft={draft}
+        drafts={drafts}
         identity={identity}
       />
     </>

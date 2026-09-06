@@ -36,6 +36,19 @@ export async function saveIdentity(formData: FormData): Promise<void> {
     logoUrl = db.storage.from('logos').getPublicUrl(path).data.publicUrl;
   }
 
+  let cvUrl: string | null = null;
+  const cv = formData.get('cv');
+  if (cv instanceof File && cv.size > 0) {
+    if (cv.size > 2 * 1024 * 1024) throw new Error('CV trop lourd (2 Mo maximum).');
+    if (cv.type !== 'application/pdf') throw new Error('Le CV doit être un PDF.');
+
+    await db.storage.createBucket('documents', { public: true }).catch(() => undefined);
+    const path = `${profile.id}/cv.pdf`;
+    const { error: cvError } = await db.storage.from('documents').upload(path, cv, { upsert: true });
+    if (cvError) throw new Error(`Téléversement du CV : ${cvError.message}`);
+    cvUrl = db.storage.from('documents').getPublicUrl(path).data.publicUrl;
+  }
+
   const { error } = await db.from('email_identities').upsert({
     user_id: profile.id,
     from_name: field('from_name'),
@@ -44,6 +57,7 @@ export async function saveIdentity(formData: FormData): Promise<void> {
     phone: field('phone'),
     website: field('website'),
     ...(logoUrl ? { logo_url: logoUrl } : {}),
+    ...(cvUrl ? { cv_url: cvUrl } : {}),
     updated_at: new Date().toISOString(),
   });
   if (error) throw new Error(`Enregistrement : ${error.message}`);

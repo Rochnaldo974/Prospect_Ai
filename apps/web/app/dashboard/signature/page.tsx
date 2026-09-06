@@ -44,6 +44,26 @@ export default async function SignaturePage() {
             />
           </label>
 
+          <label className="block">
+            <span className="field-label">CV ou dossier de présentation (PDF — 2 Mo max)</span>
+            <input
+              type="file"
+              name="cv"
+              accept="application/pdf"
+              className="mt-2 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border file:border-solid file:bg-card file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-[var(--mist)]"
+            />
+            {identity.cvUrl ? (
+              <a
+                href={identity.cvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs text-[var(--brand)] underline-offset-4 hover:underline"
+              >
+                Voir le CV actuel
+              </a>
+            ) : null}
+          </label>
+
           <button
             type="submit"
             className="rounded-full bg-[var(--brand)] px-6 py-3 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-transform duration-200 hover:-translate-y-px"

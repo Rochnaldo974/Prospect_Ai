@@ -6,7 +6,7 @@ import { requireUser } from '@/lib/auth/session';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { getIdentity, identityReady } from '@/lib/email/identity';
 import { renderEmailHtml, renderEmailText } from '@/lib/email/render';
-import { sendEmail } from '@/lib/email/send';
+import { sendEmail, type EmailAttachment } from '@/lib/email/send';
 
 export interface SendState {
   sent?: boolean;
@@ -49,6 +49,21 @@ export async function sendProspectingEmail(
     return { problem: 'Renseignez d’abord votre signature (nom au minimum).' };
   }
 
+  // La pièce jointe : le CV de l'utilisateur, et RIEN d'autre. Le fichier
+  // vient de son identité côté serveur — le formulaire ne transporte qu'un
+  // booléen, jamais un chemin.
+  let attachments: EmailAttachment[] = [];
+  if (formData.get('attachCv') === 'true' && identity.cvUrl) {
+    const response = await fetch(identity.cvUrl);
+    if (response.ok) {
+      attachments = [{
+        filename: `CV - ${identity.fromName}.pdf`,
+        content: Buffer.from(await response.arrayBuffer()),
+        contentType: 'application/pdf',
+      }];
+    }
+  }
+
   await sendEmail({
     to,
     replyTo: profile.email ?? '',
@@ -56,6 +71,7 @@ export async function sendProspectingEmail(
     subject,
     text: renderEmailText(body, identity),
     html: renderEmailHtml(body, identity),
+    attachments,
   });
 
   const db = getServiceClient();

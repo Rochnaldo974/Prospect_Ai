@@ -9,12 +9,13 @@ export interface EmailIdentity {
   phone: string;
   website: string;
   logoUrl: string | null;
+  cvUrl: string | null;
 }
 
 export async function getIdentity(userId: string): Promise<EmailIdentity> {
   const { data } = await getServiceClient()
     .from('email_identities')
-    .select('from_name, title, company, phone, website, logo_url')
+    .select('from_name, title, company, phone, website, logo_url, cv_url')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -25,6 +26,7 @@ export async function getIdentity(userId: string): Promise<EmailIdentity> {
     phone: data?.phone ?? '',
     website: data?.website ?? '',
     logoUrl: data?.logo_url ?? null,
+    cvUrl: data?.cv_url ?? null,
   };
 }
 
