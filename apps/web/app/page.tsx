@@ -382,13 +382,15 @@ function Market() {
  * d'écran vide au-dessus du tableau.
  */
 function TimeSaved() {
-  const receipt: Array<[string, string, boolean]> = [
-    ['Chercher des candidates', '45 min', false],
-    ['Évaluer leurs sites', '1 h 00', false],
-    ['Retrouver les contacts', '25 min', false],
-    ['Rédiger cinq e-mails', '1 h 15', false],
-    ['Lire cinq dossiers prêts', '10 min', true],
-    ['Envoyer cinq e-mails prêts', '5 min', true],
+  const manual: Array<[string, string]> = [
+    ['Chercher des candidates', '45 min'],
+    ['Évaluer leurs sites', '1 h 00'],
+    ['Retrouver les contacts', '25 min'],
+    ['Rédiger cinq e-mails', '1 h 15'],
+  ];
+  const withTool: Array<[string, string]> = [
+    ['Lire cinq dossiers prêts', '10 min'],
+    ['Envoyer les e-mails prêts', '5 min'],
   ];
 
   return (
@@ -409,29 +411,38 @@ function TimeSaved() {
           </Reveal>
 
           <Reveal delay={100}>
-            <div className="rounded-2xl border bg-card p-5 font-mono text-[12px] shadow-[0_1px_2px_rgba(11,13,20,.04)]">
+            <div className="rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(11,13,20,.04)]">
               <p className="field-label">Le compte, pour 5 entreprises</p>
-              <div className="mt-3 space-y-1.5">
-                {receipt.map(([label, time, ours]) => (
-                  <p key={label} className="flex items-baseline justify-between gap-4">
-                    <span className={ours ? 'text-[var(--brand)]' : 'text-muted-foreground'}>
-                      {ours ? '+ ' : '− '}{label}
-                    </span>
-                    <span className={`tabular ${ours ? 'text-[var(--brand)]' : 'text-muted-foreground'}`}>
-                      {time}
-                    </span>
+
+              <div className="mt-4 flex items-baseline justify-between gap-4">
+                <p className="text-sm font-semibold" style={{ color: 'var(--finding)' }}>À la main</p>
+                <p className="tabular font-mono text-sm font-semibold" style={{ color: 'var(--finding)' }}>3 h 30</p>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {manual.map(([label, time]) => (
+                  <p key={label} className="flex items-baseline gap-2 text-[13px] text-muted-foreground">
+                    <span>{label}</span>
+                    <span aria-hidden className="min-w-4 flex-1 border-b border-dotted border-[var(--line)]" />
+                    <span className="tabular font-mono">{time}</span>
                   </p>
                 ))}
               </div>
-              <div className="mt-3 space-y-1 border-t pt-3">
-                <p className="flex items-baseline justify-between text-[var(--finding)]">
-                  <span>À la main</span><span className="tabular font-semibold">3 h 30</span>
-                </p>
-                <p className="flex items-baseline justify-between text-[var(--brand)]">
-                  <span>Avec Prospect AI</span><span className="tabular font-semibold">15 min</span>
-                </p>
+
+              <div className="mt-4 flex items-baseline justify-between gap-4 border-t pt-4">
+                <p className="text-sm font-semibold text-[var(--brand)]">Avec Prospect AI</p>
+                <p className="tabular font-mono text-sm font-semibold text-[var(--brand)]">15 min</p>
               </div>
-              <p className="mt-3 border-t pt-2.5 text-[10px] leading-relaxed text-muted-foreground">
+              <div className="mt-2 space-y-1.5">
+                {withTool.map(([label, time]) => (
+                  <p key={label} className="flex items-baseline gap-2 text-[13px] text-muted-foreground">
+                    <span>{label}</span>
+                    <span aria-hidden className="min-w-4 flex-1 border-b border-dotted border-[var(--line)]" />
+                    <span className="tabular font-mono">{time}</span>
+                  </p>
+                ))}
+              </div>
+
+              <p className="mt-4 border-t pt-3 text-[11px] leading-relaxed text-muted-foreground">
                 Ordres de grandeur honnêtes, pas un chronomètre.
               </p>
             </div>
