@@ -44,20 +44,34 @@ const asLabel = (minutes: number): string =>
  * écran de portable, et c'est le verdict en gras qui porte — le reste ne
  * fait que confirmer.
  */
+/**
+ * Chaque grief avec sa réponse — et sa durée, quand elle se compte.
+ *
+ * Les minutes vivent DANS les lignes : les en-têtes portent les totaux, et
+ * les postes chiffrés s'y additionnent exactement (50 + 60 + 25 + 75 = 210,
+ * 10 + 5 = 15). Un lecteur qui vérifie doit retomber juste — c'est le
+ * produit entier qui promet ça.
+ */
 const PAIRS: Array<{
   pain: [string, string];
+  painTime?: string | undefined;
   answer: [string, string];
+  answerTime?: string | undefined;
 }> = [
   {
     pain: ['Chercher au hasard.', 'Des heures pour zéro besoin trouvé.'],
+    painTime: '50 min',
     answer: ['Cinq dossiers prêts.', 'Besoin constaté, daté, dans vos cordes.'],
+    answerTime: '10 min',
   },
   {
     pain: ['Vingt sites à ouvrir.', 'Pour un seul qui cloche.'],
+    painTime: '1 h',
     answer: ['Déjà analysés.', 'Défaut nommé, vérifiable en une minute.'],
   },
   {
     pain: ['Le contact introuvable.', ''],
+    painTime: '25 min',
     answer: ['Le numéro est dans le dossier.', ''],
   },
   {
@@ -65,8 +79,10 @@ const PAIRS: Array<{
     answer: ['L’angle est écrit.', 'Et pourquoi appeler maintenant.'],
   },
   {
-    pain: ['Cinq e-mails à rédiger.', 'Un quart d’heure chacun, à la main.'],
-    answer: ['Ils s’écrivent tout seuls.', 'Personnalisés, signés, envoyés en un clic.'],
+    pain: ['Cinq e-mails à rédiger.', 'À la main, un par un.'],
+    painTime: '1 h 15',
+    answer: ['Ils s’écrivent tout seuls.', 'Personnalisés, signés, envoyés.'],
+    answerTime: '5 min',
   },
   {
     pain: ['Quatrième à appeler.', 'Déjà démarché trois fois.'],
@@ -101,8 +117,8 @@ export function TimeGain() {
             highlighted
           />
 
-          {PAIRS.map(({ pain, answer }) => (
-            <Pair key={pain[0]} pain={pain} answer={answer} />
+          {PAIRS.map(({ pain, painTime, answer, answerTime }) => (
+            <Pair key={pain[0]} pain={pain} painTime={painTime} answer={answer} answerTime={answerTime} />
           ))}
         </div>
       </div>
@@ -161,23 +177,31 @@ function ColumnHead({
  * Une ligne, deux cellules émises dans la même grille : la réponse reste
  * alignée sur son grief quelle que soit la longueur des textes.
  */
-function Pair({ pain, answer }: { pain: [string, string]; answer: [string, string] }) {
+function Pair({
+  pain, painTime, answer, answerTime,
+}: {
+  pain: [string, string];
+  painTime?: string | undefined;
+  answer: [string, string];
+  answerTime?: string | undefined;
+}) {
   return (
     <>
-      <Cell mark="✕" color="var(--finding)" wash="var(--finding-wash)" lead={pain[0]} rest={pain[1]} />
-      <Cell mark="✓" color="var(--brand)" wash="var(--brand-wash)" lead={answer[0]} rest={answer[1]} highlighted />
+      <Cell mark="✕" color="var(--finding)" wash="var(--finding-wash)" lead={pain[0]} rest={pain[1]} time={painTime} />
+      <Cell mark="✓" color="var(--brand)" wash="var(--brand-wash)" lead={answer[0]} rest={answer[1]} time={answerTime} highlighted />
     </>
   );
 }
 
 function Cell({
-  mark, color, wash, lead, rest, highlighted = false,
+  mark, color, wash, lead, rest, time, highlighted = false,
 }: {
   mark: string;
   color: string;
   wash: string;
   lead: string;
   rest: string;
+  time?: string | undefined;
   highlighted?: boolean;
 }) {
   return (
@@ -192,10 +216,18 @@ function Cell({
       >
         {mark}
       </span>
-      <p className="text-[15px] leading-snug">
+      <p className="min-w-0 flex-1 text-[15px] leading-snug">
         <span className="font-semibold">{lead}</span>
         {rest ? <span className="text-muted-foreground"> {rest}</span> : null}
       </p>
+      {time ? (
+        <span
+          className="tabular ml-auto shrink-0 self-center font-mono text-[11px]"
+          style={{ color }}
+        >
+          {time}
+        </span>
+      ) : null}
     </div>
   );
 }

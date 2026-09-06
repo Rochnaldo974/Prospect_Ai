@@ -377,81 +377,40 @@ function Market() {
 }
 
 /**
- * Le temps repris. Le reçu du calcul occupe la droite de l'en-tête — le
- * détail honnête, posé là où il se vérifie d'un œil, au lieu d'une moitié
- * d'écran vide au-dessus du tableau.
+ * Le temps repris. UN seul artefact : le grand tableau porte tout — les
+ * totaux dans ses en-têtes, les minutes dans ses lignes. La version
+ * précédente ajoutait un petit reçu à côté du titre : les mêmes chiffres
+ * dits trois fois, et deux blocs qui se disputaient la même information.
  */
 function TimeSaved() {
-  const manual: Array<[string, string]> = [
-    ['Chercher des candidates', '45 min'],
-    ['Évaluer leurs sites', '1 h 00'],
-    ['Retrouver les contacts', '25 min'],
-    ['Rédiger cinq e-mails', '1 h 15'],
-  ];
-  const withTool: Array<[string, string]> = [
-    ['Lire cinq dossiers prêts', '10 min'],
-    ['Envoyer les e-mails prêts', '5 min'],
-  ];
-
   return (
     <section id="temps" className="relative scroll-mt-20 overflow-hidden">
       <Glow tint="finding" className="-left-40 top-10 size-[26rem]" />
       <Glow className="-right-44 bottom-0 size-[30rem]" />
       <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-24">
-        <div className="grid items-end gap-x-16 gap-y-10 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid items-end gap-x-16 gap-y-4 lg:grid-cols-[1fr_0.8fr]">
           <Reveal>
             <p className="field-label">Le temps que ça vous prend</p>
             <h2 className="mt-4 max-w-2xl text-[clamp(1.875rem,3.4vw,2.75rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
               Cinq entreprises prospectées en 15 minutes
             </h2>
-            <p className="reasoning mt-4 max-w-xl text-muted-foreground">
+          </Reveal>
+          <Reveal delay={80}>
+            <p className="reasoning text-muted-foreground lg:pb-1">
               À la main, prospecter cinq entreprises prend l’après-midi. Ici, tout est prêt au
               réveil — il reste un quart d’heure, et c’est la partie qui rapporte.
             </p>
-          </Reveal>
-
-          <Reveal delay={100}>
-            <div className="rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(11,13,20,.04)]">
-              <p className="field-label">Le compte, pour 5 entreprises</p>
-
-              <div className="mt-4 flex items-baseline justify-between gap-4">
-                <p className="text-sm font-semibold" style={{ color: 'var(--finding)' }}>À la main</p>
-                <p className="tabular font-mono text-sm font-semibold" style={{ color: 'var(--finding)' }}>3 h 30</p>
-              </div>
-              <div className="mt-2 space-y-1.5">
-                {manual.map(([label, time]) => (
-                  <p key={label} className="flex items-baseline gap-2 text-[13px] text-muted-foreground">
-                    <span>{label}</span>
-                    <span aria-hidden className="min-w-4 flex-1 border-b border-dotted border-[var(--line)]" />
-                    <span className="tabular font-mono">{time}</span>
-                  </p>
-                ))}
-              </div>
-
-              <div className="mt-4 flex items-baseline justify-between gap-4 border-t pt-4">
-                <p className="text-sm font-semibold text-[var(--brand)]">Avec Prospect AI</p>
-                <p className="tabular font-mono text-sm font-semibold text-[var(--brand)]">15 min</p>
-              </div>
-              <div className="mt-2 space-y-1.5">
-                {withTool.map(([label, time]) => (
-                  <p key={label} className="flex items-baseline gap-2 text-[13px] text-muted-foreground">
-                    <span>{label}</span>
-                    <span aria-hidden className="min-w-4 flex-1 border-b border-dotted border-[var(--line)]" />
-                    <span className="tabular font-mono">{time}</span>
-                  </p>
-                ))}
-              </div>
-
-              <p className="mt-4 border-t pt-3 text-[11px] leading-relaxed text-muted-foreground">
-                Ordres de grandeur honnêtes, pas un chronomètre.
-              </p>
-            </div>
           </Reveal>
         </div>
 
         <Reveal>
           <TimeGain />
         </Reveal>
+
+        <p className="mt-6 text-xs text-muted-foreground">
+          Ordres de grandeur honnêtes pour une prospection menée sérieusement, pas un
+          chronomètre.
+        </p>
       </div>
     </section>
   );
