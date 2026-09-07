@@ -185,28 +185,50 @@ const CASES = [
   },
 
   // ── Closes, pour les statistiques ─────────────────────────────────────
-  // Un mois d'historique étalé jour par jour : c'est lui qui nourrit le
-  // graphique d'activité — deux ou trois appels par jour ouvré, comme un
-  // vrai compte qui vit.
-  ...[
-    ['Pharmacie Centrale', 'not_interested', 1], ['Boulangerie Fasseur', 'no_response', 2],
-    ['Optique Rive Sud', 'not_interested', 4], ['Atelier Cadres & Co', 'no_response', 4],
-    ['Cave des Halles', 'not_interested', 6], ['Garage Prieur', 'no_response', 7],
-    ['Cordonnerie Michel', 'no_response', 8], ['Auto-École Departure', 'not_interested', 9],
-    ['Boucherie Vasseur', 'no_response', 11], ['Pressing de la Gare', 'no_response', 12],
-    ['Librairie du Théâtre', 'not_interested', 13], ['Tabac le Marigny', 'no_response', 14],
-    ['Cabinet Véto Anjou', 'client', 16], ['Fromagerie Petit Pont', 'not_interested', 17],
-    ['Serrurerie Ledoux', 'no_response', 18], ['Studio Photo Morel', 'not_interested', 19],
-    ['Bar de la Marine', 'no_response', 21], ['Coiffure Passage Bleu', 'client', 22],
-    ['Charcuterie Rambert', 'no_response', 23], ['Fleuriste Val d’Or', 'not_interested', 25],
-    ['Menuiserie des Coteaux', 'no_response', 26], ['Brasserie des Arts', 'not_interested', 27],
-    ['Poissonnerie Océane', 'no_response', 28], ['Hôtel du Parc Vert', 'not_interested', 29],
-  ].map(([name, outcome, days]) => ({
-    name,
-    fields: { industry_label: 'Commerce', city: 'Angers', phone: '+33241000199' },
-    opp: { type: 'website_redesign', trigger: null, occurred: null, needs: [['dated_platform', 45]] },
-    assign: { outcome, daysAgo: days, notes: outcome === 'client' ? 'Signé — acompte reçu.' : null },
-  })),
+  // Un mois d'historique généré jour par jour : deux à cinq appels par
+  // jour ouvré, week-ends creux, trois clients dans le mois — le rythme
+  // d'un vrai compte, pour nourrir courbes, entonnoir et filtres.
+  ...(() => {
+    const PREFIXES = ['Boulangerie', 'Garage', 'Institut', 'Cabinet', 'Atelier', 'Studio', 'Brasserie', 'Pharmacie', 'Fleuriste', 'Menuiserie', 'Optique', 'Charcuterie'];
+    const SUFFIXES = ['des Lilas', 'Saint-Michel', 'du Port', 'Bellevue', 'des Arts', 'Lumière', 'du Marché', 'Océane', 'Provence', 'du Centre', 'Rive Gauche', 'des Halles'];
+    const CITIES = ['Angers', 'Nantes', 'Rennes', 'Tours', 'Le Mans'];
+    const TYPES = ['website_redesign', 'website_redesign', 'website_creation', 'ecommerce', 'website_redesign', 'seo', 'maintenance'];
+    const NOTES = [
+      null, null, null, 'Numéro sur répondeur, boîte pleine.',
+      null, 'Le gérant part à la retraite en décembre.', null, null,
+      'A déjà un neveu « qui s’en occupe ».', null, null, 'Rappeler l’an prochain, budget épuisé.',
+    ];
+    // Le rythme d'une semaine : lun→ven soutenus, samedi léger, dimanche rien.
+    const WEEK_PATTERN = [0, 4, 3, 5, 2, 4, 1]; // dim, lun, …, sam
+    const CLIENT_DAYS = new Set([6, 16, 26]);
+    // Les relances occupent déjà une attribution ces jours-là (plafond 5/jour).
+    const BUSY_DAYS = new Set([0, 3, 10, 15, 24]);
+
+    const entries = [];
+    let n = 0;
+    for (let day = 1; day <= 29; day += 1) {
+      const weekday = new Date(now - day * 86_400_000).getDay();
+      let calls = WEEK_PATTERN[weekday] ?? 0;
+      if (BUSY_DAYS.has(day)) calls = Math.min(calls, 4);
+      for (let i = 0; i < calls; i += 1) {
+        const outcome = CLIENT_DAYS.has(day) && i === 0
+          ? 'client'
+          : (n % 7 < 4 ? 'no_response' : 'not_interested');
+        entries.push({
+          name: `${PREFIXES[n % PREFIXES.length]} ${SUFFIXES[(n * 5 + day) % SUFFIXES.length]}`,
+          fields: { industry_label: 'Commerce', city: CITIES[n % CITIES.length], phone: '+33241000199' },
+          opp: { type: TYPES[n % TYPES.length], trigger: null, occurred: null, needs: [['dated_platform', 45]] },
+          assign: {
+            outcome,
+            daysAgo: day,
+            notes: outcome === 'client' ? 'Signé — acompte reçu.' : NOTES[n % NOTES.length],
+          },
+        });
+        n += 1;
+      }
+    }
+    return entries;
+  })(),
 ];
 
 // ─── Insertion ──────────────────────────────────────────────────────────────
@@ -264,4 +286,4 @@ for (const c of CASES) {
 console.log(`✓ ${inserted} attributions de démonstration pour ${email}`);
 console.log('  Ce matin : 5 + 1 mis de côté (1 appelée, 1 urgente, 1 sans téléphone, 1 sans ville, 1 diagnostic)');
 console.log('  À relancer : 5 (3 statuts, notes courte/longue/absente, 1 dossier à 24 j)');
-console.log('  Closes : 24 sur un mois (10 refus, 12 sans réponse, 2 clients)');
+console.log('  Closes : un mois généré jour par jour (2-5 appels/jour ouvré, 3 clients)');

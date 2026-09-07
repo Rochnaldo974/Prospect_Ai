@@ -14,8 +14,8 @@ const TABS = [
   ['/dashboard', 'Aujourd’hui'],
   ['/dashboard/plus-tard', 'Plus tard'],
   ['/dashboard/suivi', 'À relancer'],
-  ['/dashboard/historique', 'Historique'],
   ['/dashboard/statistiques', 'Statistiques'],
+  ['/dashboard/historique', 'Historique'],
 ] as const;
 
 export function DashboardNav({

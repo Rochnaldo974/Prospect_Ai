@@ -29,12 +29,16 @@ export async function enqueueJob(
 ): Promise<number | null> {
   // Les clés optionnelles sont omises plutôt que passées à undefined :
   // exactOptionalPropertyTypes distingue les deux, et PostgREST aussi.
+  // run_after est omis quand l'appelant ne demande rien : le défaut SQL est
+  // now() — CELUI DE POSTGRES. Envoyer l'horloge de Node ici rendait le job
+  // invisible à un claim immédiat dès que l'hôte avançait de quelques
+  // centaines de millisecondes sur le conteneur.
   const { data, error } = await db.rpc('enqueue_job', {
     p_job_type: type,
     p_payload: payload,
     p_priority: options.priority ?? 50,
-    p_run_after: (options.runAfter ?? new Date()).toISOString(),
     p_max_attempts: options.maxAttempts ?? 3,
+    ...(options.runAfter ? { p_run_after: options.runAfter.toISOString() } : {}),
     ...(options.dedupeKey ? { p_dedupe_key: options.dedupeKey } : {}),
   });
 

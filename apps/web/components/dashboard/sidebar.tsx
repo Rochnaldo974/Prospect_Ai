@@ -18,8 +18,8 @@ const WORK: Array<[string, string, string]> = [
   ['/dashboard', 'Aujourd’hui', 'jour'],
   ['/dashboard/plus-tard', 'Plus tard', 'snooze'],
   ['/dashboard/suivi', 'À relancer', 'relance'],
-  ['/dashboard/historique', 'Historique', ''],
   ['/dashboard/statistiques', 'Statistiques', ''],
+  ['/dashboard/historique', 'Historique', ''],
 ];
 
 export function Sidebar({
