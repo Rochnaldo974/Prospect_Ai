@@ -1,8 +1,9 @@
 import 'server-only';
 import {
-  diagnoseEmptyDay, getActivitySeries, getFollowUps, getOutcomeStats, getServiceClient,
-  getTodayOpportunities, markDayViewed,
-  type ActivityDay, type EmptyDiagnosis, type FollowUp, type OutcomeStats, type TodayOpportunity,
+  diagnoseEmptyDay, getActivitySeries, getFollowUps, getMonthlyStats, getOutcomeStats,
+  getServiceClient, getTodayOpportunities, markDayViewed,
+  type ActivityDay, type EmptyDiagnosis, type FollowUp, type MonthlyStats, type OutcomeStats,
+  type TodayOpportunity,
 } from '@prospect/core';
 import { requireOnboardedUser } from '@/lib/auth/session';
 
@@ -39,17 +40,14 @@ export async function getMyOpportunities(): Promise<{
   followUpCount: number;
   /** Le pipeline de l'utilisateur — ce que ses appels ont produit. */
   stats: OutcomeStats;
-  /** L'activité jour par jour des trente derniers jours. */
-  activity: ActivityDay[];
 }> {
   const profile = await requireOnboardedUser();
   const db = getServiceClient();
 
-  const [opportunities, followUps, stats, activity] = await Promise.all([
+  const [opportunities, followUps, stats] = await Promise.all([
     getTodayOpportunities(db, profile.id),
     getFollowUps(db, profile.id),
     getOutcomeStats(db, profile.id),
-    getActivitySeries(db, profile.id),
   ]);
 
   // « Livré et vu » : la mesure dont l'expérience a besoin pour comparer le
@@ -73,7 +71,6 @@ export async function getMyOpportunities(): Promise<{
     diagnosis: opportunities.length === 0 ? await diagnoseEmptyDay(db, profile.id) : null,
     followUpCount: followUps.length,
     stats,
-    activity,
   };
 }
 
@@ -110,4 +107,23 @@ export async function getMyFollowUps(): Promise<{
   ]);
 
   return { firstName: profile.full_name?.split(' ')[0] ?? '', role: profile.role, followUps, stats };
+}
+
+/** Le relevé du mois : comptes, courbes, entonnoir — la page statistiques. */
+export async function getMyStatistics(): Promise<{
+  firstName: string;
+  monthly: MonthlyStats;
+  activity: ActivityDay[];
+  stats: OutcomeStats;
+}> {
+  const profile = await requireOnboardedUser();
+  const db = getServiceClient();
+
+  const [monthly, activity, stats] = await Promise.all([
+    getMonthlyStats(db, profile.id),
+    getActivitySeries(db, profile.id),
+    getOutcomeStats(db, profile.id),
+  ]);
+
+  return { firstName: profile.full_name?.split(' ')[0] ?? '', monthly, activity, stats };
 }

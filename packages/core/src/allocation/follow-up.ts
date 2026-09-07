@@ -218,3 +218,80 @@ export async function getActivitySeries(
 
   return [...series.values()];
 }
+
+/** Les comptes d'une fenêtre de trente jours. */
+export interface WindowCounts {
+  /** Dossiers proposés par le moteur. */
+  proposed: number;
+  /** Entreprises effectivement appelées. */
+  contacted: number;
+  /** Réponses positives : intéressée, rendez-vous, devis, cliente. */
+  responses: number;
+  notInterested: number;
+  noResponse: number;
+  clients: number;
+}
+
+export interface MonthlyStats {
+  current: WindowCounts;
+  previous: WindowCounts;
+}
+
+/**
+ * Le mois écoulé, comparé au mois d'avant.
+ *
+ * Chaque événement est compté dans la fenêtre de SA date : un dossier proposé
+ * il y a quarante jours mais signé hier compte en « proposé » le mois dernier
+ * et en « client » ce mois-ci. C'est la seule lecture qui ne ment pas quand
+ * une affaire met cinq semaines à se conclure.
+ */
+export async function getMonthlyStats(
+  db: Db,
+  userId: string,
+  days = 30,
+): Promise<MonthlyStats> {
+  const cutoff = new Date(Date.now() - 2 * days * 86_400_000).toISOString();
+
+  const { data, error } = await db
+    .from('assignments')
+    .select('assigned_at, contacted_at, outcome, outcome_at')
+    .eq('user_id', userId)
+    .or(`assigned_at.gte.${cutoff},contacted_at.gte.${cutoff},outcome_at.gte.${cutoff}`);
+
+  if (error) throw new Error(`getMonthlyStats : ${error.message}`);
+
+  const empty = (): WindowCounts => ({
+    proposed: 0, contacted: 0, responses: 0, notInterested: 0, noResponse: 0, clients: 0,
+  });
+  const windows: [WindowCounts, WindowCounts] = [empty(), empty()];
+
+  const windowMs = days * 86_400_000;
+  const now = Date.now();
+  const windowOf = (iso: string | null): WindowCounts | null => {
+    if (!iso) return null;
+    const age = now - new Date(iso).getTime();
+    if (age < 0 || age >= 2 * windowMs) return null;
+    return windows[age < windowMs ? 0 : 1] ?? null;
+  };
+
+  for (const row of data ?? []) {
+    const proposedIn = windowOf(row.assigned_at as string | null);
+    if (proposedIn) proposedIn.proposed += 1;
+
+    const contactedIn = windowOf(row.contacted_at as string | null);
+    if (contactedIn) contactedIn.contacted += 1;
+
+    const outcomeIn = windowOf(row.outcome_at as string | null);
+    if (outcomeIn) {
+      const outcome = row.outcome as string | null;
+      if (outcome === 'not_interested') outcomeIn.notInterested += 1;
+      else if (outcome === 'no_response') outcomeIn.noResponse += 1;
+      else if (outcome && RESPONSE_OUTCOMES.has(outcome)) {
+        outcomeIn.responses += 1;
+        if (outcome === 'client') outcomeIn.clients += 1;
+      }
+    }
+  }
+
+  return { current: windows[0], previous: windows[1] };
+}

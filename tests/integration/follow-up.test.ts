@@ -4,7 +4,7 @@ import {
   deleteTestUsers, serviceClient, supabaseReachable,
 } from './helpers';
 import { markContacted, markDayViewed, recordOutcome } from '../../packages/core/src/allocation/outcome';
-import { getActivitySeries, getFollowUps, getOutcomeStats } from '../../packages/core/src/allocation/follow-up';
+import { getActivitySeries, getFollowUps, getMonthlyStats, getOutcomeStats } from '../../packages/core/src/allocation/follow-up';
 
 /**
  * Le suivi après l'appel.
@@ -189,5 +189,61 @@ describe.skipIf(!reachable)('série d’activité', () => {
     // Le refus d'il y a 40 jours est hors fenêtre : le total reste à deux.
     expect(series.reduce((sum, d) => sum + d.contacted, 0)).toBe(2);
     expect(series.reduce((sum, d) => sum + d.responses, 0)).toBe(1);
+  });
+});
+
+describe.skipIf(!reachable)('statistiques mensuelles', () => {
+  const admin = serviceClient();
+  let userId: string;
+
+  beforeAll(async () => {
+    await deleteTestUsers(admin, 'mensuel.test');
+    userId = await createUser(admin, 'stats@mensuel.test', 'Test Mensuel');
+  });
+
+  afterAll(async () => {
+    await cleanupEngineTables(admin);
+    await deleteTestUsers(admin, 'mensuel.test');
+  });
+
+  it('chaque événement compte dans la fenêtre de SA date', async () => {
+    await admin.from('assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('company_cooldowns').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('opportunities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+    const insert = async (assignedDaysAgo: number, outcomeDaysAgo: number | null, outcome: string | null) => {
+      const companyId = await createCompany(admin);
+      const opportunityId = await createOpportunity(admin, companyId);
+      const at = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
+      const { error } = await admin.from('assignments').insert({
+        user_id: userId, company_id: companyId, opportunity_id: opportunityId,
+        rank: 1, match_score: 80,
+        status: outcome ? 'completed' : 'active',
+        exclusive_until: at(assignedDaysAgo), assigned_at: at(assignedDaysAgo),
+        contacted_at: outcomeDaysAgo === null ? null : at(outcomeDaysAgo),
+        outcome, outcome_at: outcomeDaysAgo === null ? null : at(outcomeDaysAgo),
+      });
+      if (error) throw new Error(error.message);
+    };
+
+    // L'affaire lente : proposée il y a 40 jours, signée il y a 5 —
+    // « proposée » le mois dernier, « cliente » ce mois-ci.
+    await insert(40, 5, 'client');
+    // Le tout-venant du mois : proposée et refusée il y a 10 jours.
+    await insert(10, 10, 'not_interested');
+    // Encore sur la pile : proposée il y a 2 jours, pas encore appelée.
+    await insert(2, null, null);
+    // Hors champ : tout s'est joué il y a plus de 60 jours.
+    await insert(70, 65, 'no_response');
+
+    const { current, previous } = await getMonthlyStats(admin, userId);
+
+    expect(current).toMatchObject({
+      proposed: 2, contacted: 2, responses: 1, clients: 1, notInterested: 1, noResponse: 0,
+    });
+    expect(previous).toMatchObject({
+      proposed: 1, contacted: 0, responses: 0, clients: 0, notInterested: 0, noResponse: 0,
+    });
   });
 });
