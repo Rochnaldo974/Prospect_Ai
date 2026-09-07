@@ -81,14 +81,25 @@ export default async function OpportunityPage({
           </a>
         ) : null}
         {/* L'e-mail vit sur sa propre page : brouillon, signature, aperçu
-            fidèle et envoi direct — un bloc dans le dossier était trop
-            petit pour tout ça. */}
-        <Link
-          href={`/dashboard/opportunite/${opportunity.assignmentId}/email`}
-          className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-6 py-3 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5"
-        >
-          E-mail personnalisé
-        </Link>
+            fidèle et envoi direct. Sans adresse relevée, le bouton reste
+            VISIBLE mais éteint, la raison écrite dessus : le cacher ferait
+            croire à un bug d'un dossier à l'autre, le laisser actif ferait
+            payer un clic pour une impasse. */}
+        {company.email ? (
+          <Link
+            href={`/dashboard/opportunite/${opportunity.assignmentId}/email`}
+            className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-6 py-3 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5"
+          >
+            E-mail personnalisé
+          </Link>
+        ) : (
+          <span
+            className="cursor-not-allowed rounded-full border border-dashed px-6 py-3 text-sm text-muted-foreground"
+            title="Le site de cette entreprise ne publie aucune adresse e-mail générique. Le téléphone reste la meilleure voie."
+          >
+            E-mail — aucune adresse publiée
+          </span>
+        )}
         {company.contactFormUrl ? (
           <ActionLink href={company.contactFormUrl} external>Formulaire de contact</ActionLink>
         ) : null}
