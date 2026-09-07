@@ -154,3 +154,67 @@ export async function getHistory(db: Db, userId: string): Promise<HistoryEntry[]
     };
   });
 }
+
+export interface ActivityDay {
+  /** Le jour, en AAAA-MM-JJ, fuseau Europe/Paris. */
+  date: string;
+  /** Entreprises appelées ce jour-là. */
+  contacted: number;
+  /** Issues positives déclarées ce jour-là. */
+  responses: number;
+}
+
+/** Les issues qui comptent comme une réponse obtenue. */
+const RESPONSE_OUTCOMES = new Set(['interested', 'meeting', 'proposal', 'client']);
+
+/**
+ * L'activité jour par jour, sur une fenêtre glissante.
+ *
+ * Deux courbes seulement : ce que le freelance a fait (appels) et ce que ça
+ * a produit (réponses positives). Les refus et les silences n'y figurent
+ * pas — le graphique mesure l'effort et son fruit, pas la déception.
+ *
+ * La grille est complète : un jour sans activité vaut zéro, pas une absence.
+ * Un graphique qui saute les jours creux ment sur la régularité.
+ */
+export async function getActivitySeries(
+  db: Db,
+  userId: string,
+  days = 30,
+): Promise<ActivityDay[]> {
+  const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
+
+  const { data, error } = await db
+    .from('assignments')
+    .select('contacted_at, outcome, outcome_at')
+    .eq('user_id', userId)
+    .or(`contacted_at.gte.${cutoff},outcome_at.gte.${cutoff}`);
+
+  if (error) throw new Error(`getActivitySeries : ${error.message}`);
+
+  // fr-CA donne AAAA-MM-JJ ; le fuseau est fixé pour que « le même jour »
+  // veuille dire la même chose sur le serveur et chez l'utilisateur.
+  const dayKey = new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
+  });
+
+  const series = new Map<string, ActivityDay>();
+  const now = Date.now();
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = dayKey.format(new Date(now - i * 86_400_000));
+    series.set(date, { date, contacted: 0, responses: 0 });
+  }
+
+  for (const row of data ?? []) {
+    if (row.contacted_at) {
+      const day = series.get(dayKey.format(new Date(row.contacted_at as string)));
+      if (day) day.contacted += 1;
+    }
+    if (row.outcome_at && RESPONSE_OUTCOMES.has(row.outcome as string)) {
+      const day = series.get(dayKey.format(new Date(row.outcome_at as string)));
+      if (day) day.responses += 1;
+    }
+  }
+
+  return [...series.values()];
+}

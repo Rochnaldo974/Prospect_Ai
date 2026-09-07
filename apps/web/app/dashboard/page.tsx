@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getMyOpportunities } from '@/lib/opportunities/mine';
 import { OpportunityRow } from '@/components/dashboard/opportunity-row';
 import { EmptyDay } from '@/components/empty-day';
+import { ActivityChart } from '@/components/dashboard/activity-chart';
 
 export const metadata: Metadata = { title: 'Aujourd’hui' };
 
@@ -19,7 +20,7 @@ export const metadata: Metadata = { title: 'Aujourd’hui' };
  * porte vers la page où on agit dessus — jamais des chiffres de décor.
  */
 export default async function DashboardPage() {
-  const { firstName, opportunities, diagnosis, followUpCount, plan, stats } =
+  const { firstName, opportunities, diagnosis, followUpCount, plan, stats, activity } =
     await getMyOpportunities();
 
   // Les dossiers mis de côté vivent sous « Plus tard » : les laisser ici
@@ -87,6 +88,8 @@ export default async function DashboardPage() {
           won={stats.client > 0}
         />
       </div>
+
+      <ActivityChart data={activity} />
 
       {total === 0 ? (
         <div className="mt-10">

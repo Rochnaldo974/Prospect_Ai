@@ -176,6 +176,16 @@
   }
 }
 
+@keyframes chartGrow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+.chart-bar {
+  transform-origin: bottom;
+  animation: chartGrow 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
 @keyframes rise {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }

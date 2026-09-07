@@ -185,12 +185,22 @@ const CASES = [
   },
 
   // ── Closes, pour les statistiques ─────────────────────────────────────
+  // Un mois d'historique étalé jour par jour : c'est lui qui nourrit le
+  // graphique d'activité — deux ou trois appels par jour ouvré, comme un
+  // vrai compte qui vit.
   ...[
-    ['Pharmacie Centrale', 'not_interested', 12], ['Optique Rive Sud', 'not_interested', 18],
-    ['Cave des Halles', 'not_interested', 26], ['Auto-École Departure', 'not_interested', 33],
-    ['Boulangerie Fasseur', 'no_response', 8], ['Cordonnerie Michel', 'no_response', 21],
-    ['Pressing de la Gare', 'no_response', 29], ['Tabac le Marigny', 'no_response', 35],
-    ['Cabinet Véto Anjou', 'client', 40], ['Coiffure Passage Bleu', 'client', 55],
+    ['Pharmacie Centrale', 'not_interested', 1], ['Boulangerie Fasseur', 'no_response', 2],
+    ['Optique Rive Sud', 'not_interested', 4], ['Atelier Cadres & Co', 'no_response', 4],
+    ['Cave des Halles', 'not_interested', 6], ['Garage Prieur', 'no_response', 7],
+    ['Cordonnerie Michel', 'no_response', 8], ['Auto-École Departure', 'not_interested', 9],
+    ['Boucherie Vasseur', 'no_response', 11], ['Pressing de la Gare', 'no_response', 12],
+    ['Librairie du Théâtre', 'not_interested', 13], ['Tabac le Marigny', 'no_response', 14],
+    ['Cabinet Véto Anjou', 'client', 16], ['Fromagerie Petit Pont', 'not_interested', 17],
+    ['Serrurerie Ledoux', 'no_response', 18], ['Studio Photo Morel', 'not_interested', 19],
+    ['Bar de la Marine', 'no_response', 21], ['Coiffure Passage Bleu', 'client', 22],
+    ['Charcuterie Rambert', 'no_response', 23], ['Fleuriste Val d’Or', 'not_interested', 25],
+    ['Menuiserie des Coteaux', 'no_response', 26], ['Brasserie des Arts', 'not_interested', 27],
+    ['Poissonnerie Océane', 'no_response', 28], ['Hôtel du Parc Vert', 'not_interested', 29],
   ].map(([name, outcome, days]) => ({
     name,
     fields: { industry_label: 'Commerce', city: 'Angers', phone: '+33241000199' },
@@ -254,4 +264,4 @@ for (const c of CASES) {
 console.log(`✓ ${inserted} attributions de démonstration pour ${email}`);
 console.log('  Ce matin : 5 + 1 mis de côté (1 appelée, 1 urgente, 1 sans téléphone, 1 sans ville, 1 diagnostic)');
 console.log('  À relancer : 5 (3 statuts, notes courte/longue/absente, 1 dossier à 24 j)');
-console.log('  Closes : 10 (4 refus, 4 sans réponse, 2 clients)');
+console.log('  Closes : 24 sur un mois (10 refus, 12 sans réponse, 2 clients)');

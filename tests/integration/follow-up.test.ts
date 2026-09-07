@@ -4,7 +4,7 @@ import {
   deleteTestUsers, serviceClient, supabaseReachable,
 } from './helpers';
 import { markContacted, markDayViewed, recordOutcome } from '../../packages/core/src/allocation/outcome';
-import { getFollowUps, getOutcomeStats } from '../../packages/core/src/allocation/follow-up';
+import { getActivitySeries, getFollowUps, getOutcomeStats } from '../../packages/core/src/allocation/follow-up';
 
 /**
  * Le suivi après l'appel.
@@ -138,5 +138,56 @@ describe.skipIf(!reachable)('suivi des relances', () => {
     const { data: second } = await admin.from('assignments')
       .select('viewed_at').eq('id', assignmentId).single();
     expect(second?.viewed_at).toBe(seen);
+  });
+});
+
+describe.skipIf(!reachable)('série d’activité', () => {
+  const admin = serviceClient();
+  let userId: string;
+
+  beforeAll(async () => {
+    await deleteTestUsers(admin, 'activite.test');
+    userId = await createUser(admin, 'serie@activite.test', 'Test Activité');
+  });
+
+  afterAll(async () => {
+    await cleanupEngineTables(admin);
+    await deleteTestUsers(admin, 'activite.test');
+  });
+
+  it('grille complète, appels et réponses comptés le bon jour', async () => {
+    await admin.from('assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('company_cooldowns').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('opportunities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+    // Trois moments : un appel-réponse il y a 5 jours, un simple appel il y a
+    // 2 jours, un refus il y a 40 jours — hors fenêtre, il ne compte pas.
+    const insertAt = async (daysAgo: number, outcome: string | null) => {
+      const companyId = await createCompany(admin);
+      const opportunityId = await createOpportunity(admin, companyId);
+      const when = new Date(Date.now() - daysAgo * 86_400_000).toISOString();
+      const { error } = await admin.from('assignments').insert({
+        user_id: userId, company_id: companyId, opportunity_id: opportunityId,
+        rank: 1, match_score: 80,
+        status: outcome ? 'completed' : 'contacted',
+        exclusive_until: when, assigned_at: when, contacted_at: when,
+        outcome, outcome_at: outcome ? when : null,
+      });
+      if (error) throw new Error(error.message);
+    };
+    await insertAt(5, 'interested');
+    await insertAt(2, null);
+    await insertAt(40, 'not_interested');
+
+    const series = await getActivitySeries(admin, userId);
+
+    expect(series).toHaveLength(30);
+    const day = (offset: number) => series[series.length - 1 - offset]!;
+    expect(day(5)).toMatchObject({ contacted: 1, responses: 1 });
+    expect(day(2)).toMatchObject({ contacted: 1, responses: 0 });
+    // Le refus d'il y a 40 jours est hors fenêtre : le total reste à deux.
+    expect(series.reduce((sum, d) => sum + d.contacted, 0)).toBe(2);
+    expect(series.reduce((sum, d) => sum + d.responses, 0)).toBe(1);
   });
 });
