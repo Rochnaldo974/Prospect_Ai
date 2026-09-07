@@ -105,3 +105,53 @@ describe.skipIf(!reachable)('plan gratuit', () => {
     await admin.from('profiles').update({ plan: 'free' }).eq('id', userId);
   });
 });
+
+describe.skipIf(!reachable)('mémoire par freelance', () => {
+  const admin = serviceClient();
+  let userId: string;
+
+  beforeAll(async () => {
+    await deleteTestUsers(admin, 'memoire.test');
+    userId = await createUser(admin, 'memoire@memoire.test', 'Test Mémoire');
+    await admin.from('profiles')
+      .update({ plan: 'premium', onboarding_completed: true })
+      .eq('id', userId);
+    await admin.from('user_preferences').insert({ user_id: userId, services: [], location_mode: 'france_remote' });
+  });
+
+  afterAll(async () => {
+    await cleanupEngineTables(admin);
+    await deleteTestUsers(admin, 'memoire.test');
+  });
+
+  it('une entreprise déjà travaillée ne revient jamais au même freelance', async () => {
+    await admin.from('assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('daily_batches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('company_cooldowns').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('opportunities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await admin.from('companies').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+    // Une seule entreprise en stock, déjà travaillée par CE freelance il y a
+    // longtemps — cooldown purgé, opportunité fraîche et disponible.
+    const companyId = await createCompany(admin);
+    const oldOpportunity = await createOpportunity(admin, companyId, { status: 'expired' });
+    await admin.from('assignments').insert({
+      user_id: userId, company_id: companyId, opportunity_id: oldOpportunity,
+      rank: 1, match_score: 80, status: 'completed', outcome: 'no_response',
+      exclusive_until: new Date(Date.now() - 200 * 86_400_000).toISOString(),
+      assigned_at: new Date(Date.now() - 203 * 86_400_000).toISOString(),
+      contacted_at: new Date(Date.now() - 202 * 86_400_000).toISOString(),
+      outcome_at: new Date(Date.now() - 202 * 86_400_000).toISOString(),
+    });
+    await createOpportunity(admin, companyId);
+
+    await runAllocation(admin, { userId });
+
+    const { count } = await admin.from('assignments')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .in('status', ['active', 'contacted']);
+    // Rien : sa seule candidate est une entreprise qu'il a déjà appelée.
+    expect(count).toBe(0);
+  });
+});

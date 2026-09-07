@@ -19,11 +19,12 @@ describe('mission de scan', () => {
   it('la demande gonfle l’objectif : plus de clients, plus de scan', () => {
     // Rendement volontairement bon (5 %) pour rester sous le plafond : ce
     // test regarde la pente, pas la borne.
-    const small = planScan({ premiumSlots: 2 * 5, freeUsers: 0, stock: 0, measuredYield: 0.05 });
-    const big = planScan({ premiumSlots: 40 * 5, freeUsers: 0, stock: 0, measuredYield: 0.05 });
+    // Chacun proche de son objectif, pour lire la pente sans saturer le plafond.
+    const small = planScan({ premiumSlots: 2 * 5, freeUsers: 0, stock: 1_900, measuredYield: 0.05 });
+    const big = planScan({ premiumSlots: 100 * 5, freeUsers: 0, stock: 3_400, measuredYield: 0.05 });
 
-    // 40 abonnés × 5/j × 7 j d'avance = 1 400 d'objectif.
-    expect(big.target).toBe(40 * 5 * PLANNING.RUNWAY_DAYS);
+    // 100 abonnés × 5/j × 7 j d'avance = 3 500 d'objectif, au-dessus du plancher.
+    expect(big.target).toBe(100 * 5 * PLANNING.RUNWAY_DAYS);
     expect(big.scanQuota).toBeGreaterThan(small.scanQuota);
   });
 
@@ -35,8 +36,8 @@ describe('mission de scan', () => {
   });
 
   it('le rendement mesuré calibre : meilleur rendement, moins de scan', () => {
-    const poor = planScan({ premiumSlots: 20, freeUsers: 0, stock: 400, measuredYield: 0.02 });
-    const rich = planScan({ premiumSlots: 20, freeUsers: 0, stock: 400, measuredYield: 0.08 });
+    const poor = planScan({ premiumSlots: 20, freeUsers: 0, stock: 1_900, measuredYield: 0.02 });
+    const rich = planScan({ premiumSlots: 20, freeUsers: 0, stock: 1_900, measuredYield: 0.08 });
     expect(rich.scanQuota).toBeLessThan(poor.scanQuota);
     expect(poor.scanQuota).toBeLessThan(PLANNING.MAX_DAILY_SCAN);
   });
@@ -50,6 +51,26 @@ describe('mission de scan', () => {
   it('les gratuits pèsent un septième d’un dossier par jour', () => {
     const plan = planScan({ premiumSlots: 0, freeUsers: 70, stock: 0, measuredYield: 0.01 });
     expect(plan.dailyDemand).toBe(10);
+  });
+
+  it('l’amorçage prime : la base se constitue à pleine cadence', () => {
+    // 4,5 millions de domaines jamais visités : peu importe le stock du
+    // jour, la mission est la cadence d'amorçage.
+    const plan = planScan({
+      premiumSlots: 0, freeUsers: 0, stock: 10_000,
+      measuredYield: 0.05, unscanned: 4_500_000,
+    });
+    expect(plan.bootstrap).toBe(true);
+    expect(plan.scanQuota).toBe(PLANNING.BOOTSTRAP_DAILY_SCAN);
+  });
+
+  it('l’amorçage s’éteint quand le parc est couvert', () => {
+    const plan = planScan({
+      premiumSlots: 20, freeUsers: 0, stock: 400,
+      measuredYield: 0.02, unscanned: 12_000,
+    });
+    expect(plan.bootstrap).toBe(false);
+    expect(plan.scanQuota).toBeLessThan(PLANNING.BOOTSTRAP_DAILY_SCAN);
   });
 
   it('la mission se découpe en jobs de deux mille au plus', () => {

@@ -31,7 +31,19 @@ export const PLANNING = {
   /** Jours de stock d'avance visés. */
   RUNWAY_DAYS: 7,
   /** Stock minimal visé même sans abonné : la base se constitue toute seule. */
-  STOCK_FLOOR: 500,
+  STOCK_FLOOR: 2_000,
+  /**
+   * Amorçage : tant que plus de ce nombre de domaines n'ont JAMAIS été
+   * visités, la constitution de la base prime sur le régime de croisière.
+   */
+  BOOTSTRAP_MIN_UNSCANNED: 50_000,
+  /**
+   * Cadence d'amorçage. Cent mille hôtes DIFFÉRENTS par jour : la
+   * politesse est par hôte (une requête par seconde et par site, dans le
+   * fetcher) — le plafond de croisière protège notre bande passante, pas
+   * les sites visités. Le parc entier passe en ~45 jours.
+   */
+  BOOTSTRAP_DAILY_SCAN: 100_000,
   /** Rendement supposé tant qu'aucune mesure n'existe (1 opp / 100 domaines). */
   DEFAULT_YIELD: 0.01,
   /** Rendement plancher : en dessous, c'est un incident, pas une calibration. */
@@ -51,6 +63,8 @@ export interface ScanPlan {
   yieldRate: number;
   scanQuota: number;
   jobs: number;
+  /** Vrai tant que la base initiale n'est pas constituée. */
+  bootstrap: boolean;
 }
 
 /** Le calcul de mission, pur : c'est lui que les tests tiennent. */
@@ -59,6 +73,8 @@ export function planScan(input: {
   freeUsers: number;
   stock: number;
   measuredYield: number | null;
+  /** Domaines jamais visités — déclenche l'amorçage au-delà du seuil. */
+  unscanned?: number;
 }): ScanPlan {
   const dailyDemand = input.premiumSlots + input.freeUsers / 7;
   const target = Math.max(PLANNING.STOCK_FLOOR, Math.ceil(dailyDemand * PLANNING.RUNWAY_DAYS));
@@ -72,10 +88,16 @@ export function planScan(input: {
     input.measuredYield ?? PLANNING.DEFAULT_YIELD,
   );
 
-  const scanQuota = Math.min(
-    PLANNING.MAX_DAILY_SCAN,
-    Math.max(PLANNING.MIN_DAILY_SCAN, Math.ceil(deficit / yieldRate)),
-  );
+  // L'amorçage : tant que la base n'est pas constituée, on la constitue —
+  // à pleine cadence, quel que soit l'état du stock du jour.
+  const bootstrap = (input.unscanned ?? 0) > PLANNING.BOOTSTRAP_MIN_UNSCANNED;
+
+  const scanQuota = bootstrap
+    ? PLANNING.BOOTSTRAP_DAILY_SCAN
+    : Math.min(
+      PLANNING.MAX_DAILY_SCAN,
+      Math.max(PLANNING.MIN_DAILY_SCAN, Math.ceil(deficit / yieldRate)),
+    );
 
   return {
     dailyDemand: Number(dailyDemand.toFixed(2)),
@@ -85,6 +107,7 @@ export function planScan(input: {
     yieldRate: Number(yieldRate.toFixed(4)),
     scanQuota,
     jobs: Math.ceil(scanQuota / PLANNING.JOB_SIZE),
+    bootstrap,
   };
 }
 
@@ -132,11 +155,19 @@ export const planScanningHandler: JobHandler<z.infer<typeof planPayload>> = {
       ? created / scanned
       : null;
 
+    // Les domaines jamais visités, priorité d'abord : c'est eux que
+    // l'amorçage vise.
+    const { count: unscanned } = await db
+      .from('domains')
+      .select('domain', { count: 'exact', head: true })
+      .is('last_checked_at', null);
+
     const plan = planScan({
       premiumSlots,
       freeUsers,
       stock: stock ?? 0,
       measuredYield,
+      unscanned: unscanned ?? 0,
     });
 
     // ── La mission, en jobs ─────────────────────────────────────────────
@@ -155,6 +186,7 @@ export const planScanningHandler: JobHandler<z.infer<typeof planPayload>> = {
     }
 
     logger.info('Mission de scan planifiée', {
+      amorcage: plan.bootstrap,
       demande_jour: plan.dailyDemand,
       stock: plan.stock,
       objectif: plan.target,

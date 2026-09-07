@@ -213,7 +213,31 @@ async function allocateFor(
   if ((count ?? 0) > 0) return null;
 
   const preferences = await loadPreferences(db, profile);
-  const eligible = candidates.filter((c) => isEligible(c, preferences));
+
+  // La mémoire par personne : les exclusions globales — cooldown,
+  // exclusivité — n'empêchent pas une entreprise de REVENIR AU MÊME
+  // freelance après leur échéance. Or celui qui a déclaré une issue l'a
+  // déjà travaillée : la lui reproposer, même six mois après, c'est lui
+  // faire rappeler son propre historique. Exclusion définitive dans ce
+  // cas ; trente jours de silence pour un dossier expiré sans avoir été
+  // traité — le remontrer plus tard est une seconde chance, le remontrer
+  // le lendemain est un bégaiement.
+  const { data: history } = await db
+    .from('assignments')
+    .select('company_id, outcome, assigned_at')
+    .eq('user_id', profile.id);
+
+  const recentCutoff = Date.now() - 30 * 86_400_000;
+  const alreadySeen = new Set<string>();
+  for (const row of history ?? []) {
+    if (row.outcome !== null || new Date(row.assigned_at).getTime() > recentCutoff) {
+      alreadySeen.add(row.company_id);
+    }
+  }
+
+  const eligible = candidates.filter(
+    (c) => !alreadySeen.has(c.companyId) && isEligible(c, preferences),
+  );
   if (eligible.length === 0) return 0;
 
   const limit = profile.plan === 'free' ? 1 : profile.daily_opportunity_limit;
