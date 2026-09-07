@@ -14,6 +14,7 @@ import { detectSignalsHandler, enrichSireneHandler } from './handlers/signals';
 import { generateOpportunitiesHandler } from './handlers/opportunities';
 import { ingestTendersHandler } from './handlers/tenders';
 import { allocateDailyHandler } from './handlers/allocation';
+import { planScanningHandler } from './handlers/planning';
 
 const HANDLERS: JobHandler<never>[] = [
   expireOpportunitiesHandler,
@@ -34,6 +35,7 @@ const HANDLERS: JobHandler<never>[] = [
   ingestTendersHandler,
   generateOpportunitiesHandler,
   allocateDailyHandler,
+  planScanningHandler,
 ] as JobHandler<never>[];
 
 const byType = new Map<string, JobHandler<never>>(HANDLERS.map((h) => [h.type, h]));

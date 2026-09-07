@@ -92,6 +92,7 @@ describe.skipIf(!reachable)('exécution des jobs', () => {
         'expire_opportunities',
         'generate_opportunities',
         'ingest_tenders',
+        'plan_scanning',
         'prune_event_keys',
         'reclaim_stalled_jobs',
         'refresh_admin_stats',
