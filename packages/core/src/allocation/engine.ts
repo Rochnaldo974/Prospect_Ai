@@ -86,13 +86,25 @@ export async function runAllocation(
 
   const candidates = await loadCandidates(db);
 
+  // L'ordre de service est MÉLANGÉ à chaque passe. Sans cela, les profils
+  // sortent de la requête dans un ordre stable : quand deux abonnés ont des
+  // préférences qui se recouvrent, le même passe premier tous les jours et
+  // rafle systématiquement les meilleurs scores. Le tirage utilise le
+  // générateur du run — déterministe pour une graine donnée, donc les tests
+  // restent rejouables.
+  const order = [...profiles];
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [order[i], order[j]] = [order[j]!, order[i]!];
+  }
+
   // Une entreprise n'a qu'une attribution vivante à la fois : la base le
   // garantit, mais s'y fier seul ferait perdre au deuxième servi une place de
   // sa journée à chaque collision, au lieu de lui donner la suivante. On tient
   // donc le compte de ce qui vient d'être pris.
   const taken = new Set<string>();
 
-  for (const profile of profiles) {
+  for (const profile of order) {
     if (options.signal?.aborted) break;
     report.usersExamined += 1;
 
