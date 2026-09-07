@@ -36,13 +36,16 @@ export async function getMyOpportunities(): Promise<{
   diagnosis: EmptyDiagnosis | null;
   /** Le nombre de dossiers rouverts, pour que le matin ne les fasse pas oublier. */
   followUpCount: number;
+  /** Le pipeline de l'utilisateur — ce que ses appels ont produit. */
+  stats: OutcomeStats;
 }> {
   const profile = await requireOnboardedUser();
   const db = getServiceClient();
 
-  const [opportunities, followUps] = await Promise.all([
+  const [opportunities, followUps, stats] = await Promise.all([
     getTodayOpportunities(db, profile.id),
     getFollowUps(db, profile.id),
+    getOutcomeStats(db, profile.id),
   ]);
 
   // « Livré et vu » : la mesure dont l'expérience a besoin pour comparer le
@@ -65,6 +68,7 @@ export async function getMyOpportunities(): Promise<{
     // expliquer une page pleine seraient du gaspillage.
     diagnosis: opportunities.length === 0 ? await diagnoseEmptyDay(db, profile.id) : null,
     followUpCount: followUps.length,
+    stats,
   };
 }
 

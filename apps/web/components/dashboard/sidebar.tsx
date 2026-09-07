@@ -15,7 +15,7 @@ import { usePathname } from 'next/navigation';
  * même liste, autre forme, aucun tiroir à ouvrir.
  */
 const WORK: Array<[string, string, string]> = [
-  ['/dashboard', 'Ce matin', 'matin'],
+  ['/dashboard', 'Aujourd’hui', 'jour'],
   ['/dashboard/plus-tard', 'Plus tard', 'snooze'],
   ['/dashboard/suivi', 'À relancer', 'relance'],
   ['/dashboard/historique', 'Historique', ''],

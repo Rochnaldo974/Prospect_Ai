@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation';
  * dépendre de la teinte.
  */
 const TABS = [
-  ['/dashboard', 'Ce matin'],
+  ['/dashboard', 'Aujourd’hui'],
   ['/dashboard/plus-tard', 'Plus tard'],
   ['/dashboard/suivi', 'À relancer'],
   ['/dashboard/historique', 'Historique'],
@@ -33,7 +33,7 @@ export function DashboardNav({
   return (
     <nav className="flex items-center gap-6 whitespace-nowrap pb-0 text-sm">
       {TABS.map(([href, label]) => {
-        // La page dossier appartient à « Ce matin » : on y arrive par elle.
+        // La page dossier appartient à « Aujourd’hui » : on y arrive par elle.
         const active = pathname === href
           || (href === '/dashboard' && pathname.startsWith('/dashboard/opportunite'));
         const count = counts[href] ?? 0;

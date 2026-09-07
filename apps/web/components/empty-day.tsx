@@ -54,7 +54,7 @@ export function EmptyDay({ diagnosis }: { diagnosis: EmptyDiagnosis | null }) {
   if (diagnosis?.reason === 'inconnu') {
     return (
       <EmptyState
-        title="Rien de nouveau pour vous ce matin"
+        title="Rien de nouveau pour vous aujourd’hui"
         explanation="Le stock correspond à votre paramétrage, mais les entreprises concernées sont déjà attribuées, en cooldown, ou sous le seuil de qualité. Le moteur repasse cette nuit."
       />
     );
@@ -62,7 +62,7 @@ export function EmptyDay({ diagnosis }: { diagnosis: EmptyDiagnosis | null }) {
 
   return (
     <EmptyState
-      title="Le stock est vide ce matin"
+      title="Le stock est vide aujourd’hui"
       explanation="Mieux vaut ne rien envoyer que du remplissage : une opportunité n’est livrée que si un fait daté et vérifiable la justifie. Le moteur repasse cette nuit."
       action={{ href: '/onboarding?modifier', label: 'Élargir mes préférences' }}
     />

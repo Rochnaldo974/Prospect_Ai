@@ -42,7 +42,7 @@ export default async function OpportunityPage({
         href={snoozed ? '/dashboard/plus-tard' : '/dashboard'}
         className="text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        ← {snoozed ? 'Plus tard' : 'Ce matin'}
+        ← {snoozed ? 'Plus tard' : 'Aujourd’hui'}
       </Link>
 
       {/* ── L'en-tête : qui, et pourquoi ça compte ── */}

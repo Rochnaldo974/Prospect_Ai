@@ -41,7 +41,7 @@ export default async function SnoozedPage() {
             href="/dashboard"
             className="mt-6 inline-flex rounded-full bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white transition-transform duration-200 hover:-translate-y-px"
           >
-            Voir ce matin
+            Voir aujourd’hui
           </Link>
         </div>
       ) : (
