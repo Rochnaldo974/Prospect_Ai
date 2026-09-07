@@ -18,6 +18,11 @@
  *
  *   Statistiques — dix issues closes pour des compteurs réalistes.
  *
+ * Les sites des dossiers sont servis par l'application elle-même
+ * (/demo-sites/…) et PRÉSENTENT le défaut annoncé : un lien mort sous un
+ * constat « illisible sur téléphone » cassait la promesse « vérifiable en
+ * une minute » au premier clic.
+ *
  * Idempotent : le jeu vit sur la plage de SIREN 899999001-899999999 —
  * segment est un enum fermé, un SIREN fictif hors de tout registre fait un
  * marqueur aussi sûr — et tout l'existant sur cette plage est supprimé
@@ -106,7 +111,7 @@ const CASES = [
   // ── Ce matin ──────────────────────────────────────────────────────────
   {
     // Score fort, exclusivité NORMALE, site en panne avec réserve.
-    name: 'Le Vieux Pressoir', fields: { industry_label: 'Restaurant', city: 'Angers', phone: '+33241887702', domain: 'demo-pressoir.fr', website_url: 'https://demo-pressoir.fr' },
+    name: 'Le Vieux Pressoir', fields: { industry_label: 'Restaurant', city: 'Angers', phone: '+33241887702', domain: 'demo-pressoir.fr', website_url: 'http://127.0.0.1:3000/demo-sites/pressoir' },
     domain: { status: 'broken', http_status: 503, tls_reason: 'DEPTH_ZERO_SELF_SIGNED_CERT', has_ssl: true, emails_found: ['contact@demo-pressoir.fr'] },
     opp: { type: 'website_redesign', trigger: 'website_found_down', occurred: daysAgoIso(2), needs: [['website_broken', 55], ['invalid_certificate', 40]] },
     assign: { rank: 1, score: 91, exclusive: hours(61) },
@@ -120,7 +125,7 @@ const CASES = [
   },
   {
     // DÉJÀ APPELÉ : coche, progression « 1 sur 5 », dossier replié.
-    name: 'Menuiserie Hardouin', fields: { industry_label: 'Menuiserie', city: 'Rennes', phone: '+33299441203', domain: 'demo-hardouin.fr', website_url: 'https://demo-hardouin.fr' },
+    name: 'Menuiserie Hardouin', fields: { industry_label: 'Menuiserie', city: 'Rennes', phone: '+33299441203', domain: 'demo-hardouin.fr', website_url: 'http://127.0.0.1:3000/demo-sites/hardouin' },
     domain: { status: 'reachable', cms: 'wordpress', tech_year: 2011, copyright_year: 2014, dated_components: [{ name: 'jquery', version: '1.7.2', year: 2011 }, { name: 'bootstrap', version: '2.3.2', year: 2013 }] },
     opp: { type: 'website_redesign', trigger: 'frozen_site_woke_up', occurred: daysAgoIso(5), needs: [['outdated_stack', 50], ['stale_content', 30]] },
     assign: { rank: 3, score: 76, exclusive: hours(58), contactedHoursAgo: 2 },
@@ -128,14 +133,14 @@ const CASES = [
   {
     // SANS déclencheur daté : « pourquoi maintenant » absent — la voie
     // diagnostique. Nom d'enseigne long : troncature de la ligne repliée.
-    name: 'Atelier d’Architecture Beaumont, Lefèvre et Associés', fields: { industry_label: 'Cabinet d’architectes', city: 'Angers', phone: '+33241778812', domain: 'demo-beaumont.fr', website_url: 'https://demo-beaumont.fr' },
+    name: 'Atelier d’Architecture Beaumont, Lefèvre et Associés', fields: { industry_label: 'Cabinet d’architectes', city: 'Angers', phone: '+33241778812', domain: 'demo-beaumont.fr', website_url: 'http://127.0.0.1:3000/demo-sites/beaumont' },
     domain: { status: 'reachable', responsive: false, ttfb_ms: 4200, has_media_queries: false },
     opp: { type: 'website_redesign', trigger: null, occurred: null, needs: [['not_responsive', 55], ['slow_website', 25]] },
     assign: { rank: 4, score: 68, exclusive: hours(55) },
   },
   {
     // Score BAS (pastille claire), SANS VILLE, e-commerce.
-    name: 'Aux Fleurs de Loire', fields: { industry_label: 'Fleuriste', city: null, region: null, phone: '+33240551209', domain: 'demo-fleursdeloire.fr', website_url: 'https://demo-fleursdeloire.fr' },
+    name: 'Aux Fleurs de Loire', fields: { industry_label: 'Fleuriste', city: null, region: null, phone: '+33240551209', domain: 'demo-fleursdeloire.fr', website_url: 'http://127.0.0.1:3000/demo-sites/fleurs' },
     domain: { status: 'reachable', ecommerce_detected: false, contact_form_detected: false },
     opp: { type: 'ecommerce', trigger: null, occurred: null, needs: [['retail_without_ecommerce', 45], ['no_contact_form', 15]] },
     assign: { rank: 5, score: 61, exclusive: hours(52) },
@@ -144,7 +149,7 @@ const CASES = [
   {
     // MIS DE CÔTÉ : attribué HIER (le plafond de cinq par jour est tenu
     // par la base, et elle a raison), encore sous exclusivité.
-    name: 'Torréfaction du Ralliement', fields: { industry_label: 'Torréfacteur', city: 'Angers', phone: '+33241889917', domain: 'demo-ralliement.fr', website_url: 'https://demo-ralliement.fr' },
+    name: 'Torréfaction du Ralliement', fields: { industry_label: 'Torréfacteur', city: 'Angers', phone: '+33241889917', domain: 'demo-ralliement.fr', website_url: 'http://127.0.0.1:3000/demo-sites/ralliement' },
     domain: { status: 'reachable', cms: 'wordpress', tech_year: 2013, copyright_year: 2016 },
     opp: { type: 'website_redesign', trigger: null, occurred: null, needs: [['dated_platform', 45], ['stale_content', 30]] },
     assign: { rank: 1, score: 64, exclusive: hours(40), snoozed: true, assignedHoursAgo: 30 },

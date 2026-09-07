@@ -12,8 +12,11 @@ import { useState } from 'react';
  * dans un onglet » : le produit demande de VÉRIFIER sur le site réel, pas
  * de le juger à travers une vignette.
  *
- * sandbox sans allow-scripts : on affiche une page tierce, on ne l'exécute
- * pas chez nous.
+ * sandbox="allow-same-origin" SANS allow-scripts : la page s'affiche, ses
+ * scripts ne s'exécutent pas — c'est la combinaison scripts+same-origin
+ * qui serait dangereuse, pas chacun séparément. Le sandbox entièrement
+ * opaque (sandbox="") rendait un cadre blanc, constaté au banc : Chrome
+ * refuse d'y peindre nos pages.
  */
 export function SitePreview({ url }: { url: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -48,7 +51,7 @@ export function SitePreview({ url }: { url: string }) {
         <iframe
           src={url}
           title="Aperçu du site du prospect"
-          sandbox=""
+          sandbox="allow-same-origin"
           loading="lazy"
           referrerPolicy="no-referrer"
           onLoad={() => setLoaded(true)}

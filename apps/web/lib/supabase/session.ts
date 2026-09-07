@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@prospect/core';
 
 /** Routes accessibles sans session. */
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth', '/confidentialite'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth', '/confidentialite', '/demo-sites'];
 
 // Les aperçus de développement ne demandent pas de session : la page fait
 // elle-même son 404 en production, le proxy n'a rien à leur ajouter.
