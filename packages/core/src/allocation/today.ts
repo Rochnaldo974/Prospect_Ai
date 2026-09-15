@@ -3,6 +3,7 @@ import type { OpportunityType } from '../domain/types';
 import { explainOpportunity, type Explanation } from '../opportunities/explain';
 import { loadWrittenCards } from './written-card';
 import { screenshotUrl } from '../enrichment/screenshot';
+import type { SiteScores } from '../enrichment/audit';
 
 /**
  * Les opportunités du jour d'un freelance, prêtes à l'affichage.
@@ -43,6 +44,13 @@ export interface TodayOpportunity {
     /** Capture du site prise par le moteur à la vérification du dossier, quand elle existe. */
     screenshotUrl: string | null;
   };
+  /** La note du site mesurée par le moteur, quand le site a été audité. */
+  audit: {
+    score: number;
+    scores: SiteScores;
+    findings: string[];
+    measuredAt: string | null;
+  } | null;
   explanation: Explanation;
 }
 
@@ -99,12 +107,13 @@ export async function getTodayOpportunities(
     ecommerce_detected: boolean | null; registered_at: string | null;
     tls_reason: string | null; tls_valid_to: string | null;
     tech_year: number | null; dated_components: unknown; screenshot_path?: string | null;
+    site_score?: number | null; site_scores?: unknown; audited_at?: string | null;
   }>();
 
   for (let i = 0; i < domains.length; i += 100) {
     const { data: rows } = await db
       .from('domains')
-      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components, emails_found, screenshot_path')
+      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components, emails_found, screenshot_path, site_score, site_scores, audited_at')
       .in('domain', domains.slice(i, i + 100));
     for (const row of rows ?? []) facts.set(row.domain, row);
   }
@@ -174,6 +183,7 @@ export async function getTodayOpportunities(
         websiteUrl: company.website_url,
         screenshotUrl: screenshotUrl(process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '', site?.screenshot_path),
       },
+      audit: readAudit(site),
       explanation: withWrittenCard(row.id, writtenCards, explainOpportunity({
         opportunityType: opportunity.opportunity_type as OpportunityType,
         companyName: name,
@@ -232,5 +242,19 @@ function withWrittenCard(
     headline: card.headline,
     opener: card.opener,
     written: true,
+  };
+}
+
+/** L'audit tel qu'il est rangé sur le domaine, relu prudemment. */
+function readAudit(site: { site_score?: number | null; site_scores?: unknown; audited_at?: string | null } | null | undefined): TodayOpportunity['audit'] {
+  if (!site || typeof site.site_score !== 'number') return null;
+  const raw = site.site_scores as { scores?: Partial<SiteScores>; findings?: unknown } | null | undefined;
+  const scores = raw?.scores ?? {};
+  const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+  return {
+    score: site.site_score,
+    scores: { speed: num(scores.speed), mobile: num(scores.mobile), seo: num(scores.seo), trust: num(scores.trust) },
+    findings: Array.isArray(raw?.findings) ? raw.findings.filter((f): f is string => typeof f === 'string') : [],
+    measuredAt: site.audited_at ?? null,
   };
 }

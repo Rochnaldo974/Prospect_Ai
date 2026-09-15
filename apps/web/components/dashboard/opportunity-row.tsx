@@ -38,8 +38,11 @@ export function OpportunityRow({ opportunity }: { opportunity: DailyOpportunity 
       </span>
 
       <span className="flex shrink-0 flex-col items-end gap-1.5">
-        <span className="rounded-full bg-[var(--brand-wash)] px-2.5 py-1 text-xs font-medium text-[var(--brand)] sm:px-3 sm:py-1.5 sm:text-[13px]">
-          {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
+        <span className="flex items-center gap-1.5">
+          {opportunity.audit ? <SiteScore value={opportunity.audit.score} /> : null}
+          <span className="rounded-full bg-[var(--brand-wash)] px-2.5 py-1 text-xs font-medium text-[var(--brand)] sm:px-3 sm:py-1.5 sm:text-[13px]">
+            {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
+          </span>
         </span>
         <Remaining hoursLeft={opportunity.hoursLeft} />
       </span>
@@ -96,6 +99,24 @@ function Remaining({ hoursLeft }: { hoursLeft: number }) {
       title="Temps d’exclusivité restant sur cette entreprise"
     >
       {label}
+    </span>
+  );
+}
+
+/**
+ * La note du site, mesurée par le moteur : rouge sous 40, ambre sous 70.
+ * C'est l'état du site, pas la pertinence du dossier — les deux nombres
+ * disent des choses différentes et ne se confondent pas.
+ */
+function SiteScore({ value }: { value: number }) {
+  const color = value < 40 ? 'var(--finding)' : value < 70 ? 'var(--warning)' : 'var(--ink-2)';
+  return (
+    <span
+      className="tabular rounded-full border px-2 py-1 font-mono text-[11px] font-medium"
+      style={{ color, borderColor: `color-mix(in srgb, ${color} 40%, transparent)` }}
+      title="Note du site mesurée par le moteur : vitesse, mobile, bases SEO, confiance"
+    >
+      site {value}
     </span>
   );
 }

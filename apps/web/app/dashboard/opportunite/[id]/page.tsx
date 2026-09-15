@@ -6,6 +6,7 @@ import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { toggleSnooze } from '@/app/dashboard/actions';
 import { OutcomeForm } from '@/components/outcome-form';
 import { SitePreview } from '@/components/dashboard/site-preview';
+import type { DailyOpportunity } from '@/lib/opportunities/mine';
 
 export const metadata: Metadata = { title: 'Dossier' };
 
@@ -151,6 +152,8 @@ export default async function OpportunityPage({
         </div>
 
         <div className="space-y-6">
+          {opportunity.audit ? <SiteAudit audit={opportunity.audit} /> : null}
+
           {explanation.signals.length > 0 ? (
             <section>
               <h2 className="field-label">Ce qui le prouve</h2>
@@ -291,4 +294,58 @@ function formatPhone(phone: string): string {
   return /^0\d{9}$/.test(french)
     ? french.replace(/(\d{2})(?=\d)/g, '$1 ').trim()
     : phone;
+}
+
+/**
+ * La note du site, telle que le moteur l'a mesurée en vérifiant le dossier.
+ *
+ * Quatre barres et les constats chiffrés : c'est ce que le freelance peut
+ * dire au téléphone sans avoir ouvert le site, et ce que le commerçant peut
+ * vérifier lui-même. Aucun avis de goût n'entre ici.
+ */
+function SiteAudit({ audit }: { audit: NonNullable<DailyOpportunity['audit']> }) {
+  const tone = (v: number) => (v < 40 ? 'var(--finding)' : v < 70 ? 'var(--warning)' : 'var(--brand)');
+  const bars: Array<{ label: string; value: number }> = [
+    { label: 'Vitesse', value: audit.scores.speed },
+    { label: 'Téléphone', value: audit.scores.mobile },
+    { label: 'Bases SEO', value: audit.scores.seo },
+    { label: 'Confiance', value: audit.scores.trust },
+  ];
+  const measured = audit.measuredAt
+    ? new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(new Date(audit.measuredAt))
+    : null;
+
+  return (
+    <section className="rounded-2xl border bg-card px-5 py-4">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="field-label">Note du site</h2>
+        <span className="tabular font-mono text-2xl font-semibold" style={{ color: tone(audit.score) }}>
+          {audit.score}<span className="text-sm text-muted-foreground">/100</span>
+        </span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {bars.map((bar) => (
+          <li key={bar.label} className="flex items-center gap-3 text-xs">
+            <span className="w-20 shrink-0 text-muted-foreground">{bar.label}</span>
+            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--mist)]">
+              <span className="block h-full rounded-full" style={{ width: `${bar.value}%`, backgroundColor: tone(bar.value) }} />
+            </span>
+            <span className="tabular w-7 text-right font-mono">{bar.value}</span>
+          </li>
+        ))}
+      </ul>
+      {audit.findings.length > 0 ? (
+        <ul className="mt-3 space-y-1.5 border-t pt-3">
+          {audit.findings.slice(0, 5).map((finding) => (
+            <li key={finding} className="text-sm leading-snug">{finding}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 border-t pt-3 text-sm text-muted-foreground">Aucun défaut mesurable : le site tient la route techniquement.</p>
+      )}
+      {measured ? (
+        <p className="mt-2 text-[11px] text-muted-foreground">Mesuré par le moteur le {measured}, en ouvrant le site comme un visiteur.</p>
+      ) : null}
+    </section>
+  );
 }

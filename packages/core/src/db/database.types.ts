@@ -801,6 +801,7 @@ export type Database = {
       }
       domains: {
         Row: {
+          audited_at: string | null
           booking_detected: boolean
           check_attempts: number
           check_error: string | null
@@ -835,6 +836,8 @@ export type Database = {
           screenshot_at: string | null
           screenshot_path: string | null
           sirens_found: string[]
+          site_score: number | null
+          site_scores: Json | null
           status: Database["public"]["Enums"]["domain_status"]
           tech_hash: string | null
           tech_year: number | null
@@ -848,6 +851,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audited_at?: string | null
           booking_detected?: boolean
           check_attempts?: number
           check_error?: string | null
@@ -882,6 +886,8 @@ export type Database = {
           screenshot_at?: string | null
           screenshot_path?: string | null
           sirens_found?: string[]
+          site_score?: number | null
+          site_scores?: Json | null
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
           tech_year?: number | null
@@ -895,6 +901,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audited_at?: string | null
           booking_detected?: boolean
           check_attempts?: number
           check_error?: string | null
@@ -929,6 +936,8 @@ export type Database = {
           screenshot_at?: string | null
           screenshot_path?: string | null
           sirens_found?: string[]
+          site_score?: number | null
+          site_scores?: Json | null
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
           tech_year?: number | null
