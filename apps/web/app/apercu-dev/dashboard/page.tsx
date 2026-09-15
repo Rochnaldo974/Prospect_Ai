@@ -158,6 +158,7 @@ function fixtures(): DailyOpportunity[] {
         address: null,
         contactFormUrl: null,
         websiteUrl: 'https://exemple.invalid',
+        screenshotUrl: null,
       },
       explanation: {
         why: 'Le site ne répond plus depuis au moins deux passages. Un client qui cherche les horaires ne trouve rien.',
@@ -183,6 +184,7 @@ function fixtures(): DailyOpportunity[] {
         address: null,
         contactFormUrl: null,
         websiteUrl: 'https://exemple.invalid',
+        screenshotUrl: null,
       },
       explanation: {
         why: 'Les composants de la page datent de 2009 : le site annonce son âge à chaque visite.',
@@ -208,6 +210,7 @@ function fixtures(): DailyOpportunity[] {
         address: null,
         contactFormUrl: 'https://exemple.invalid/contact',
         websiteUrl: null,
+        screenshotUrl: null,
       },
       explanation: {
         why: 'Créée en juin, toujours aucun site : une fiche annuaire et un numéro.',

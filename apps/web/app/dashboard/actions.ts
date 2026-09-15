@@ -1,9 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getServiceClient, markContacted, recordOptOut, recordOutcome, setSnoozed } from '@prospect/core';
+import {
+  getServiceClient, logger, markContacted, recordOptOut, recordOutcome, setSnoozed,
+  simulateNextDelivery,
+} from '@prospect/core';
 import type { DeclarableOutcome } from '@prospect/core';
-import { requireUser } from '@/lib/auth/session';
+import { requireAdmin, requireUser } from '@/lib/auth/session';
 
 /**
  * Ce que le freelance déclare après son appel.
@@ -84,4 +87,25 @@ export async function toggleSnooze(formData: FormData): Promise<void> {
   revalidatePath('/dashboard');
   revalidatePath('/dashboard/plus-tard');
   revalidatePath(`/dashboard/opportunite/${assignmentId}`);
+}
+
+/**
+ * Avancer son propre compte d'un jour et recevoir la livraison suivante.
+ *
+ * Un outil d'administration, pas une fonction du produit : il n'existe que
+ * pour voir ce que donne « demain » sans attendre demain. Le rôle est
+ * vérifié contre la base avant que le client de service soit créé, et la
+ * simulation ne porte que sur le compte de l'appelant — un admin ne fait
+ * pas avancer la journée de quelqu'un d'autre.
+ */
+export async function simulateMyNextDelivery(): Promise<void> {
+  const profile = await requireAdmin();
+  await simulateNextDelivery(getServiceClient(), profile.id, { logger });
+
+  for (const path of [
+    '/dashboard', '/dashboard/plus-tard', '/dashboard/suivi',
+    '/dashboard/historique', '/dashboard/statistiques',
+  ]) {
+    revalidatePath(path);
+  }
 }

@@ -39,6 +39,11 @@ console.log(`  ${tenders.eventsCreated} avis retenus · ${tenders.companiesCreat
 
 if (withScan) {
   step(2, 'Enrichissement depuis le répertoire');
+  const geo = await c.fillPostalCodesFromCoordinates(db, { limit: 600 });
+  console.log(`  ${geo.filled} codes postaux complétés depuis les coordonnées`);
+  const identity = await c.resolveIdentityByName(db, { limit: 600 });
+  console.log(`  ${identity.matched} SIREN rapprochés par le nom`
+    + ` · ${identity.ambiguous} ambigus · ${identity.notFound} introuvables`);
   let enriched = 0;
   for (let i = 0; i < 4; i += 1) {
     const r = await c.enrichFromSirene(db, { limit: 300 });
@@ -76,5 +81,8 @@ if (allocation.errors > 0 || allocation.rejectedByGuards > 0) {
 if (allocation.usersAlreadyServed > 0) {
   console.log(`  ${allocation.usersAlreadyServed} déjà servi(s) aujourd'hui — l'attribution ne double pas les lots`);
 }
+
+const cards = await c.writeCards(db, { logger: c.logger });
+console.log(`  ${cards.written} fiche(s) rédigée(s)` + (cards.written === 0 && cards.errors === 0 ? ' (rédaction sautée sans clé Claude)' : ''));
 
 console.log('\n  → http://127.0.0.1:3000/dashboard');

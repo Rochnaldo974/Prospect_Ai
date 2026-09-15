@@ -14,6 +14,7 @@ import { detectSignalsHandler, enrichSireneHandler } from './handlers/signals';
 import { generateOpportunitiesHandler } from './handlers/opportunities';
 import { ingestTendersHandler } from './handlers/tenders';
 import { allocateDailyHandler } from './handlers/allocation';
+import { writeCardsHandler } from './handlers/writing';
 import { planScanningHandler } from './handlers/planning';
 
 const HANDLERS: JobHandler<never>[] = [
@@ -35,6 +36,7 @@ const HANDLERS: JobHandler<never>[] = [
   ingestTendersHandler,
   generateOpportunitiesHandler,
   allocateDailyHandler,
+  writeCardsHandler,
   planScanningHandler,
 ] as JobHandler<never>[];
 

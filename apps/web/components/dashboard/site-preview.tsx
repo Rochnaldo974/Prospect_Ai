@@ -18,7 +18,7 @@ import { useState } from 'react';
  * opaque (sandbox="") rendait un cadre blanc, constaté au banc : Chrome
  * refuse d'y peindre nos pages.
  */
-export function SitePreview({ url }: { url: string }) {
+export function SitePreview({ url, screenshotUrl }: { url: string; screenshotUrl?: string | null }) {
   const [loaded, setLoaded] = useState(false);
 
   return (
@@ -43,11 +43,19 @@ export function SitePreview({ url }: { url: string }) {
       </figcaption>
 
       <div className="relative aspect-[16/9] bg-[var(--mist)]">
-        {!loaded ? (
+        {/* La capture prise par le moteur à la vérification du dossier :
+            c'est le site tel qu'un visiteur le voit, et c'est datée. L'iframe
+            ne reste qu'en secours, quand aucune capture n'existe. */}
+        {screenshotUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- image distante, taille inconnue
+          <img src={screenshotUrl} alt="Capture d’écran du site du prospect" className="size-full object-cover object-top" />
+        ) : null}
+        {!screenshotUrl && !loaded ? (
           <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-muted-foreground">
             Chargement de l’aperçu…
           </p>
         ) : null}
+        {screenshotUrl ? null : (
         <iframe
           src={url}
           title="Aperçu du site du prospect"
@@ -57,9 +65,11 @@ export function SitePreview({ url }: { url: string }) {
           onLoad={() => setLoaded(true)}
           className="relative size-full"
         />
+        )}
       </div>
 
       <p className="border-t px-5 py-2.5 text-xs text-muted-foreground">
+        {screenshotUrl ? 'Capture prise par le moteur au moment de la vérification du dossier. ' : ''}
         Aperçu vide ? Le site bloque l’intégration, ou ne répond pas — c’est parfois le constat
         lui-même. Ouvrez-le dans un onglet pour vérifier.
       </p>

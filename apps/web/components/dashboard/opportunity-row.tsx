@@ -33,7 +33,7 @@ export function OpportunityRow({ opportunity }: { opportunity: DailyOpportunity 
         </span>
         {/* Le premier constat suffit à décider : les autres attendent le dossier. */}
         <span className="mt-1 block truncate text-[15px] leading-snug text-muted-foreground">
-          {explanation.signals[0] ?? explanation.why}
+          {explanation.headline ?? explanation.signals[0] ?? explanation.why}
         </span>
       </span>
 

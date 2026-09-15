@@ -26,7 +26,10 @@
     "lint": "echo 'lint: core (via typecheck)'"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "@sparticuz/chromium": "^153.0.0",
     "@supabase/supabase-js": "^2.112.4",
+    "puppeteer-core": "^25.11.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

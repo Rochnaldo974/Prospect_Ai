@@ -21,7 +21,7 @@ if (existsSync(envPath)) {
   }
 }
 
-const { runAllocation, getServiceClient, logger } = await import('@prospect/core');
+const { runAllocation, writeCards, getServiceClient, logger } = await import('@prospect/core');
 const userId = process.argv[2];
 const report = await runAllocation(getServiceClient(), {
   logger,
@@ -36,3 +36,6 @@ console.log(`  dont groupe contrôle    ${report.controlsPlaced}`);
 console.log(`  servis sous le plafond  ${report.usersUnderserved}`);
 console.log(`  refusées par les gardes ${report.rejectedByGuards}`);
 console.log(`  erreurs                 ${report.errors}`);
+
+const cards = await writeCards(getServiceClient(), { logger, ...(userId ? { userId } : {}) });
+console.log(`  fiches rédigées         ${cards.written} (déjà rédigées ${cards.alreadyWritten}, erreurs ${cards.errors})`);

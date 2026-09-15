@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { getMyOpportunities } from '@/lib/opportunities/mine';
 import { OpportunityRow } from '@/components/dashboard/opportunity-row';
 import { EmptyDay } from '@/components/empty-day';
+import { SimulateButton } from '@/components/dashboard/simulate-button';
+import { simulateMyNextDelivery } from './actions';
 
 export const metadata: Metadata = { title: 'Aujourd’hui' };
 
@@ -19,7 +21,7 @@ export const metadata: Metadata = { title: 'Aujourd’hui' };
  * porte vers la page où on agit dessus — jamais des chiffres de décor.
  */
 export default async function DashboardPage() {
-  const { firstName, opportunities, diagnosis, followUpCount, plan, stats } =
+  const { firstName, role, opportunities, diagnosis, followUpCount, plan, stats } =
     await getMyOpportunities();
 
   // Les dossiers mis de côté vivent sous « Plus tard » : les laisser ici
@@ -56,7 +58,16 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {total > 0 ? <Progress done={done} total={total} /> : null}
+        <div className="flex flex-wrap items-center gap-4">
+          {total > 0 ? <Progress done={done} total={total} /> : null}
+          {/* L'outil de simulation n'existe que pour l'administrateur : le
+              freelance vit au rythme réel, un matin par jour. */}
+          {role === 'admin' ? (
+            <form action={simulateMyNextDelivery}>
+              <SimulateButton plan={plan} />
+            </form>
+          ) : null}
+        </div>
       </header>
 
       <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">

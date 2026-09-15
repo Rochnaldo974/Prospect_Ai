@@ -5,6 +5,7 @@ import {
   isEligible, matchScore,
   type OpportunityCandidate, type MatchingPreferences,
 } from './fit';
+import { defaultVerifier, type OpportunityVerifier } from './verify';
 
 /**
  * Attribution quotidienne.
@@ -38,6 +39,8 @@ export interface AllocationReport {
   usersUnderserved: number;
   /** Refusées à l'écriture par les garde-fous de la base. */
   rejectedByGuards: number;
+  /** Écartées à la vérification avant livraison : le site ne montre plus le défaut. */
+  rejectedByVerification: number;
   errors: number;
 }
 
@@ -49,6 +52,12 @@ export interface AllocationOptions {
   /** Tirage du groupe contrôle, injectable pour rendre les tests déterministes. */
   random?: () => number;
   algorithmVersion?: string;
+  /**
+   * Vérification avant livraison. Par défaut, chaque dossier choisi est
+   * revisité et recalculé à l'instant ; `false` la désactive (tests,
+   * mesures), une fonction la remplace.
+   */
+  verify?: OpportunityVerifier | false;
 }
 
 interface CandidateRow extends OpportunityCandidate {
@@ -66,12 +75,18 @@ export async function runAllocation(
   const report: AllocationReport = {
     usersExamined: 0, usersServed: 0, usersAlreadyServed: 0,
     assignmentsCreated: 0, controlsPlaced: 0, usersUnderserved: 0,
-    rejectedByGuards: 0, errors: 0,
+    rejectedByGuards: 0, rejectedByVerification: 0, errors: 0,
   };
 
   const log = options.logger;
   const random = options.random ?? Math.random;
   const version = options.algorithmVersion ?? 'v0';
+  const verify: OpportunityVerifier | null = options.verify === false
+    ? null
+    : options.verify ?? defaultVerifier(db, { ...(log ? { logger: log } : {}) });
+  // Un dossier vérifié une fois dans la passe l'est pour tout le monde : le
+  // site ne change pas entre deux abonnés servis à quelques secondes d'écart.
+  const verdicts = new Map<string, boolean>();
 
   let profileQuery = db
     .from('profiles')
@@ -111,7 +126,7 @@ export async function runAllocation(
     try {
         const served = await allocateFor(
         db, profile, candidates.filter((c) => !taken.has(c.companyId)),
-        taken, report, random, version, log,
+        taken, report, random, version, log, verify, verdicts,
       );
       if (served === null) report.usersAlreadyServed += 1;
     } catch (cause: unknown) {
@@ -188,7 +203,9 @@ async function allocateFor(
   report: AllocationReport,
   random: () => number,
   version: string,
-  log?: Logger,
+  log: Logger | undefined,
+  verify: OpportunityVerifier | null,
+  verdicts: Map<string, boolean>,
 ): Promise<number | null> {
   const today = new Date();
   const dayStart = new Date(Date.UTC(
@@ -245,19 +262,56 @@ async function allocateFor(
     .map((c) => ({ candidate: c, score: matchScore(c, preferences) }))
     .sort((a, b) => b.score - a.score);
 
-  const chosen = ranked.slice(0, limit);
+  // Chaque dossier est vérifié avant d'être retenu : on descend le
+  // classement jusqu'à en avoir assez qui tiennent. Un dossier écarté ici
+  // n'est pas perdu pour le produit — le moteur l'a retiré du stock, et il
+  // reviendra si les faits reviennent.
+  const holds = async (entry: { candidate: CandidateRow; score: number }): Promise<boolean> => {
+    if (verify === null) return true;
+    const cached = verdicts.get(entry.candidate.opportunityId);
+    if (cached !== undefined) return cached;
+    let verdict = false;
+    try {
+      verdict = await verify({
+        companyId: entry.candidate.companyId,
+        opportunityId: entry.candidate.opportunityId,
+      });
+    } catch (cause: unknown) {
+      // Une vérification qui échoue n'est pas une vérification réussie.
+      log?.warn('Vérification avant livraison en échec', {
+        company_id: entry.candidate.companyId,
+        error: cause instanceof Error ? cause.message : String(cause),
+      });
+    }
+    verdicts.set(entry.candidate.opportunityId, verdict);
+    if (!verdict) report.rejectedByVerification += 1;
+    return verdict;
+  };
+
+  const chosen: { candidate: CandidateRow; score: number }[] = [];
+  let cursor = 0;
+  while (chosen.length < limit && cursor < ranked.length) {
+    const entry = ranked[cursor]!;
+    cursor += 1;
+    if (await holds(entry)) chosen.push(entry);
+  }
 
   // Le tirage de contrôle remplace une place, il n'en ajoute pas : le
   // freelance reçoit toujours le même nombre d'opportunités, dont une qui ne
   // doit rien au moteur. La remplacée est la dernière du classement — celle
-  // dont on perd le moins en la sacrifiant.
+  // dont on perd le moins en la sacrifiant. Le dossier tiré est vérifié
+  // comme les autres : le hasard ne dispense pas de la vérité.
   let controlIndex: number | null = null;
   if (chosen.length === limit && limit >= CONTROL_RATE) {
-    const pool = ranked.slice(limit);
-    if (pool.length > 0) {
-      const drawn = pool[Math.floor(random() * pool.length)]!;
-      controlIndex = chosen.length - 1;
-      chosen[controlIndex] = drawn;
+    const pool = ranked.slice(cursor);
+    for (let attempt = 0; attempt < 3 && pool.length > 0; attempt += 1) {
+      const at = Math.floor(random() * pool.length);
+      const drawn = pool.splice(at, 1)[0]!;
+      if (await holds(drawn)) {
+        controlIndex = chosen.length - 1;
+        chosen[controlIndex] = drawn;
+        break;
+      }
     }
   }
 

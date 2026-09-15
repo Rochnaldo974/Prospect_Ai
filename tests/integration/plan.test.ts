@@ -53,7 +53,7 @@ describe.skipIf(!reachable)('plan gratuit', () => {
 
   it('sert UN dossier, pas cinq, même avec du stock', async () => {
     await stock(6);
-    await runAllocation(admin, { userId });
+    await runAllocation(admin, { userId, verify: false });
 
     const { count } = await admin.from('assignments')
       .select('id', { count: 'exact', head: true }).eq('user_id', userId);
@@ -62,13 +62,13 @@ describe.skipIf(!reachable)('plan gratuit', () => {
 
   it('ne ressert pas pendant la semaine, ressert après', async () => {
     await stock(3);
-    await runAllocation(admin, { userId });
+    await runAllocation(admin, { userId, verify: false });
 
     // Trois jours plus tard : rien. La semaine n'est pas finie.
     await admin.from('assignments')
       .update({ assigned_at: new Date(Date.now() - 3 * 86_400_000).toISOString() })
       .eq('user_id', userId);
-    await runAllocation(admin, { userId });
+    await runAllocation(admin, { userId, verify: false });
     const { count: midWeek } = await admin.from('assignments')
       .select('id', { count: 'exact', head: true }).eq('user_id', userId);
     expect(midWeek).toBe(1);
@@ -80,7 +80,7 @@ describe.skipIf(!reachable)('plan gratuit', () => {
       .update({ assigned_at: new Date(Date.now() - 8 * 86_400_000).toISOString() })
       .eq('user_id', userId);
     await admin.from('daily_batches').delete().eq('user_id', userId);
-    await runAllocation(admin, { userId });
+    await runAllocation(admin, { userId, verify: false });
     const { count: nextWeek } = await admin.from('assignments')
       .select('id', { count: 'exact', head: true }).eq('user_id', userId);
     expect(nextWeek).toBe(2);
@@ -88,7 +88,7 @@ describe.skipIf(!reachable)('plan gratuit', () => {
 
   it('un passage en premium rouvre la journée', async () => {
     await stock(6);
-    await runAllocation(admin, { userId });
+    await runAllocation(admin, { userId, verify: false });
 
     await admin.from('profiles').update({ plan: 'premium' }).eq('id', userId);
     // Hier en gratuit ; aujourd'hui premium : la fenêtre redevient le jour.
@@ -96,7 +96,7 @@ describe.skipIf(!reachable)('plan gratuit', () => {
       .update({ assigned_at: new Date(Date.now() - 86_400_000 - 3_600_000).toISOString() })
       .eq('user_id', userId);
     await admin.from('daily_batches').delete().eq('user_id', userId);
-    await runAllocation(admin, { userId });
+    await runAllocation(admin, { userId, verify: false });
 
     const { count } = await admin.from('assignments')
       .select('id', { count: 'exact', head: true }).eq('user_id', userId);
@@ -145,7 +145,7 @@ describe.skipIf(!reachable)('mémoire par freelance', () => {
     });
     await createOpportunity(admin, companyId);
 
-    await runAllocation(admin, { userId });
+    await runAllocation(admin, { userId, verify: false });
 
     const { count } = await admin.from('assignments')
       .select('id', { count: 'exact', head: true })

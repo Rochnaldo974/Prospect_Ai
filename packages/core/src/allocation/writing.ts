@@ -1,0 +1,200 @@
+import Anthropic from '@anthropic-ai/sdk';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
+import type { Db } from '../db/client';
+import type { Json } from '../db/database.types';
+import type { Logger } from '../logger';
+import { getTodayOpportunities, type TodayOpportunity } from './today';
+import { WrittenCardSchema, type WrittenCard } from './written-card';
+
+/**
+ * Rédaction des fiches par Claude.
+ *
+ * Le moteur produit un relevé exact — faits mesurés, datés, vérifiables —
+ * mais un relevé ne donne pas envie de décrocher. Retour du propriétaire
+ * sur les premières fiches réelles : ce qui fait cliquer, c'est un titre qui
+ * dit le défaut comme on le dirait au commerçant, et une première phrase
+ * prête à être prononcée au téléphone.
+ *
+ * Claude n'intervient qu'ici, sur les dossiers déjà attribués — jamais dans
+ * le scan ni dans le scoring (décision du 2026-09-14 : le coût par appel
+ * interdit tout usage en masse). Il ne peut rien inventer : il reçoit les
+ * faits que le moteur a constatés et rien d'autre, et la fiche est validée
+ * avant d'être enregistrée. La fiche rédigée est figée à côté de
+ * l'attribution : améliorer la formulation plus tard ne réécrit pas ce que
+ * le freelance a déjà lu.
+ *
+ * Sans clé d'API, la rédaction est simplement sautée : le relevé du moteur
+ * reste affiché, et c'est déjà juste.
+ */
+
+export const DEFAULT_WRITING_MODEL = 'claude-opus-5';
+
+export interface CardInput {
+  opportunity: TodayOpportunity;
+  /** Les services que le freelance propose, pour orienter l'angle. */
+  services: string[];
+}
+
+export type CardWriter = (input: CardInput) => Promise<WrittenCard>;
+
+const SYSTEM_PROMPT = `Tu rédiges, pour un freelance du web, la fiche d'un prospect détecté par un moteur d'analyse.
+
+Règles absolues :
+- Tu n'utilises QUE les faits fournis. Aucun chiffre, aucune date, aucun nom, aucun outil qui n'y figure pas.
+- Tu ne prêtes jamais d'intention à l'entreprise : elle n'a rien demandé. Tu dis ce qui a été constaté, pas ce qu'elle veut.
+- Tu n'inventes pas d'urgence. Si aucun fait daté n'est fourni, "whyNow" est une chaîne vide.
+- Tu écris en français, au vouvoiement, sans jargon, sans superlatif, sans promesse de résultat.
+- Le titre nomme le défaut ou l'occasion comme on le dirait au commerçant, en une ligne.
+- L'accroche téléphonique est une phrase qu'on peut dire telle quelle : elle se présente, cite le fait le plus visible, et pose une question courte. Jamais "je me permets de vous contacter".
+- Le constat cite les faits avec leurs valeurs (année, secondes, technologie) plutôt que des adjectifs.
+- L'angle propose une action concrète et proportionnée, cohérente avec les services du freelance.`;
+
+function factsForPrompt(input: CardInput): string {
+  const o = input.opportunity;
+  const e = o.explanation;
+  const lines: string[] = [
+    `Entreprise : ${o.company.name}`,
+    `Ville : ${o.company.city ?? 'inconnue'}`,
+    `Activité : ${o.company.industry ?? 'inconnue'}`,
+    `Type d'opportunité : ${o.type}`,
+    `Téléphone connu : ${o.company.phone ? 'oui' : 'non'}`,
+    `Site web : ${o.company.websiteUrl ?? 'aucun'}`,
+    `Formulaire de contact : ${o.company.contactFormUrl ?? 'aucun'}`,
+    `Services du freelance : ${input.services.length > 0 ? input.services.join(', ') : 'non précisés'}`,
+    '',
+    'Faits constatés par le moteur (la seule source autorisée) :',
+    ...e.signals.map((s) => `- ${s}`),
+    '',
+    `Relevé du moteur, pourquoi : ${e.why}`,
+    `Relevé du moteur, pourquoi maintenant : ${e.whyNow || '(aucun fait daté)'}`,
+    `Relevé du moteur, angle : ${e.angle}`,
+  ];
+  if (e.caveats.length > 0) {
+    lines.push('', 'Réserves à respecter :', ...e.caveats.map((c) => `- ${c}`));
+  }
+  return lines.join('\n');
+}
+
+/** Le rédacteur par défaut : Claude, via l'API Claude, en sortie structurée validée. */
+export function createClaudeWriter(options: { model?: string; client?: Anthropic } = {}): CardWriter {
+  const client = options.client ?? new Anthropic();
+  const model = options.model ?? DEFAULT_WRITING_MODEL;
+
+  return async (input) => {
+    const response = await client.messages.parse({
+      model,
+      max_tokens: 4000,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: factsForPrompt(input) }],
+      output_config: { format: zodOutputFormat(WrittenCardSchema) },
+    });
+
+    if (response.stop_reason === 'refusal') {
+      throw new Error('Rédaction refusée par le modèle');
+    }
+    const parsed = response.parsed_output;
+    if (!parsed) throw new Error('Rédaction illisible : sortie non conforme au schéma');
+    return WrittenCardSchema.parse(parsed);
+  };
+}
+
+export interface WritingReport {
+  usersExamined: number;
+  written: number;
+  alreadyWritten: number;
+  skipped: number;
+  errors: number;
+}
+
+export interface WritingOptions {
+  userId?: string;
+  writer?: CardWriter;
+  logger?: Logger;
+  signal?: AbortSignal;
+  /** Plafond de fiches rédigées par passe : c'est un coût, il se borne. */
+  limit?: number;
+}
+
+/** Une clé d'API présente rend la rédaction possible ; son absence la saute proprement. */
+export function writingAvailable(): boolean {
+  return Boolean(process.env['ANTHROPIC_API_KEY'] || process.env['ANTHROPIC_AUTH_TOKEN']);
+}
+
+/**
+ * Rédige les fiches des dossiers vivants qui n'en ont pas encore.
+ *
+ * Passe après l'attribution, sur les attributions actives de chaque
+ * utilisateur (ou d'un seul). Une fiche déjà rédigée n'est jamais réécrite.
+ */
+export async function writeCards(db: Db, options: WritingOptions = {}): Promise<WritingReport> {
+  const report: WritingReport = { usersExamined: 0, written: 0, alreadyWritten: 0, skipped: 0, errors: 0 };
+  const log = options.logger;
+  const limit = options.limit ?? 50;
+
+  if (!options.writer && !writingAvailable()) {
+    log?.info('Rédaction sautée : aucune clé d’API Claude configurée');
+    return report;
+  }
+  const writer = options.writer ?? createClaudeWriter();
+
+  let userQuery = db.from('assignments').select('user_id').in('status', ['active']);
+  if (options.userId) userQuery = userQuery.eq('user_id', options.userId);
+  const { data: rows, error } = await userQuery;
+  if (error) throw new Error(`writeCards : ${error.message}`);
+  const userIds = [...new Set((rows ?? []).map((r) => r.user_id))];
+
+  for (const userId of userIds) {
+    if (options.signal?.aborted || report.written >= limit) break;
+    report.usersExamined += 1;
+
+    const [opportunities, preferences, existing] = await Promise.all([
+      getTodayOpportunities(db, userId),
+      db.from('user_preferences').select('services').eq('user_id', userId).maybeSingle(),
+      db.from('assignment_cards').select('assignment_id, card').eq('user_id', userId),
+    ]);
+    const services = ((preferences.data?.services ?? []) as string[]);
+    const written = new Set(
+      (existing.data ?? [])
+        .filter((c) => (c.card as { written?: unknown } | null)?.written)
+        .map((c) => c.assignment_id),
+    );
+
+    for (const opportunity of opportunities) {
+      if (options.signal?.aborted || report.written >= limit) break;
+      if (written.has(opportunity.assignmentId)) { report.alreadyWritten += 1; continue; }
+      // Un dossier déjà appelé n'a plus besoin d'accroche.
+      if (opportunity.contactedAt !== null) { report.skipped += 1; continue; }
+
+      try {
+        const card = await writer({ opportunity, services });
+        const { error: upsertError } = await db.from('assignment_cards').upsert({
+          assignment_id: opportunity.assignmentId,
+          user_id: userId,
+          card: {
+            written: card,
+            written_at: new Date().toISOString(),
+            model: DEFAULT_WRITING_MODEL,
+            // Les faits fournis, figés avec la fiche : ce qui a été dit
+            // reste vérifiable même si le relevé change ensuite.
+            facts: opportunity.explanation.signals,
+          } as unknown as Json,
+        }, { onConflict: 'assignment_id' });
+        if (upsertError) throw new Error(upsertError.message);
+        report.written += 1;
+      } catch (cause: unknown) {
+        report.errors += 1;
+        log?.warn('Fiche non rédigée', {
+          assignment_id: opportunity.assignmentId,
+          error: cause instanceof Error ? cause.message : String(cause),
+        });
+      }
+    }
+  }
+
+  log?.info('Rédaction des fiches terminée', {
+    users: report.usersExamined, written: report.written,
+    already_written: report.alreadyWritten, errors: report.errors,
+  });
+  return report;
+}
+

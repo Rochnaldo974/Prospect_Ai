@@ -58,7 +58,7 @@ export async function presentOpportunities(
     .from('opportunities')
     // Littéral d'un seul tenant : la forme du résultat est déduite de ce
     // texte, et une concaténation la rendrait indéchiffrable au compilateur.
-    .select('id, company_id, opportunity_type, base_score, confidence_score, reason_data, companies!inner(id, legal_name, commercial_name, city, industry_label, phone, contact_form_url, domain, creation_date, employee_min)')
+    .select('id, company_id, opportunity_type, base_score, confidence_score, reason_data, companies!inner(id, legal_name, commercial_name, city, industry_label, phone, contact_form_url, social_links, domain, creation_date, employee_min)')
     .order('base_score', { ascending: false })
     .limit(options.limit ?? 20);
 
@@ -161,6 +161,7 @@ export async function presentOpportunities(
           employeeMin: company.employee_min,
           ecommerceDetected: site?.ecommerce_detected ?? null,
           phone: company.phone,
+          socialLinks: (company as { social_links?: Record<string, string> | null }).social_links ?? null,
           domainRegisteredAt: site?.registered_at ?? null,
           websiteStatus: site?.status ?? null,
           tlsReason: site?.tls_reason ?? null,

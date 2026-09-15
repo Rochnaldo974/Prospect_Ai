@@ -53,6 +53,8 @@ export interface ExplanationInput {
     phone?: string | null;
     domainRegisteredAt?: string | null;
     websiteStatus?: string | null;
+    /** Réseaux sociaux connus, {réseau: url}. */
+    socialLinks?: Record<string, string> | null;
   };
   confidenceScore: number;
 }
@@ -68,6 +70,12 @@ export interface Explanation {
   signals: string[];
   /** Ce qu'on ne sait pas, dit explicitement. */
   caveats: string[];
+  /** Titre rédigé, quand une fiche a été écrite pour ce dossier. */
+  headline?: string;
+  /** Première phrase à prononcer au téléphone, quand une fiche a été écrite. */
+  opener?: string;
+  /** Vrai quand pourquoi, pourquoi maintenant et angle viennent de la fiche rédigée. */
+  written?: boolean;
 }
 
 /**
@@ -133,6 +141,15 @@ function agePhrase(days: number): string {
  */
 function describeSignal(signal: string, facts: ExplanationInput['facts']): string | null {
   switch (signal) {
+    case 'social_without_website': {
+      const names: Record<string, string> = {
+        instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', linkedin: 'LinkedIn',
+      };
+      const networks = Object.keys(facts.socialLinks ?? {}).map((n) => names[n] ?? n);
+      return networks.length > 0
+        ? `Présente sur ${networks.join(' et ')}, sans aucun site web à elle`
+        : 'Présente sur les réseaux sociaux, sans aucun site web à elle';
+    }
     case 'no_website_proven':
       return "Aucun site web trouvé, alors que l'entreprise est joignable et référencée";
     case 'website_placeholder':
@@ -149,10 +166,13 @@ function describeSignal(signal: string, facts: ExplanationInput['facts']): strin
       return facts.cms
         ? `Site construit sous ${facts.cms}, une solution de mise en ligne rapide`
         : 'Site construit sur une solution de mise en ligne rapide';
-    case 'stale_content':
-      return facts.copyrightYear
-        ? `Mention de copyright figée à ${facts.copyrightYear}`
-        : 'Contenu du site apparemment figé depuis plusieurs années';
+    case 'stale_content': {
+      if (!facts.copyrightYear) return 'Contenu du site apparemment figé depuis plusieurs années';
+      const age = new Date().getFullYear() - facts.copyrightYear;
+      return age >= 2
+        ? `Site figé à ${facts.copyrightYear} d'après sa mention de copyright — ${age} ans sans mise à jour visible`
+        : `Mention de copyright figée à ${facts.copyrightYear}`;
+    }
     case 'slow_website':
       return facts.ttfbMs
         ? `Temps de réponse du serveur mesuré à ${fr(facts.ttfbMs / 1000)} s`
@@ -198,14 +218,15 @@ function describeSignal(signal: string, facts: ExplanationInput['facts']): strin
           : null;
       }
       return `Site bâti sur ${parts.join(', ')}`
-        + `${facts.techYear ? ` — rien de plus récent que ${facts.techYear}` : ''}`;
+        + `${facts.techYear ? ` — des technologies de ${facts.techYear}, rien de plus récent` : ''}`;
     }
     case 'not_responsive':
       return 'Le site ne s’adapte pas aux écrans de téléphone — vérifiable en l’ouvrant sur mobile';
     case 'aged_domain':
-      return facts.domainAgeYears
-        ? `Nom de domaine déposé il y a ${facts.domainAgeYears} ans`
-        : null;
+      // Un domaine ancien n'est pas un défaut, et « déposé il y a 9 ans »
+      // ne donne envie à personne d'appeler. Le fait reste un a priori
+      // interne du scoring ; il ne se dit pas au freelance.
+      return null;
     case 'frozen_site_woke_up':
       return null; // porté par « pourquoi maintenant »
     case 'invalid_certificate':
@@ -244,12 +265,15 @@ const RELEVANCE: Record<OpportunityType, string> = {
 };
 
 const ANGLES: Record<OpportunityType, (facts: ExplanationInput['facts'], signals: string[]) => string> = {
-  website_creation: (facts) =>
+  website_creation: (facts, signals) =>
     facts.domain
       ? `Le domaine ${facts.domain} est déjà réservé : le projet est engagé mais pas abouti. `
         + `Proposer de le concrétiser rapidement, avec une première version en ligne sous quelques semaines.`
-      : `Appeler en partant de ce que ses clients trouvent aujourd'hui en cherchant l'entreprise. `
-        + `Proposer une première version simple plutôt qu'un projet complet.`,
+      : signals.includes('social_without_website')
+        ? `Partir de sa page sociale, qui vit déjà : proposer la vitrine qui la prolonge — `
+          + `horaires, carte, prise de contact — plutôt qu'un projet complet. Le lien est dans la fiche.`
+        : `Appeler en partant de ce que ses clients trouvent aujourd'hui en cherchant l'entreprise. `
+          + `Proposer une première version simple plutôt qu'un projet complet.`,
 
   website_redesign: (facts, signals) => {
     const levers: string[] = [];
@@ -392,8 +416,100 @@ function buildWhyNow(input: ExplanationInput): string {
  * Le ton est celui d'un constat, jamais d'une certitude sur l'intention du
  * prospect. On dit ce qu'on a vu ; c'est au freelance de juger.
  */
+/**
+ * Ce qui ouvre une fiche est ce qui donne envie d'appeler : un défaut que le
+ * freelance peut montrer en une capture d'écran. Le scoring pèse les faits
+ * par leur poids commercial ; la fiche les ordonne par ce qu'ils font voir.
+ * Un site illisible sur téléphone ou figé en 2011 vaut une conversation ;
+ * un formulaire absent, à peine une remarque.
+ */
+const SELLING_ORDER: string[] = [
+  'tender_published',
+  'social_without_website',
+  'website_broken', 'website_went_down',
+  'not_responsive', 'stale_content', 'outdated_stack', 'dated_platform',
+  'no_website_proven', 'website_placeholder',
+  'invalid_certificate', 'certificate_expired', 'no_ssl',
+  'slow_website', 'retail_without_ecommerce',
+  'company_recently_created', 'bodacc_creation', 'bodacc_immatriculation',
+  'domain_recently_registered', 'bodacc_cession', 'bodacc_modification',
+  'no_contact_form',
+];
+
+function sellingRank(signal: string): number {
+  const at = SELLING_ORDER.indexOf(signal);
+  return at === -1 ? SELLING_ORDER.length : at;
+}
+
+/**
+ * Le titre : le verdict, la preuve, la proposition — en une ligne.
+ *
+ * « Site trop vieux — figé en 2011, illisible sur téléphone : proposer une
+ * refonte moderne ». C'est la ligne qu'on lit avant d'ouvrir le dossier, et
+ * retour du propriétaire, c'est elle qui donne ou non envie de cliquer. Le
+ * relevé détaillé reste dessous, prudent et complet ; le titre, lui, parle
+ * comme on parlerait au commerçant. Il ne dit jamais ce que l'entreprise
+ * veut : il dit ce qu'on a vu et ce qu'on peut proposer.
+ */
+function buildHeadline(input: ExplanationInput, signals: string[]): string {
+  const f = input.facts;
+  const has = (k: string) => signals.includes(k);
+  const year = new Date().getFullYear();
+
+  if (input.opportunityType === 'tender_response') {
+    return f.tenderSubject ? `Appel d'offres publié : ${f.tenderSubject}` : 'Appel d’offres publié — dossier à examiner';
+  }
+
+  if (input.opportunityType === 'website_creation') {
+    if (has('social_without_website')) {
+      const names: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', linkedin: 'LinkedIn' };
+      const networks = Object.keys(f.socialLinks ?? {}).map((n) => names[n] ?? n);
+      const where = networks.length > 0 ? networks.join(' et ') : 'les réseaux';
+      return `Pas de site, mais une page ${where} active — proposer un site vitrine simple`;
+    }
+    if (has('website_placeholder')) return 'Domaine réservé, site jamais mis en ligne — proposer de le concrétiser';
+    if (f.creationDate) {
+      const when = formatDate(`${f.creationDate}T00:00:00Z`) ?? f.creationDate;
+      return `Entreprise créée le ${when}, sans site — proposer un premier site`;
+    }
+    return 'Entreprise joignable, sans site — proposer un premier site simple';
+  }
+
+  if (input.opportunityType === 'ecommerce') {
+    return 'Commerce de détail sans vente en ligne — proposer une boutique';
+  }
+
+  // Refonte et maintenance : le défaut le plus visible ouvre.
+  if (has('website_broken') || has('website_found_down') || has('website_went_down')) {
+    return f.httpStatus
+      ? `Site en panne (erreur ${f.httpStatus}) — proposer une remise en ligne rapide`
+      : 'Site en panne — proposer une remise en ligne rapide';
+  }
+  if (has('certificate_expired') || has('invalid_certificate')) {
+    return 'Avertissement de sécurité à chaque visite — proposer la remise en conformité du site';
+  }
+
+  const proofs: string[] = [];
+  if (has('stale_content') && f.copyrightYear) proofs.push(`figé en ${f.copyrightYear}`);
+  if (has('outdated_stack') && f.techYear) proofs.push(`technologies de ${f.techYear}`);
+  if (has('dated_platform') && f.cms) proofs.push(`fait sous ${f.cms}`);
+  if (has('not_responsive')) proofs.push('illisible sur téléphone');
+  if (has('slow_website') && f.ttfbMs) proofs.push(`${fr(f.ttfbMs / 1000)} s à répondre`);
+  if (has('no_ssl')) proofs.push('sans HTTPS');
+  const age = f.copyrightYear ? year - f.copyrightYear : f.techYear ? year - f.techYear : null;
+  const verdict = age !== null && age >= 5 ? 'Site trop vieux' : proofs.length > 0 ? 'Site à reprendre' : 'Site à moderniser';
+  const proposal = input.opportunityType === 'maintenance'
+    ? 'proposer une remise à niveau'
+    : 'proposer une refonte moderne';
+  return proofs.length > 0
+    ? `${verdict} — ${proofs.slice(0, 3).join(', ')} : ${proposal}`
+    : `${verdict} : ${proposal}`;
+}
+
 export function explainOpportunity(input: ExplanationInput): Explanation {
-  const signalKeys = input.needSignals.map((s) => s.signal);
+  const signalKeys = input.needSignals
+    .map((s) => s.signal)
+    .sort((a, b) => sellingRank(a) - sellingRank(b));
 
   const described = signalKeys
     .map((key) => describeSignal(key, input.facts))
@@ -465,5 +581,6 @@ export function explainOpportunity(input: ExplanationInput): Explanation {
     angle: ANGLES[input.opportunityType](input.facts, signalKeys),
     signals,
     caveats,
+    headline: buildHeadline(input, signalKeys),
   };
 }

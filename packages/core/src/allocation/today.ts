@@ -1,6 +1,8 @@
 import type { Db } from '../db/client';
 import type { OpportunityType } from '../domain/types';
 import { explainOpportunity, type Explanation } from '../opportunities/explain';
+import { loadWrittenCards } from './written-card';
+import { screenshotUrl } from '../enrichment/screenshot';
 
 /**
  * Les opportunités du jour d'un freelance, prêtes à l'affichage.
@@ -38,6 +40,8 @@ export interface TodayOpportunity {
     address: string | null;
     contactFormUrl: string | null;
     websiteUrl: string | null;
+    /** Capture du site prise par le moteur à la vérification du dossier, quand elle existe. */
+    screenshotUrl: string | null;
   };
   explanation: Explanation;
 }
@@ -76,7 +80,7 @@ export async function getTodayOpportunities(
 ): Promise<TodayOpportunity[]> {
   const { data, error } = await db
     .from('assignments')
-    .select('id, rank, match_score, exclusive_until, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, website_url, domain, creation_date, employee_min)')
+    .select('id, rank, match_score, exclusive_until, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, social_links, website_url, domain, creation_date, employee_min)')
     .eq('user_id', userId)
     .in('status', ['active', 'contacted'])
     .order('rank', { ascending: true });
@@ -94,19 +98,23 @@ export async function getTodayOpportunities(
     ttfb_ms: number | null; has_ssl: boolean | null; http_status: number | null;
     ecommerce_detected: boolean | null; registered_at: string | null;
     tls_reason: string | null; tls_valid_to: string | null;
-    tech_year: number | null; dated_components: unknown;
+    tech_year: number | null; dated_components: unknown; screenshot_path?: string | null;
   }>();
 
   for (let i = 0; i < domains.length; i += 100) {
     const { data: rows } = await db
       .from('domains')
-      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components, emails_found')
+      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components, emails_found, screenshot_path')
       .in('domain', domains.slice(i, i + 100));
     for (const row of rows ?? []) facts.set(row.domain, row);
   }
 
   // Le contenu d'un avis appartient à l'événement, qui reste la source de
   // vérité sur le fait lui-même.
+  // Les fiches rédigées, quand elles existent : elles remplacent le relevé
+  // dans ce que lit le freelance, jamais dans ce que le moteur a constaté.
+  const writtenCards = await loadWrittenCards(db, data.map((row) => row.id));
+
   const tenders = new Map<string, TenderPayload>();
   const tenderCompanies = data
     .filter((row) => ((row.opportunities as unknown as { reason_data: ReasonData | null })
@@ -164,8 +172,9 @@ export async function getTodayOpportunities(
         address: [company.address, company.postal_code, company.city].filter(Boolean).join(', ') || null,
         contactFormUrl: company.contact_form_url,
         websiteUrl: company.website_url,
+        screenshotUrl: screenshotUrl(process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '', site?.screenshot_path),
       },
-      explanation: explainOpportunity({
+      explanation: withWrittenCard(row.id, writtenCards, explainOpportunity({
         opportunityType: opportunity.opportunity_type as OpportunityType,
         companyName: name,
         city: company.city,
@@ -186,6 +195,7 @@ export async function getTodayOpportunities(
           employeeMin: company.employee_min,
           ecommerceDetected: site?.ecommerce_detected ?? null,
           phone: company.phone,
+          socialLinks: (company as { social_links?: Record<string, string> | null }).social_links ?? null,
           domainRegisteredAt: site?.registered_at ?? null,
           websiteStatus: site?.status ?? null,
           tlsReason: site?.tls_reason ?? null,
@@ -201,7 +211,26 @@ export async function getTodayOpportunities(
           tenderDeadline: tender?.deadline ?? null,
         },
         confidenceScore: Number(opportunity.confidence_score),
-      }),
+      })),
     };
   });
+}
+
+/** La fiche rédigée prend la place du relevé dans ce que lit le freelance ; les faits restent. */
+function withWrittenCard(
+  assignmentId: string,
+  cards: Awaited<ReturnType<typeof loadWrittenCards>>,
+  explanation: Explanation,
+): Explanation {
+  const card = cards.get(assignmentId);
+  if (!card) return explanation;
+  return {
+    ...explanation,
+    why: card.why,
+    whyNow: card.whyNow,
+    angle: card.angle,
+    headline: card.headline,
+    opener: card.opener,
+    written: true,
+  };
 }

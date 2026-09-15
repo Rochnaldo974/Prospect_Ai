@@ -206,3 +206,84 @@ describe('accords en français', () => {
     expect(e.whyNow).not.toMatch(/environ 1 mois/);
   });
 });
+
+describe('ce qui donne envie d’appeler', () => {
+  const refonte = (needSignals: ExplanationInput['needSignals'], facts: ExplanationInput['facts']) =>
+    explainOpportunity(input({
+      opportunityType: 'website_redesign', triggerType: null, triggerOccurredAt: null,
+      needSignals, facts,
+    }));
+
+  it('ne parle jamais de l’âge du nom de domaine', () => {
+    // « Déposé il y a 9 ans » n'est pas un défaut : c'est un a priori du
+    // scoring, et le dire au freelance affaiblit la fiche.
+    const e = refonte(
+      [{ signal: 'aged_domain', points: 12 }, { signal: 'no_contact_form', points: 7 }],
+      { domainAgeYears: 9 },
+    );
+    expect(e.why).not.toMatch(/il y a 9 ans/);
+    expect(e.signals.join(' ')).not.toMatch(/déposé il y a/);
+  });
+
+  it('ouvre par le défaut le plus visible, pas par le plus pesant', () => {
+    // Le formulaire absent pèse peu et se voit peu ; un site figé en 2011 se
+    // montre en une capture d'écran. C'est lui qui ouvre.
+    const e = refonte(
+      [
+        { signal: 'no_contact_form', points: 7.5 },
+        { signal: 'aged_domain', points: 12 },
+        { signal: 'stale_content', points: 24 },
+      ],
+      { copyrightYear: 2011 },
+    );
+    expect(e.why).toMatch(/^BOULANGERIE MOREAU.*Site figé à 2011/);
+    expect(e.why).toMatch(/ans sans mise à jour visible/);
+  });
+
+  it('dit l’époque des technologies, pas seulement leur nom', () => {
+    const e = refonte(
+      [{ signal: 'outdated_stack', points: 45 }, { signal: 'slow_website', points: 20 }],
+      { datedComponents: [{ name: 'jQuery', version: '1.7.2', year: 2012 }], techYear: 2012, ttfbMs: 2100 },
+    );
+    expect(e.why).toMatch(/jQuery 1\.7\.2 \(2012\)/);
+    expect(e.why).toMatch(/technologies de 2012/);
+  });
+});
+
+describe('présente sur les réseaux, sans site', () => {
+  it('nomme les réseaux et ouvre la fiche avec', () => {
+    const e = explainOpportunity(input({
+      opportunityType: 'website_creation', triggerType: null, triggerOccurredAt: null,
+      needSignals: [{ signal: 'active_business', points: 10 }, { signal: 'social_without_website', points: 60 }],
+      facts: { socialLinks: { instagram: 'https://www.instagram.com/moreau', facebook: 'https://www.facebook.com/moreau' }, phone: '+33241222479' },
+    }));
+    expect(e.why).toMatch(/^BOULANGERIE MOREAU.*Présente sur Instagram et Facebook, sans aucun site web/);
+    expect(e.angle).toMatch(/page sociale/);
+  });
+});
+
+describe('le titre', () => {
+  it('dit le verdict, la preuve et la proposition en une ligne', () => {
+    const e = explainOpportunity(input({
+      opportunityType: 'website_redesign', triggerType: null, triggerOccurredAt: null,
+      needSignals: [{ signal: 'stale_content', points: 24 }, { signal: 'not_responsive', points: 50 }],
+      facts: { copyrightYear: 2015 },
+    }));
+    expect(e.headline).toBe('Site trop vieux — figé en 2015, illisible sur téléphone : proposer une refonte moderne');
+  });
+
+  it('nomme la page sociale quand c’est elle qui porte la création', () => {
+    const e = explainOpportunity(input({
+      opportunityType: 'website_creation', triggerType: null, triggerOccurredAt: null,
+      needSignals: [{ signal: 'social_without_website', points: 60 }, { signal: 'active_business', points: 10 }],
+      facts: { socialLinks: { instagram: 'x' } },
+    }));
+    expect(e.headline).toBe('Pas de site, mais une page Instagram active — proposer un site vitrine simple');
+  });
+
+  it('ne prête aucune intention, même dans le titre', () => {
+    const e = explainOpportunity(input({ facts: { creationDate: '2026-08-09' } }));
+    expect(e.headline).toMatch(/^Entreprise créée le 9 août 2026, sans site — proposer un premier site$/);
+    expect(e.headline).not.toMatch(/cherche|a besoin|veut/);
+  });
+});

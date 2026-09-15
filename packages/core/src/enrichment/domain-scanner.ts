@@ -94,6 +94,17 @@ function nextCheckDays(status: DomainScanResult['status'], hasSiren: boolean): n
   }
 }
 
+/** L'hôte que le visiteur voit réellement : celui de l'URL finale en HTTPS, sinon le domaine. */
+function landingHostOf(result: FetchResult, domain: string): string {
+  try {
+    const final = new URL(result.finalUrl);
+    if (final.protocol === 'https:' && final.hostname.length > 0) return final.hostname;
+  } catch {
+    // URL finale illisible : on retombe sur le domaine.
+  }
+  return domain;
+}
+
 export async function scanDomain(
   domain: string,
   fetcher: WebsiteFetcher,
@@ -106,7 +117,14 @@ export async function scanDomain(
   // elle-même. Constater le refus après coup reviendrait à ne jamais le
   // constater, et à ranger en « site injoignable » un site qui répond très
   // bien — avec un avertissement de sécurité devant.
-  const tls = result.skippedReason === 'robots' ? null : await inspectTls(domain);
+  //
+  // Le certificat examiné est celui de l'adresse où le visiteur ATTERRIT.
+  // Beaucoup de sites ne servent que « www » : le domaine nu redirige, et son
+  // certificat, s'il ne couvre pas le nom nu, n'est vu par personne — le
+  // navigateur suit la redirection avant de l'inspecter. Constaté sur une
+  // fiche livrée : « certificat invalide » sur un site irréprochable.
+  const landingHost = landingHostOf(result, domain);
+  const tls = result.skippedReason === 'robots' ? null : await inspectTls(landingHost);
 
   if (result.skippedReason === 'robots') {
     return {
@@ -228,69 +246,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
     }
   };
 
-  const scanOne = async (
-    row: {
-      domain: string; content_hash: string | null;
-      check_attempts: number; tech_year: number | null;
-    },
-  ): Promise<void> => {
-    try {
-      const scan = await scanDomain(row.domain, fetcher, row.content_hash, options.signal);
-      report.scanned += 1;
-
-      switch (scan.status) {
-        case 'reachable': report.reachable += 1; break;
-        case 'placeholder': report.placeholders += 1; break;
-        case 'broken': report.broken += 1; break;
-        case 'unreachable': report.unreachable += 1; break;
-        case 'blocked': report.blocked += 1; break;
-        case 'excluded': report.excluded += 1; break;
-      }
-
-      if (row.content_hash !== null && !scan.contentChanged && scan.analysis) {
-        report.unchanged += 1;
-      }
-
-      await persistScan(db, scan, row.check_attempts);
-      await recordScanEvents(db, scan, row.content_hash, row.check_attempts, row.tech_year);
-
-      if (scan.sirens.length > 0) {
-        report.sirensFound += 1;
-        const { data: outcome } = await db.rpc('attach_domain_by_legal_siren', {
-          p_domain: scan.domain,
-        });
-
-        const row = outcome?.[0];
-        if (row) {
-          report.companiesAttached += row.attached ?? 0;
-          report.companiesConfirmed += row.confirmed ?? 0;
-          report.sharedSirensSkipped += row.skipped_shared ?? 0;
-
-          if ((row.attached ?? 0) > 0 || (row.confirmed ?? 0) > 0) {
-            log?.info('Mentions légales exploitées', {
-              domain: scan.domain,
-              sirens: scan.sirens,
-              attached: row.attached,
-              confirmed: row.confirmed,
-            });
-          }
-        }
-      }
-    } catch (scanError: unknown) {
-      report.errors += 1;
-      const message = scanError instanceof Error ? scanError.message : String(scanError);
-      log?.warn('Scan en échec', { domain: row.domain, error: message });
-
-      await db
-        .from('domains')
-        .update({
-          check_error: message,
-          last_checked_at: new Date().toISOString(),
-          next_check_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
-        })
-        .eq('domain', row.domain);
-    }
-  };
+  const scanOne = (row: DueRow): Promise<void> => scanAndPersist(db, row, fetcher, report, log, options.signal);
 
   await Promise.all(Array.from({ length: concurrency }, worker));
 
@@ -564,4 +520,109 @@ async function recordScanEvents(
       });
     }
   }
+}
+
+interface DueRow {
+  domain: string; content_hash: string | null;
+  check_attempts: number; tech_year: number | null;
+}
+
+/** Scanne un domaine et enregistre tout ce qui en découle : faits, événements, rattachements. */
+async function scanAndPersist(
+  db: Db,
+  row: DueRow,
+  fetcher: WebsiteFetcher,
+  report: ScanReport,
+  log: Logger | undefined,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+
+    try {
+      const scan = await scanDomain(row.domain, fetcher, row.content_hash, signal);
+      report.scanned += 1;
+
+      switch (scan.status) {
+        case 'reachable': report.reachable += 1; break;
+        case 'placeholder': report.placeholders += 1; break;
+        case 'broken': report.broken += 1; break;
+        case 'unreachable': report.unreachable += 1; break;
+        case 'blocked': report.blocked += 1; break;
+        case 'excluded': report.excluded += 1; break;
+      }
+
+      if (row.content_hash !== null && !scan.contentChanged && scan.analysis) {
+        report.unchanged += 1;
+      }
+
+      await persistScan(db, scan, row.check_attempts);
+      await recordScanEvents(db, scan, row.content_hash, row.check_attempts, row.tech_year);
+
+      if (scan.sirens.length > 0) {
+        report.sirensFound += 1;
+        const { data: outcome } = await db.rpc('attach_domain_by_legal_siren', {
+          p_domain: scan.domain,
+        });
+
+        const row = outcome?.[0];
+        if (row) {
+          report.companiesAttached += row.attached ?? 0;
+          report.companiesConfirmed += row.confirmed ?? 0;
+          report.sharedSirensSkipped += row.skipped_shared ?? 0;
+
+          if ((row.attached ?? 0) > 0 || (row.confirmed ?? 0) > 0) {
+            log?.info('Mentions légales exploitées', {
+              domain: scan.domain,
+              sirens: scan.sirens,
+              attached: row.attached,
+              confirmed: row.confirmed,
+            });
+          }
+        }
+      }
+    } catch (scanError: unknown) {
+      report.errors += 1;
+      const message = scanError instanceof Error ? scanError.message : String(scanError);
+      log?.warn('Scan en échec', { domain: row.domain, error: message });
+
+      await db
+        .from('domains')
+        .update({
+          check_error: message,
+          last_checked_at: new Date().toISOString(),
+          next_check_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+        })
+        .eq('domain', row.domain);
+    }
+}
+
+/**
+ * Rescanne un seul domaine, tout de suite.
+ *
+ * Sert à la vérification avant livraison : un dossier choisi pour un
+ * freelance est revisité à l'instant de l'attribution, et ses faits sont
+ * recalculés sur ce que le site montre MAINTENANT, pas sur ce qu'il montrait
+ * la nuit du scan. Un état transitoire — certificat en cours de
+ * renouvellement, hébergeur en maintenance — ne doit jamais devenir un
+ * argument de prospection.
+ */
+export async function rescanDomain(
+  db: Db,
+  domain: string,
+  options: { fetcher?: WebsiteFetcher; logger?: Logger; signal?: AbortSignal } = {},
+): Promise<ScanReport> {
+  const report: ScanReport = {
+    scanned: 0, reachable: 0, placeholders: 0, broken: 0, unreachable: 0,
+    blocked: 0, excluded: 0, unchanged: 0, sirensFound: 0,
+    companiesAttached: 0, companiesConfirmed: 0, sharedSirensSkipped: 0, errors: 0,
+  };
+  const { data: row, error } = await db
+    .from('domains')
+    .select('domain, content_hash, check_attempts, tech_year')
+    .eq('domain', domain)
+    .maybeSingle();
+  if (error) throw new Error(`rescanDomain : ${error.message}`);
+  if (!row) return report;
+
+  await scanAndPersist(db, row, options.fetcher ?? new WebsiteFetcher(), report, options.logger, options.signal);
+  return report;
 }

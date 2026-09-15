@@ -127,6 +127,14 @@ export default async function OpportunityPage({
           <section>
             <h2 className="field-label" style={{ color: 'var(--finding)' }}>Le problème</h2>
             <p className="reasoning mt-2.5">{explanation.why}</p>
+            {/* La phrase à dire au téléphone, quand une fiche a été rédigée :
+                on ne demande pas au freelance de l'inventer à chaud. */}
+            {explanation.opener ? (
+              <p className="mt-3 rounded-xl border border-[var(--brand)]/25 bg-[var(--brand-wash)] px-4 py-3 text-sm leading-relaxed text-[var(--brand)]">
+                <span className="field-label mr-2">Pour ouvrir l’appel</span>
+                {explanation.opener}
+              </p>
+            ) : null}
           </section>
 
           {explanation.whyNow ? (
@@ -214,7 +222,7 @@ export default async function OpportunityPage({
       {/* ── Vérifier : le site tel que ses clients le voient ── */}
       {company.websiteUrl ? (
         <div className="mt-10">
-          <SitePreview url={company.websiteUrl} />
+          <SitePreview url={company.websiteUrl} screenshotUrl={company.screenshotUrl} />
         </div>
       ) : null}
 
