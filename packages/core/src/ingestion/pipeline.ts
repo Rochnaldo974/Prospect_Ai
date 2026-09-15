@@ -71,6 +71,9 @@ function fillOnlyMissing(
   if (existing.contact_form_url === null && candidate.contactFormUrl !== null) {
     patch.contact_form_url = candidate.contactFormUrl;
   }
+  if (existing.social_links === null && candidate.socialLinks !== null) {
+    patch.social_links = candidate.socialLinks;
+  }
   if (existing.address === null && candidate.address !== null) patch.address = candidate.address;
   if (existing.postal_code === null && candidate.postalCode !== null) {
     patch.postal_code = candidate.postalCode;
@@ -125,6 +128,7 @@ function toInsertRow(candidate: NormalizedCompanyCandidate): Insert<'companies'>
     website_url: candidate.websiteUrl,
     phone: candidate.phone,
     contact_form_url: candidate.contactFormUrl,
+    social_links: candidate.socialLinks,
     address: candidate.address,
     postal_code: candidate.postalCode,
     city: candidate.city,
@@ -189,6 +193,7 @@ function collapseDuplicates(
     existing.domain ??= candidate.domain;
     existing.websiteUrl ??= candidate.websiteUrl;
     existing.contactFormUrl ??= candidate.contactFormUrl;
+    existing.socialLinks ??= candidate.socialLinks;
     existing.address ??= candidate.address;
     existing.postalCode ??= candidate.postalCode;
     existing.city ??= candidate.city;

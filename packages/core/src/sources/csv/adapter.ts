@@ -200,6 +200,8 @@ export class CsvCompanySource implements CompanySourceAdapter {
 
       phone,
       contactFormUrl: null,
+      // Un fichier plat ne dit rien des réseaux sociaux.
+      socialLinks: null,
 
       address: normalizeAddress(get('address')),
       postalCode,

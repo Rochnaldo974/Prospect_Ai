@@ -17,6 +17,15 @@ import { scoreAll, type ScoringSignal, type ScoredOpportunity, type ScoringInput
 
 export interface QualityGate {
   minBaseScore: number;
+  /**
+   * Seuil de base d'une opportunité sans fait daté. Le seuil général est
+   * calibré pour un événement : timing et fraîcheur y comptent pour près de
+   * la moitié. Un diagnostic n'a ni l'un ni l'autre par construction, et le
+   * même seuil le refusait mécaniquement — mesuré sur des données réelles,
+   * 14 diagnostics livrables sur 83 constats à trois défauts ou plus. Le
+   * classement de l'attribution garde les faits datés devant.
+   */
+  minDiagnosticBaseScore: number;
   minConfidence: number;
   minIdentityConfidence: number;
   /** Le gate de contact du V1 : téléphone ou formulaire. */
@@ -26,6 +35,7 @@ export interface QualityGate {
 
 export const DEFAULT_GATE: QualityGate = {
   minBaseScore: 55,
+  minDiagnosticBaseScore: 40,
   minConfidence: 0.6,
   minIdentityConfidence: 0.75,
   requireContact: true,
@@ -48,6 +58,8 @@ export interface OpportunityEngineReport {
 
 export interface OpportunityEngineOptions {
   limit?: number;
+  /** Réévaluer ces entreprises-là, et elles seules — la vérification avant livraison. */
+  companyIds?: string[];
   gate?: Partial<QualityGate>;
   algorithmVersion?: string;
   logger?: Logger;
@@ -86,17 +98,33 @@ export async function runOpportunityEngine(
   // produire une opportunité de diagnostic — refonte uniquement, et sous
   // condition de densité — d'où la seconde branche. Les entreprises sans
   // aucun signal ne sont jamais chargées.
-  const { data: candidates, error } = await db
-    .from('companies')
-    .select('id, has_contact, identity_confidence, domain, prospecting_allowed, suppression_global, cooldown_until')
-    .or('trigger_signal_count.gt.0,active_signal_count.gt.0')
-    .eq('prospecting_allowed', true)
-    .eq('suppression_global', false)
-    .limit(options.limit ?? 2000);
+  //
+  // Servies par pages : l'API plafonne chaque réponse à mille lignes et
+  // tronque en silence au-delà. Une seule requête « limit 2000 » n'examinait
+  // donc jamais que les mille premières entreprises signalées — les mêmes à
+  // chaque passage — et le stock plafonnait sans qu'aucune erreur ne le dise.
+  const pageSize = 1000;
+  const maxRows = options.limit ?? 20_000;
+  const rows: CandidateRow[] = [];
 
-  if (error) throw new Error(`runOpportunityEngine : ${error.message}`);
+  for (let from = 0; from < maxRows; from += pageSize) {
+    let query = db
+      .from('companies')
+      .select('id, has_contact, identity_confidence, domain, prospecting_allowed, suppression_global, cooldown_until')
+      .eq('prospecting_allowed', true)
+      .eq('suppression_global', false)
+      .order('id', { ascending: true })
+      .range(from, Math.min(from + pageSize, maxRows) - 1);
+    query = options.companyIds
+      ? query.in('id', options.companyIds)
+      : query.or('trigger_signal_count.gt.0,active_signal_count.gt.0');
 
-  const rows = (candidates ?? []) as CandidateRow[];
+    const { data: candidates, error } = await query;
+    if (error) throw new Error(`runOpportunityEngine : ${error.message}`);
+    rows.push(...((candidates ?? []) as CandidateRow[]));
+    if (!candidates || candidates.length < pageSize) break;
+  }
+
   if (rows.length === 0) return report;
 
   const reject = (reason: string): void => {
@@ -231,7 +259,8 @@ export async function runOpportunityEngine(
           reject('identité mal établie'); continue;
         }
         if (opportunity.confidenceScore < gate.minConfidence) { reject('confiance insuffisante'); continue; }
-        if (opportunity.baseScore < gate.minBaseScore) { reject('score sous le seuil'); continue; }
+        const minBase = opportunity.triggerEventId === null ? gate.minDiagnosticBaseScore : gate.minBaseScore;
+        if (opportunity.baseScore < minBase) { reject('score sous le seuil'); continue; }
 
         report.byType[opportunity.type] = (report.byType[opportunity.type] ?? 0) + 1;
 

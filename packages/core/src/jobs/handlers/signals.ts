@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { runSignalEngine } from '../../signals/engine';
 import { enrichFromSirene } from '../../sources/sirene/enricher';
+import { resolveIdentityByName } from '../../sources/sirene/identity';
+import { fillPostalCodesFromCoordinates } from '../../sources/ban/reverse';
 import type { JobHandler } from '../types';
 
 const signalsPayload = z.object({
@@ -69,11 +71,12 @@ export const enrichSireneHandler: JobHandler<z.infer<typeof enrichPayload>> = {
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
-    const report = await enrichFromSirene(db, {
-      limit: payload.limit,
-      logger,
-      ...(signal ? { signal } : {}),
-    });
+    // Dans l'ordre où chaque étape rend la suivante possible : le code postal
+    // permet la recherche par nom, le SIREN permet l'enrichissement.
+    const common = { limit: payload.limit, logger, ...(signal ? { signal } : {}) };
+    await fillPostalCodesFromCoordinates(db, common);
+    await resolveIdentityByName(db, common);
+    const report = await enrichFromSirene(db, common);
 
     return {
       processed: report.examined,

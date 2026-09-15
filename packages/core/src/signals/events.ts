@@ -118,16 +118,31 @@ export async function materializeDomainRegistrationEvents(
   // millions de .fr du fichier AFNIC pour n'en retenir qu'une poignée, et la
   // limite de lignes de l'API tronquerait le résultat en silence. On part donc
   // des entreprises, qui sont trois ordres de grandeur moins nombreuses.
-  const { data: companies, error } = await db
-    .from('companies')
-    .select('id, domain')
-    .not('domain', 'is', null)
-    .limit(options.limit ?? 2000);
+  // Par pages, et les entreprises récemment touchées d'abord : une limite
+  // posée sans ordre sur la table entière ne voyait que ses premières lignes,
+  // toujours les mêmes — les entreprises créées depuis leur site, donc les
+  // plus susceptibles d'un dépôt récent, n'étaient jamais examinées.
+  const pageSize = 1000;
+  const maxRows = options.limit ?? 20_000;
+  const rows: { id: string; domain: string }[] = [];
 
-  if (error) throw new Error(`materializeDomainRegistrationEvents : ${error.message}`);
-  if (!companies || companies.length === 0) return report;
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const { data: companies, error } = await db
+      .from('companies')
+      .select('id, domain')
+      .not('domain', 'is', null)
+      .order('updated_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, Math.min(from + pageSize, maxRows) - 1);
 
-  const rows = companies.filter((c): c is { id: string; domain: string } => c.domain !== null);
+    if (error) throw new Error(`materializeDomainRegistrationEvents : ${error.message}`);
+    for (const c of companies ?? []) {
+      if (c.domain !== null) rows.push({ id: c.id, domain: c.domain });
+    }
+    if (!companies || companies.length < pageSize) break;
+  }
+
+  if (rows.length === 0) return report;
   const names = [...new Set(rows.map((c) => c.domain))];
 
   // Découpage volontairement court : une liste d'identifiants trop longue

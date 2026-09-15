@@ -23,6 +23,18 @@ export interface OpportunityRule {
    * Absent : la règle exige un déclencheur daté, sans exception.
    */
   diagnosticMinFacts?: number;
+  /**
+   * Plancher de besoin propre au diagnostic, plus haut que celui d'une
+   * opportunité datée : sans « pourquoi maintenant », seule la densité du
+   * constat justifie de déranger un commerçant.
+   */
+  diagnosticMinNeed?: number;
+  /**
+   * Faits sans lesquels le diagnostic ne se propose pas, quel que soit le
+   * reste. Pour une création de site : la présence sociale, seule preuve
+   * montrable que l'entreprise veut exister en ligne.
+   */
+  diagnosticRequires?: string[];
   /** Signaux de besoin et leur contribution, en points sur 100. */
   needWeights: Record<string, number>;
   /**
@@ -56,7 +68,16 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     label: 'Création de site',
     requiresWebsite: false,
     minNeed: 40,
+    // Sans fait daté, une création ne se propose que sur un dossier dense :
+    // une présence sociale prouvée, plus un second fait. Le seul « pas de
+    // site » resterait une opinion d'annuaire.
+    diagnosticMinFacts: 2,
+    diagnosticMinNeed: 60,
+    diagnosticRequires: ['social_without_website'],
     needWeights: {
+      // La preuve la plus parlante : l'entreprise existe en ligne, sans
+      // vitrine à elle.
+      social_without_website: 60,
       // Preuve positive d'absence, jamais une simple recherche infructueuse.
       no_website_proven: 70,
       website_placeholder: 65,
@@ -78,6 +99,7 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     // vaste — presque toutes les entreprises ont un site — et le seul où
     // l'absence d'urgence se compense par la précision du constat.
     diagnosticMinFacts: 3,
+    diagnosticMinNeed: 60,
     needWeights: {
       website_broken: 55,
       website_found_down: 50,

@@ -183,6 +183,8 @@ export function scoreOpportunity(
     // Les constats qui comptent sont ceux qui portent le besoin : un signal
     // présent mais sans poids dans cette règle ne prouve rien la concernant.
     if (contributions.length < minimum) return null;
+    if (rule.diagnosticMinNeed !== undefined && needScore < rule.diagnosticMinNeed) return null;
+    if (rule.diagnosticRequires?.some((required) => !present.has(required))) return null;
   }
 
   const timingScore = best !== null ? clamp(best.strength * 100, 0, 100) : 0;

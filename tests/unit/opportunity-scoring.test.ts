@@ -248,6 +248,17 @@ describe('opportunité sans fait daté', () => {
     }))).not.toBeNull();
   });
 
+  it('exige un besoin plus dense qu’une opportunité datée', () => {
+    // Trois faits légers — un vieux domaine, pas de formulaire, un site
+    // lent — font 52 points au mieux : un dossier mince, sans urgence pour
+    // le porter. Le plancher du diagnostic est plus haut que celui d'une
+    // refonte déclenchée par une panne.
+    expect(scoreOpportunity(refonte, input({
+      websiteStatus: 'reachable',
+      signals: constat(['aged_domain', 'no_contact_form', 'slow_website']),
+    }))).toBeNull();
+  });
+
   it('ne compte que les constats qui pèsent sur cette règle', () => {
     // Un signal présent mais sans poids dans la règle ne prouve rien la
     // concernant : le compter gonflerait artificiellement le dossier.
@@ -310,5 +321,27 @@ describe('opportunité sans fait daté', () => {
     }))!;
 
     expect(scored.baseScore).toBeGreaterThan(55);
+  });
+});
+
+describe('création de site sans fait daté', () => {
+  const creation = ruleFor('website_creation')!;
+  const constat = (types: string[]) => types.map((signalType) => ({
+    signalType, kind: 'modifier' as const, category: 'need' as const,
+    strength: 1, confidence: 0.9, occurredAt: null, triggerEventId: null,
+  }));
+
+  it('se propose sur une présence sociale prouvée, avec un second fait', () => {
+    const scored = scoreOpportunity(creation, input({
+      websiteStatus: null, signals: constat(['social_without_website', 'active_business']),
+    }));
+    expect(scored).not.toBeNull();
+    expect(scored?.reason['diagnostic_only']).toBe(true);
+  });
+
+  it('ne se propose pas sur la seule absence de site', () => {
+    expect(scoreOpportunity(creation, input({
+      websiteStatus: null, signals: constat(['active_business']),
+    }))).toBeNull();
   });
 });

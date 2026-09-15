@@ -40,6 +40,8 @@ export interface SignalEngineReport {
 
 export interface SignalEngineOptions {
   limit?: number;
+  /** Réévaluer ces entreprises-là, et elles seules — la vérification avant livraison. */
+  companyIds?: string[];
   /** N'examiner que ce qui a bougé depuis cette date. */
   since?: Date;
   batchSize?: number;
@@ -111,9 +113,9 @@ export async function runSignalEngine(
   // les entreprises au-delà du millier ne sont jamais réévaluées.
   const wanted = options.limit ?? 1000;
   const pageSize = 1000;
-  const ids: string[] = [];
+  const ids: string[] = options.companyIds ? [...options.companyIds] : [];
 
-  while (ids.length < wanted) {
+  while (!options.companyIds && ids.length < wanted) {
     const { data: targets, error } = await db.rpc('companies_needing_signals', {
       p_limit: Math.min(pageSize, wanted - ids.length),
       p_offset: ids.length,

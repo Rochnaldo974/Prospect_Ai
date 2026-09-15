@@ -1,3 +1,4 @@
+import type { Json } from '../../db/database.types';
 import type { SignalDetector } from '../types';
 import { ageInDays, clamp01 } from '../types';
 
@@ -43,6 +44,45 @@ export const noWebsiteDetector: SignalDetector = {
         has_phone: company.phone !== null,
       },
       fingerprint: 'no_website_proven',
+    }];
+  },
+};
+
+/**
+ * Présente sur les réseaux, sans site.
+ *
+ * Le dossier qui donne le plus envie d'appeler : l'entreprise a déjà voulu
+ * exister en ligne — une page Instagram ou Facebook tenue à jour — et il
+ * lui manque la vitrine qu'elle contrôle. Ce n'est pas une déduction sur un
+ * silence, c'est un fait montrable : le lien est dans la fiche.
+ *
+ * Retour du propriétaire sur les premières fiches réelles : « une page
+ * Instagram business qui vient de se lancer sans site, ça donne envie de
+ * cliquer ». Un modificateur, pas un déclencheur — l'absence de site n'est
+ * pas datée — mais assez fort pour porter une création de site à lui seul,
+ * avec la densité minimale exigée de la règle.
+ */
+export const socialWithoutWebsiteDetector: SignalDetector = {
+  id: 'social_without_website',
+  describes: 'Présente sur les réseaux sociaux, sans site web',
+
+  detect({ company }) {
+    if (company.domain !== null) return [];
+    const links = company.social_links;
+    if (!links || typeof links !== 'object' || Array.isArray(links)) return [];
+    const networks = Object.keys(links as Record<string, unknown>).sort();
+    if (networks.length === 0) return [];
+
+    return [{
+      signalType: 'social_without_website',
+      kind: 'modifier',
+      category: 'need',
+      // Deux réseaux tenus valent plus qu'un : l'entreprise investit sa
+      // présence en ligne.
+      strength: networks.length >= 2 ? 1 : 0.9,
+      confidence: 0.9,
+      evidence: { networks, links: links as Json },
+      fingerprint: `social_without_website:${networks.join('+')}`,
     }];
   },
 };
@@ -501,6 +541,7 @@ export const activeBusinessDetector: SignalDetector = {
 
 export const MODIFIER_DETECTORS: SignalDetector[] = [
   noWebsiteDetector,
+  socialWithoutWebsiteDetector,
   placeholderSiteDetector,
   brokenSiteDetector,
   invalidCertificateDetector,

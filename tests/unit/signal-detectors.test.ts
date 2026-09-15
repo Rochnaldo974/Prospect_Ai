@@ -9,6 +9,7 @@ import {
   noEcommerceDetector,
   noSslDetector,
   noWebsiteDetector,
+  socialWithoutWebsiteDetector,
   placeholderSiteDetector,
   recentCompanyDetector,
   sharedDomainDetector,
@@ -50,6 +51,8 @@ const company = (over: Partial<Company> = {}): Company => ({
   website_last_resolved_at: null,
   phone: '+33241222479',
   contact_form_url: null,
+  social_links: null,
+  identity_lookup_at: null,
   has_contact: true,
   address: null,
   postal_code: '49000',
@@ -443,5 +446,28 @@ describe('modificateurs', () => {
     expect(activeBusinessDetector.detect(context({
       company: company({ last_seen_at: daysAgo(2), company_status: 'closed' }),
     }))).toHaveLength(0);
+  });
+});
+
+describe('présente sur les réseaux, sans site', () => {
+  it('se prononce quand une source cite un réseau et aucun site', () => {
+    const ctx = context({ company: company({ domain: null, social_links: { instagram: 'https://www.instagram.com/moreau' } }) });
+    const [signal] = socialWithoutWebsiteDetector.detect(ctx);
+    expect(signal?.signalType).toBe('social_without_website');
+    expect(signal?.kind).toBe('modifier');
+    expect(signal?.strength).toBe(0.9);
+  });
+
+  it('pèse plus lourd avec deux réseaux tenus', () => {
+    const ctx = context({ company: company({ domain: null, social_links: { instagram: 'a', facebook: 'b' } }) });
+    expect(socialWithoutWebsiteDetector.detect(ctx)[0]?.strength).toBe(1);
+  });
+
+  it('se tait dès qu’un site existe, ou qu’aucun réseau n’est connu', () => {
+    expect(socialWithoutWebsiteDetector.detect(context({
+      company: company({ domain: 'moreau.fr', social_links: { instagram: 'a' } }),
+    }))).toEqual([]);
+    expect(socialWithoutWebsiteDetector.detect(context({ company: company({ domain: null, social_links: null }) }))).toEqual([]);
+    expect(socialWithoutWebsiteDetector.detect(context({ company: company({ domain: null, social_links: {} }) }))).toEqual([]);
   });
 });

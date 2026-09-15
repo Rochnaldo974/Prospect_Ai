@@ -4,6 +4,7 @@ import type { Logger } from '../../logger';
 import { normalizeSiren, normalizePostalCode } from '../../normalization';
 import { parseEmployeeRange, isProspectable, normalizeNafCode, parseSireneDate } from '../csv/sirene-codes';
 import { DEFAULT_USER_AGENT, RateLimitedHttpClient } from '../http/client';
+import { runPool } from '../http/pool';
 
 /**
  * Enrichissement depuis le répertoire, par l'API Recherche d'entreprises.
@@ -20,9 +21,9 @@ import { DEFAULT_USER_AGENT, RateLimitedHttpClient } from '../http/client';
  * API publique, gratuite, sans clé, plafonnée à sept requêtes par seconde.
  */
 
-const ENDPOINT = 'https://recherche-entreprises.api.gouv.fr/search';
+export const REGISTRY_SEARCH_ENDPOINT = 'https://recherche-entreprises.api.gouv.fr/search';
 
-interface ApiEtablissement {
+export interface ApiEtablissement {
   siret?: string | null;
   date_creation?: string | null;
   etat_administratif?: string | null;
@@ -38,7 +39,7 @@ interface ApiEtablissement {
   adresse?: string | null;
 }
 
-interface ApiResult {
+export interface ApiResult {
   siren?: string | null;
   nom_complet?: string | null;
   nom_raison_sociale?: string | null;
@@ -48,7 +49,7 @@ interface ApiResult {
   matching_etablissements?: ApiEtablissement[] | null;
 }
 
-interface ApiResponse {
+export interface ApiResponse {
   results?: ApiResult[];
 }
 
@@ -66,6 +67,8 @@ export interface EnrichOptions {
   logger?: Logger;
   signal?: AbortSignal;
   requestsPerSecond?: number;
+  /** Requêtes en vol simultanément ; le débit reste borné par le limiteur. */
+  concurrency?: number;
 }
 
 /**
@@ -97,17 +100,21 @@ export async function enrichFromSirene(
     .select('id, siren, siret, creation_date, employee_min, industry_code, lat, commercial_name, city, postal_code')
     .not('siren', 'is', null)
     .is('creation_date', null)
-    .order('updated_at', { ascending: false })
+    // Les jamais interrogées d'abord, puis les plus anciennement vues : une
+    // entreprise que le répertoire ne date pas (SIREN inconnu, fiche sans
+    // date) revenait en tête à chaque passage et bloquait la file — vécu sur
+    // 32 000 entreprises qui n'avançaient plus.
+    .order('last_seen_at', { ascending: true, nullsFirst: true })
     .limit(options.limit ?? 200);
 
   if (error) throw new Error(`enrichFromSirene : ${error.message}`);
 
-  for (const company of targets ?? []) {
-    if (options.signal?.aborted) break;
+  await runPool(targets ?? [], options.concurrency ?? 4, async (company) => {
+    if (options.signal?.aborted) return;
     report.examined += 1;
 
     try {
-      const url = new URL(ENDPOINT);
+      const url = new URL(REGISTRY_SEARCH_ENDPOINT);
       url.searchParams.set('q', company.siren!);
       url.searchParams.set('per_page', '1');
       url.searchParams.set('limite_matching_etablissements', '10');
@@ -117,7 +124,8 @@ export async function enrichFromSirene(
 
       if (!result) {
         report.notFound += 1;
-        continue;
+        await db.from('companies').update({ last_seen_at: new Date().toISOString() }).eq('id', company.id);
+        return;
       }
 
       // On préfère l'établissement exact quand on connaît son SIRET : la date
@@ -129,11 +137,13 @@ export async function enrichFromSirene(
         ?? result.siege
         ?? null;
 
-      const patch = buildPatch(company, result, establishment);
+      const patch = buildRegistryPatch(company, result, establishment);
 
       if (Object.keys(patch).length === 0) {
         report.unchanged += 1;
-        continue;
+        // Datée quand même : c'est la trace que la question a été posée.
+        await db.from('companies').update({ last_seen_at: new Date().toISOString() }).eq('id', company.id);
+        return;
       }
 
       const { error: updateError } = await db
@@ -146,7 +156,7 @@ export async function enrichFromSirene(
         log?.warn('Enrichissement non enregistré', {
           company_id: company.id, error: updateError.message,
         });
-        continue;
+        return;
       }
 
       report.enriched += 1;
@@ -160,7 +170,7 @@ export async function enrichFromSirene(
         error: fetchError instanceof Error ? fetchError.message : String(fetchError),
       });
     }
-  }
+  });
 
   log?.info('Enrichissement depuis le répertoire terminé', {
     examined: report.examined,
@@ -171,7 +181,7 @@ export async function enrichFromSirene(
   return report;
 }
 
-type Target = {
+export type RegistryTarget = {
   creation_date: string | null;
   employee_min: number | null;
   industry_code: string | null;
@@ -182,8 +192,8 @@ type Target = {
 };
 
 /** Ne remplit que ce qui manque. */
-function buildPatch(
-  company: Target,
+export function buildRegistryPatch(
+  company: RegistryTarget,
   result: ApiResult,
   establishment: ApiEtablissement | null,
 ): Update<'companies'> {

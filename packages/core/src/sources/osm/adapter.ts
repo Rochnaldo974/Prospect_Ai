@@ -224,6 +224,13 @@ export class OsmCompanySource implements CompanySourceAdapter {
     const emailResult = normalizeEmailDetailed(rawEmail);
     if (rawEmail && !emailResult.email) reject('email', rawEmail, 'adresse invalide');
 
+    // ── Réseaux sociaux ───────────────────────────────────────────────────
+    // Un commerce présent sur Instagram ou Facebook sans site est le dossier
+    // le plus parlant du produit : l'envie d'exister en ligne est prouvée,
+    // la vitrine manque. Les contributeurs OSM renseignent ces liens sur une
+    // part des points d'intérêt ; on les garde tels quels, normalisés en URL.
+    const socialLinks = readSocialLinks(tags);
+
     // ── Localisation ──────────────────────────────────────────────────────
     const lat = element.lat ?? element.center?.lat ?? null;
     const lon = element.lon ?? element.center?.lon ?? null;
@@ -252,6 +259,7 @@ export class OsmCompanySource implements CompanySourceAdapter {
 
       phone,
       contactFormUrl: null,
+      socialLinks,
 
       address,
       postalCode,
@@ -295,4 +303,44 @@ function titleCase(value: string | null): string | null {
   return value.replace(/(^|[\s-])([a-z])/g, (_, prefix: string, letter: string) =>
     `${prefix}${letter.toUpperCase()}`,
   );
+}
+
+/** Tags OSM des réseaux sociaux, avec et sans le préfixe contact:. */
+const SOCIAL_TAGS: Record<string, string[]> = {
+  instagram: ['contact:instagram', 'instagram'],
+  facebook: ['contact:facebook', 'facebook'],
+  tiktok: ['contact:tiktok', 'tiktok'],
+  linkedin: ['contact:linkedin', 'linkedin'],
+};
+
+const SOCIAL_HOSTS: Record<string, string> = {
+  instagram: 'https://www.instagram.com/',
+  facebook: 'https://www.facebook.com/',
+  tiktok: 'https://www.tiktok.com/@',
+  linkedin: 'https://www.linkedin.com/company/',
+};
+
+/**
+ * Lit les liens sociaux d'un élément OSM.
+ *
+ * La valeur est tantôt une URL complète, tantôt un simple identifiant
+ * (« @boulangerie_dupont », « boulangerie.dupont ») : on rend une URL dans
+ * les deux cas, pour que la fiche puisse pointer dessus. Null quand aucun
+ * tag n'est présent — ce n'est pas la même chose qu'un objet vide.
+ */
+export function readSocialLinks(tags: Record<string, string>): Record<string, string> | null {
+  const links: Record<string, string> = {};
+  for (const [network, keys] of Object.entries(SOCIAL_TAGS)) {
+    const raw = keys.map((k) => tags[k]).find((v) => typeof v === 'string' && v.trim().length > 0);
+    if (!raw) continue;
+    const value = raw.trim();
+    if (/^https?:\/\//i.test(value)) {
+      links[network] = value.slice(0, 300);
+    } else {
+      const handle = value.replace(/^@/, '').replace(/\s+/g, '');
+      if (handle.length === 0 || handle.length > 100) continue;
+      links[network] = `${SOCIAL_HOSTS[network]}${handle}`;
+    }
+  }
+  return Object.keys(links).length > 0 ? links : null;
 }

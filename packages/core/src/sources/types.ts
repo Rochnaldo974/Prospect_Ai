@@ -23,6 +23,8 @@ export interface NormalizedCompanyCandidate {
 
   phone: string | null;
   contactFormUrl: string | null;
+  /** Réseaux sociaux, {réseau: url}. Null si la source ne se prononce pas. */
+  socialLinks: Record<string, string> | null;
 
   address: string | null;
   postalCode: string | null;

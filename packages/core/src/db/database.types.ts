@@ -228,6 +228,7 @@ export type Database = {
           has_live_assignment: boolean
           id: string
           identity_confidence: number
+          identity_lookup_at: string | null
           industry_code: string | null
           industry_label: string | null
           last_scanned_at: string | null
@@ -246,6 +247,7 @@ export type Database = {
           segment: Database["public"]["Enums"]["company_segment"]
           siren: string | null
           siret: string | null
+          social_links: Json | null
           suppression_global: boolean
           suppression_reason: string | null
           trigger_signal_count: number
@@ -278,6 +280,7 @@ export type Database = {
           has_live_assignment?: boolean
           id?: string
           identity_confidence?: number
+          identity_lookup_at?: string | null
           industry_code?: string | null
           industry_label?: string | null
           last_scanned_at?: string | null
@@ -296,6 +299,7 @@ export type Database = {
           segment?: Database["public"]["Enums"]["company_segment"]
           siren?: string | null
           siret?: string | null
+          social_links?: Json | null
           suppression_global?: boolean
           suppression_reason?: string | null
           trigger_signal_count?: number
@@ -328,6 +332,7 @@ export type Database = {
           has_live_assignment?: boolean
           id?: string
           identity_confidence?: number
+          identity_lookup_at?: string | null
           industry_code?: string | null
           industry_label?: string | null
           last_scanned_at?: string | null
@@ -346,6 +351,7 @@ export type Database = {
           segment?: Database["public"]["Enums"]["company_segment"]
           siren?: string | null
           siret?: string | null
+          social_links?: Json | null
           suppression_global?: boolean
           suppression_reason?: string | null
           trigger_signal_count?: number
@@ -826,6 +832,8 @@ export type Database = {
           registered_at: string | null
           responsive: boolean | null
           scan_priority: number
+          screenshot_at: string | null
+          screenshot_path: string | null
           sirens_found: string[]
           status: Database["public"]["Enums"]["domain_status"]
           tech_hash: string | null
@@ -871,6 +879,8 @@ export type Database = {
           registered_at?: string | null
           responsive?: boolean | null
           scan_priority?: number
+          screenshot_at?: string | null
+          screenshot_path?: string | null
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
@@ -916,6 +926,8 @@ export type Database = {
           registered_at?: string | null
           responsive?: boolean | null
           scan_priority?: number
+          screenshot_at?: string | null
+          screenshot_path?: string | null
           sirens_found?: string[]
           status?: Database["public"]["Enums"]["domain_status"]
           tech_hash?: string | null
