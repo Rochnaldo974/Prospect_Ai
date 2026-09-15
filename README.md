@@ -79,7 +79,7 @@ Voir [`apps/worker/README.md`](apps/worker/README.md) pour ajouter un handler.
 | `pnpm engine --scan` | idem, en ajoutant l'enrichissement et le scan des sites (lent) |
 | `pnpm allocate [user_id]` | distribue les opportunités du jour, sans recollecter |
 
-> **`pnpm test` vide les tables du moteur.** Les tests d'intégration partagent
+> **`pnpm test` et `pnpm test:integration` vident les tables du moteur ; `pnpm test:unit` ne touche pas à la base.** Les tests d'intégration partagent
 > la base de développement et ont besoin de la trouver vide : entreprises,
 > opportunités et attributions collectées disparaissent à chaque exécution.
 > C'est sans gravité — `pnpm engine` reconstruit un stock en quelques
