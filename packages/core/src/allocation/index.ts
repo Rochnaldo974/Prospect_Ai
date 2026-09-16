@@ -13,3 +13,4 @@ export * from './verify';
 export * from './written-card';
 export * from './writing';
 export * from './audit-share';
+export * from './tier';

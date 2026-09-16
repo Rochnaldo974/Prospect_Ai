@@ -287,3 +287,14 @@ describe('le titre', () => {
     expect(e.headline).not.toMatch(/cherche|a besoin|veut/);
   });
 });
+
+describe('la note Google', () => {
+  it('ouvre la situation quand les clients ont parlé', () => {
+    const e = explainOpportunity(input({ facts: { googleRating: 4.7, googleReviews: 214 } }));
+    expect(e.why).toMatch(/^BOULANGERIE MOREAU, boulangerie et boulangerie-pâtisserie à Angers, 4,7 sur Google avec 214 avis\./);
+  });
+  it('se tait sous vingt avis', () => {
+    const e = explainOpportunity(input({ facts: { googleRating: 5, googleReviews: 3 } }));
+    expect(e.why).not.toMatch(/sur Google/);
+  });
+});

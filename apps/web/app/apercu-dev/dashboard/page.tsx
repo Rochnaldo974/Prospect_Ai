@@ -159,8 +159,10 @@ function fixtures(): DailyOpportunity[] {
         contactFormUrl: null,
         websiteUrl: 'https://exemple.invalid',
         screenshotUrl: null,
+        google: null,
       },
       audit: null,
+      tier: { level: 'or', points: 3, reasons: ['un fait daté', 'un téléphone'] },
       explanation: {
         why: 'Le site ne répond plus depuis au moins deux passages. Un client qui cherche les horaires ne trouve rien.',
         whyNow: 'Le certificat a expiré le 25 octobre : depuis, chaque navigateur affiche un avertissement.',
@@ -186,8 +188,10 @@ function fixtures(): DailyOpportunity[] {
         contactFormUrl: null,
         websiteUrl: 'https://exemple.invalid',
         screenshotUrl: null,
+        google: null,
       },
       audit: null,
+      tier: { level: 'or', points: 3, reasons: ['un fait daté', 'un téléphone'] },
       explanation: {
         why: 'Les composants de la page datent de 2009 : le site annonce son âge à chaque visite.',
         whyNow: '',
@@ -213,8 +217,10 @@ function fixtures(): DailyOpportunity[] {
         contactFormUrl: 'https://exemple.invalid/contact',
         websiteUrl: null,
         screenshotUrl: null,
+        google: null,
       },
       audit: null,
+      tier: { level: 'or', points: 3, reasons: ['un fait daté', 'un téléphone'] },
       explanation: {
         why: 'Créée en juin, toujours aucun site : une fiche annuaire et un numéro.',
         whyNow: 'L’immatriculation date de juin — les choix d’installation se font maintenant.',

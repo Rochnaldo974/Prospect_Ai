@@ -4,6 +4,7 @@ import { explainOpportunity, type Explanation } from '../opportunities/explain';
 import { loadWrittenCards } from './written-card';
 import { screenshotUrl } from '../enrichment/screenshot';
 import type { SiteScores } from '../enrichment/audit';
+import { tierOf, type Tier } from './tier';
 
 /**
  * Les opportunités du jour d'un freelance, prêtes à l'affichage.
@@ -43,7 +44,11 @@ export interface TodayOpportunity {
     websiteUrl: string | null;
     /** Capture du site prise par le moteur à la vérification du dossier, quand elle existe. */
     screenshotUrl: string | null;
+    /** La présence Google, quand elle a été relevée : ce que ses clients en disent. */
+    google: { rating: number | null; reviewCount: number | null; photoCount: number | null; mapsUrl: string | null } | null;
   };
+  /** Le palier : combien d'atouts le dossier réunit pour que l'appel aboutisse. */
+  tier: Tier;
   /** La note du site mesurée par le moteur, quand le site a été audité. */
   audit: {
     score: number;
@@ -88,7 +93,7 @@ export async function getTodayOpportunities(
 ): Promise<TodayOpportunity[]> {
   const { data, error } = await db
     .from('assignments')
-    .select('id, rank, match_score, exclusive_until, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, social_links, website_url, domain, creation_date, employee_min)')
+    .select('id, rank, match_score, exclusive_until, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, social_links, siren, identity_confidence, google_rating, google_review_count, google_photo_count, google_maps_url, google_checked_at, website_url, domain, creation_date, employee_min)')
     .eq('user_id', userId)
     .in('status', ['active', 'contacted'])
     .order('rank', { ascending: true });
@@ -182,8 +187,24 @@ export async function getTodayOpportunities(
         contactFormUrl: company.contact_form_url,
         websiteUrl: company.website_url,
         screenshotUrl: screenshotUrl(process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '', site?.screenshot_path),
+        google: readGoogle(company),
       },
       audit: readAudit(site),
+      tier: tierOf({
+        dated: (reason.trigger ?? null) !== null,
+        phone: company.phone !== null,
+        email: pickGenericEmail((site as unknown as { emails_found?: unknown })?.emails_found) !== null,
+        contactForm: company.contact_form_url !== null,
+        hasWebsite: company.domain !== null,
+        siteScore: typeof site?.site_score === 'number' ? site.site_score : null,
+        socialWithoutWebsite: company.domain === null
+          && (company as { social_links?: Record<string, string> | null }).social_links != null
+          && Object.keys((company as { social_links?: Record<string, string> | null }).social_links ?? {}).length > 0,
+        identified: (company as { siren?: string | null }).siren != null
+          && Number((company as { identity_confidence?: number }).identity_confidence ?? 0) >= 0.9,
+        googleReviews: readGoogle(company)?.reviewCount ?? null,
+        googleRating: readGoogle(company)?.rating ?? null,
+      }),
       explanation: withWrittenCard(row.id, writtenCards, explainOpportunity({
         opportunityType: opportunity.opportunity_type as OpportunityType,
         companyName: name,
@@ -205,6 +226,8 @@ export async function getTodayOpportunities(
           employeeMin: company.employee_min,
           ecommerceDetected: site?.ecommerce_detected ?? null,
           phone: company.phone,
+          googleRating: readGoogle(company)?.rating ?? null,
+          googleReviews: readGoogle(company)?.reviewCount ?? null,
           socialLinks: (company as { social_links?: Record<string, string> | null }).social_links ?? null,
           domainRegisteredAt: site?.registered_at ?? null,
           websiteStatus: site?.status ?? null,
@@ -256,5 +279,21 @@ function readAudit(site: { site_score?: number | null; site_scores?: unknown; au
     scores: { speed: num(scores.speed), mobile: num(scores.mobile), seo: num(scores.seo), trust: num(scores.trust) },
     findings: Array.isArray(raw?.findings) ? raw.findings.filter((f): f is string => typeof f === 'string') : [],
     measuredAt: site.audited_at ?? null,
+  };
+}
+
+/** La présence Google telle qu'elle est rangée sur l'entreprise, ou null si jamais relevée. */
+function readGoogle(company: unknown): TodayOpportunity['company']['google'] {
+  const c = company as {
+    google_rating?: number | string | null; google_review_count?: number | null;
+    google_photo_count?: number | null; google_maps_url?: string | null; google_place_id?: string | null;
+    google_checked_at?: string | null;
+  };
+  if (!c.google_checked_at || (c.google_review_count == null && c.google_rating == null)) return null;
+  return {
+    rating: c.google_rating == null ? null : Number(c.google_rating),
+    reviewCount: c.google_review_count ?? null,
+    photoCount: c.google_photo_count ?? null,
+    mapsUrl: c.google_maps_url ?? null,
   };
 }

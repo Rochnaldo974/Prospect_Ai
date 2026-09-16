@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
+import { OPPORTUNITY_TYPE_LABELS, TIER_LABELS } from '@prospect/core';
 import type { DailyOpportunity } from '@/lib/opportunities/mine';
 
 /**
@@ -35,10 +35,16 @@ export function OpportunityRow({ opportunity }: { opportunity: DailyOpportunity 
         <span className="mt-1 block truncate text-[15px] leading-snug text-muted-foreground">
           {explanation.headline ?? explanation.signals[0] ?? explanation.why}
         </span>
+        {company.google?.rating != null && company.google.reviewCount != null ? (
+          <span className="mt-1 block text-xs text-muted-foreground" title="Ce que ses clients en disent sur Google">
+            ★ {company.google.rating.toFixed(1).replace('.', ',')} · {company.google.reviewCount} avis Google
+          </span>
+        ) : null}
       </span>
 
       <span className="flex shrink-0 flex-col items-end gap-1.5">
         <span className="flex items-center gap-1.5">
+          <TierBadge tier={opportunity.tier} />
           {opportunity.audit ? <SiteScore value={opportunity.audit.score} /> : null}
           <span className="rounded-full bg-[var(--brand-wash)] px-2.5 py-1 text-xs font-medium text-[var(--brand)] sm:px-3 sm:py-1.5 sm:text-[13px]">
             {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
@@ -117,6 +123,29 @@ function SiteScore({ value }: { value: number }) {
       title="Note du site mesurée par le moteur : vitesse, mobile, bases SEO, confiance"
     >
       site {value}
+    </span>
+  );
+}
+
+/**
+ * Le palier, et pourquoi, au survol. Diamant se voit ; Bronze s'efface :
+ * l'œil doit aller au dossier qui réunit le plus d'atouts.
+ */
+function TierBadge({ tier }: { tier: DailyOpportunity['tier'] }) {
+  const styles: Record<typeof tier.level, { color: string; bg: string }> = {
+    diamant: { color: '#1d4ed8', bg: '#dbeafe' },
+    or: { color: '#92400e', bg: '#fef3c7' },
+    argent: { color: '#475569', bg: '#f1f5f9' },
+    bronze: { color: '#78716c', bg: '#f5f5f4' },
+  };
+  const s = styles[tier.level];
+  return (
+    <span
+      className="rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]"
+      style={{ color: s.color, backgroundColor: s.bg }}
+      title={tier.reasons.length > 0 ? `Réunit ${tier.reasons.join(', ')}` : 'Aucun atout mesuré'}
+    >
+      {TIER_LABELS[tier.level]}
     </span>
   );
 }

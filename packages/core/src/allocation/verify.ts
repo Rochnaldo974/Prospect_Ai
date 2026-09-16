@@ -2,6 +2,7 @@ import type { Db } from '../db/client';
 import type { Logger } from '../logger';
 import { rescanDomain } from '../enrichment/domain-scanner';
 import { captureAndStore } from '../enrichment/screenshot';
+import { enrichGooglePresence } from '../sources/google/places';
 import { runOpportunityEngine } from '../opportunities/engine';
 import { runSignalEngine } from '../signals/engine';
 
@@ -90,6 +91,18 @@ export async function verifyOpportunity(
     } catch (cause: unknown) {
       log?.debug?.('Capture non prise', {
         domain: company.domain, error: cause instanceof Error ? cause.message : String(cause),
+      });
+    }
+  }
+
+  // Et sa présence Google — la note qui dit que le commerce marche. Un
+  // appel payant, donc seulement ici, sur un dossier qui va être livré.
+  if (holds) {
+    try {
+      await enrichGooglePresence(db, company.id, { ...(log ? { logger: log } : {}) });
+    } catch (cause: unknown) {
+      log?.debug?.('Présence Google non relevée', {
+        company_id: company.id, error: cause instanceof Error ? cause.message : String(cause),
       });
     }
   }

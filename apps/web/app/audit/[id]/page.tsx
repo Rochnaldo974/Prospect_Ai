@@ -54,6 +54,13 @@ export default async function PublicAuditPage({ params }: { params: Promise<{ id
         <p className="text-sm text-[#5b6070]">Audit préparé pour {s.company.name}</p>
       </header>
 
+      {s.google ? (
+        <p className="mt-6 rounded-xl bg-[#f6f7fb] px-4 py-3 text-sm">
+          Vos clients vous notent <strong>{s.google.rating.toFixed(1).replace('.', ',')} sur 5</strong> sur Google, sur {s.google.reviewCount} avis.
+          Votre site est la première chose qu’ils voient ensuite.
+        </p>
+      ) : null}
+
       <section className="mt-8">
         <p className="text-xs uppercase tracking-[0.14em] text-[#5b6070]">Ce que votre site montre à vos clients</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-[-0.02em]">{s.headline}</h1>

@@ -57,6 +57,18 @@ export default async function OpportunityPage({
           <h1 className="text-3xl font-semibold tracking-[-0.035em]">{company.name}</h1>
           <p className="mt-1.5 text-muted-foreground">
             {[company.industry, company.city].filter(Boolean).join(' · ') || 'Localisation inconnue'}
+            {company.google?.rating != null && company.google.reviewCount != null ? (
+              <>
+                {' · '}
+                {company.google.mapsUrl ? (
+                  <a href={company.google.mapsUrl} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline" title="Voir la fiche Google">
+                    ★ {company.google.rating.toFixed(1).replace('.', ',')} · {company.google.reviewCount} avis
+                  </a>
+                ) : (
+                  <>★ {company.google.rating.toFixed(1).replace('.', ',')} · {company.google.reviewCount} avis</>
+                )}
+              </>
+            ) : null}
           </p>
         </div>
 

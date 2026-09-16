@@ -41,6 +41,8 @@ export const AuditSnapshotSchema = z.object({
     logoUrl: z.string().nullable(),
   }),
   measuredAt: z.string().nullable(),
+  /** Ce que ses clients en disent : la note Google, quand elle a été relevée. */
+  google: z.object({ rating: z.number(), reviewCount: z.number() }).nullable().optional(),
 });
 
 export type AuditSnapshot = z.infer<typeof AuditSnapshotSchema>;
@@ -88,6 +90,9 @@ export function buildAuditSnapshot(opportunity: TodayOpportunity, author: AuditA
       website: author.website && !/^https?:\/\//i.test(author.website) ? `https://${author.website}` : author.website,
     },
     measuredAt: audit?.measuredAt ?? null,
+    google: company.google?.rating != null && company.google.reviewCount != null
+      ? { rating: company.google.rating, reviewCount: company.google.reviewCount }
+      : null,
   });
 }
 

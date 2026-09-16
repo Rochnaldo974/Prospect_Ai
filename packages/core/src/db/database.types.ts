@@ -272,6 +272,12 @@ export type Database = {
           domain: string | null
           employee_max: number | null
           employee_min: number | null
+          google_checked_at: string | null
+          google_maps_url: string | null
+          google_photo_count: number | null
+          google_place_id: string | null
+          google_rating: number | null
+          google_review_count: number | null
           has_contact: boolean | null
           has_live_assignment: boolean
           id: string
@@ -324,6 +330,12 @@ export type Database = {
           domain?: string | null
           employee_max?: number | null
           employee_min?: number | null
+          google_checked_at?: string | null
+          google_maps_url?: string | null
+          google_photo_count?: number | null
+          google_place_id?: string | null
+          google_rating?: number | null
+          google_review_count?: number | null
           has_contact?: boolean | null
           has_live_assignment?: boolean
           id?: string
@@ -376,6 +388,12 @@ export type Database = {
           domain?: string | null
           employee_max?: number | null
           employee_min?: number | null
+          google_checked_at?: string | null
+          google_maps_url?: string | null
+          google_photo_count?: number | null
+          google_place_id?: string | null
+          google_rating?: number | null
+          google_review_count?: number | null
           has_contact?: boolean | null
           has_live_assignment?: boolean
           id?: string

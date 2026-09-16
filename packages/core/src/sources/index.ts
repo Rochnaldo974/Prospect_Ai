@@ -12,3 +12,4 @@ export * from './sirene/identity';
 export * from './ban/reverse';
 export * from './afnic/adapter';
 export * from './boamp/adapter';
+export * from './google/places';

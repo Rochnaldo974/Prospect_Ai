@@ -55,6 +55,9 @@ export interface ExplanationInput {
     websiteStatus?: string | null;
     /** Réseaux sociaux connus, {réseau: url}. */
     socialLinks?: Record<string, string> | null;
+    /** Ce que ses clients en disent sur Google, quand on l'a relevé. */
+    googleRating?: number | null;
+    googleReviews?: number | null;
   };
   confidenceScore: number;
 }
@@ -533,9 +536,14 @@ export function explainOpportunity(input: ExplanationInput): Explanation {
   const signals = described;
   const others = (observations.length > 0 ? observations : described).slice(1, 3);
 
-  const situation = input.city
+  // La note Google ouvre la situation quand elle est bonne : c'est la
+  // preuve que le commerce marche, et donc que le défaut du site lui coûte.
+  const acclaim = input.facts.googleRating && input.facts.googleReviews && input.facts.googleReviews >= 20
+    ? `, ${fr(input.facts.googleRating)} sur Google avec ${input.facts.googleReviews} avis`
+    : '';
+  const situation = (input.city
     ? `${input.companyName}, ${input.industryLabel ? `${input.industryLabel.toLowerCase()} ` : ''}à ${input.city}`
-    : input.companyName;
+    : input.companyName) + acclaim;
 
   const body = lead
     ? others.length > 0
