@@ -74,21 +74,6 @@ export function IdentityForm({
         ) : null}
       </label>
 
-      <label className="flex items-start gap-2.5 text-sm">
-        <input
-          type="checkbox"
-          name="gmail_signature"
-          defaultChecked={identity.gmailSignature}
-          className="mt-0.5 size-4 accent-[var(--brand)]"
-        />
-        <span>
-          Ma signature est dans Gmail
-          <span className="block text-xs text-muted-foreground">
-            Les e-mails ouverts dans Gmail ne la répètent pas : Gmail l’ajoute lui-même, avec le logo.
-          </span>
-        </span>
-      </label>
-
       {state.problem ? (
         <p className="rounded-lg bg-[var(--finding-wash)] px-4 py-3 text-sm text-[var(--finding)]">
           {state.problem}

@@ -23,7 +23,7 @@ export default async function FollowUpPage() {
   const { followUps, stats } = await getMyFollowUps();
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <main className="mx-auto max-w-[1400px] px-6 py-10 xl:px-12 2xl:px-16">
       <header>
         <h1 className="text-3xl font-semibold tracking-[-0.035em]">À relancer</h1>
         <p className="mt-2 max-w-xl text-muted-foreground">

@@ -45,9 +45,9 @@ export function EmailShow() {
               <span aria-hidden className="mx-auto grid size-12 place-items-center rounded-full bg-[var(--brand)] text-xl text-white">
                 ✓
               </span>
-              <p className="mt-3 font-medium">Envoyé sous votre nom</p>
+              <p className="mt-3 font-medium">Ouvert dans Gmail, sous votre nom</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                La réponse arrivera dans votre boîte mail.
+                Tout est rempli. La réponse arrivera dans votre boîte mail.
               </p>
             </div>
           </div>
@@ -88,7 +88,7 @@ export function EmailShow() {
                 <span className="h-7 w-12 rounded bg-[var(--brand)]/85" />
                 <span>
                   <span className="block text-[13px] font-semibold leading-tight">Vous</span>
-                  <span className="block text-[11px] text-muted-foreground">votre métier · votre logo</span>
+                  <span className="block text-[11px] text-muted-foreground">votre métier · votre téléphone</span>
                 </span>
               </span>
               <span className="rounded-full bg-[var(--brand)] px-4 py-2 text-[13px] font-medium text-white">

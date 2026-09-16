@@ -69,7 +69,7 @@ export default async function DashboardPage() {
   const inDiscussion = stats.interested + stats.meeting + stats.proposal;
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <main className="mx-auto max-w-[1400px] px-6 py-10 xl:px-12 2xl:px-16">
       <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">

@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useState } from 'react';
 import { EMAIL_INTENTS, type EmailIntent } from '@prospect/core';
 import type { EmailIdentity } from '@/lib/email/identity';
-import { renderEmailFragment, renderEmailText } from '@/lib/email/render';
+import { renderEmailText } from '@/lib/email/render';
 import { recordExternalSend, sendProspectingEmail, type SendState } from './actions';
 
 /**
@@ -51,13 +51,9 @@ export function EmailSendForm({
   };
 
   /**
-   * Gmail reçoit tout par l'adresse : destinataire, objet, message — ce
-   * que le freelance a validé dans l'aperçu, mot pour mot. Le presse-
-   * papiers reçoit en plus la version exacte de l'aperçu, logo compris, en
-   * HTML : dans Gmail, tout sélectionner puis coller la met à la place du
-   * texte. On ne l'attend pas, on ne compte pas dessus — Gmail a déjà le
-   * message. Si la signature est dans Gmail, Gmail l'ajoute lui-même avec
-   * le logo et il ne reste qu'« Envoyer ».
+   * Gmail reçoit tout par l'adresse : destinataire, objet, et le message
+   * validé dans l'aperçu, mot pour mot, signature comprise. Rien d'autre à
+   * faire là-bas qu'« Envoyer ».
    */
   const composeUrl = () => {
     const compose = new URL('https://mail.google.com/mail/');
@@ -65,19 +61,11 @@ export function EmailSendForm({
     compose.searchParams.set('fs', '1');
     compose.searchParams.set('to', to);
     compose.searchParams.set('su', subject);
-    compose.searchParams.set('body', identity.gmailSignature ? body.trim() : renderEmailText(body, identity));
+    compose.searchParams.set('body', renderEmailText(body, identity));
     return compose.toString();
   };
 
   const openGmail = () => {
-    if (typeof ClipboardItem !== 'undefined' && typeof navigator.clipboard?.write === 'function') {
-      navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': new Blob([renderEmailFragment(body, identity)], { type: 'text/html' }),
-          'text/plain': new Blob([renderEmailText(body, identity)], { type: 'text/plain' }),
-        }),
-      ]).catch(() => undefined);
-    }
     setGmail('opened');
     window.open(composeUrl(), '_blank', 'noopener');
   };
@@ -167,15 +155,7 @@ export function EmailSendForm({
         ) : (
           <div className="rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-wash)] px-4 py-4 text-sm leading-relaxed">
             <p className="font-medium text-[var(--brand)]">Gmail est ouvert : adresse, objet et message sont remplis.</p>
-            {identity.gmailSignature ? (
-              <p className="mt-1.5 text-[var(--brand)]/85">Votre signature Gmail, avec le logo, se place toute seule. Relisez, puis « Envoyer ».</p>
-            ) : (
-              <p className="mt-1.5 text-[var(--brand)]/85">
-                Relisez, puis « Envoyer ». Pour la version exacte de l’aperçu, logo compris : cliquez dans le message,{' '}
-                <kbd className="rounded border bg-card px-1.5 font-mono text-xs">⌘ A</kbd> puis{' '}
-                <kbd className="rounded border bg-card px-1.5 font-mono text-xs">⌘ V</kbd> — elle est déjà copiée.
-              </p>
-            )}
+            <p className="mt-1.5 text-[var(--brand)]/85">Relisez, puis « Envoyer ». Revenez ensuite dire que c’est parti.</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -237,13 +217,7 @@ export function EmailSendForm({
 
         <p className="text-xs leading-relaxed text-muted-foreground">
           L’e-mail part de votre boîte Gmail, sous votre nom : les réponses y arrivent directement. L’adresse du
-          destinataire est celle que l’entreprise publie sur son site.{' '}
-          {identity.gmailSignature ? null : (
-            <>
-              Votre logo apparaîtra une fois votre signature mise dans Gmail, depuis{' '}
-              <a href="/dashboard/signature" className="text-[var(--brand)] underline-offset-4 hover:underline">Signature e-mail</a>.
-            </>
-          )}
+          destinataire est celle que l’entreprise publie sur son site.
         </p>
       </div>
 
@@ -272,10 +246,6 @@ function LivePreview({
         ))}
       </div>
       <div className="mt-5 border-t pt-4">
-        {identity.logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={identity.logoUrl} alt="" className="mb-2.5 h-10 w-auto max-w-40 object-contain" />
-        ) : null}
         <p className="text-sm font-semibold">{identity.fromName}</p>
         {(identity.title || identity.company) ? (
           <p className="mt-0.5 text-[13px] text-muted-foreground">

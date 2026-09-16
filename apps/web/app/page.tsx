@@ -296,15 +296,15 @@ function EmailFeature() {
             </h2>
             <p className="reasoning mt-4 max-w-lg text-muted-foreground">
               Choisissez ce que vous proposez — un appel, un audit gratuit, une présentation —
-              et le message s’écrit depuis les constats du dossier. Votre nom, votre logo,
-              votre CV en pièce jointe. Un clic, c’est envoyé, et la réponse arrive dans
-              votre boîte.
+              et le message s’écrit depuis les constats du dossier, signé à votre nom. Un
+              clic ouvre Gmail avec tout de rempli : il ne reste qu’à envoyer, et la réponse
+              arrive dans votre boîte.
             </p>
             <ul className="mt-7 space-y-2.5">
               {[
                 'Rédigé depuis les faits du dossier — jamais générique',
-                'Signé à votre nom, avec votre logo',
-                'Envoyé directement, réponses dans votre boîte mail',
+                'Signé à votre nom, sans un mot technique',
+                'Ouvert dans Gmail, tout rempli : il ne reste qu’à envoyer',
               ].map((line) => (
                 <li key={line} className="flex gap-3 text-sm">
                   <span aria-hidden className="text-[var(--brand)]">✓</span>

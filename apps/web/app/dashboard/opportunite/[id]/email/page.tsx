@@ -55,7 +55,7 @@ export default async function EmailPage({
   const back = `/dashboard/opportunite/${id}`;
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-8">
+    <main className="mx-auto max-w-[1400px] px-6 py-8 xl:px-12 2xl:px-16">
       <Link href={back} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
         ← Retour au dossier
       </Link>

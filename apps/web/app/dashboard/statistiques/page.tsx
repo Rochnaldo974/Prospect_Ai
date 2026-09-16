@@ -1,3 +1,4 @@
+import type { WindowCounts } from '@prospect/core';
 import type { Metadata } from 'next';
 import { getMyStatistics } from '@/lib/opportunities/mine';
 import { StatsChart } from '@/components/dashboard/stats-chart';
@@ -21,7 +22,7 @@ export default async function StatisticsPage() {
     : null;
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <main className="mx-auto max-w-[1400px] px-6 py-10 xl:px-12 2xl:px-16">
       <header>
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
           30 derniers jours
@@ -155,7 +156,7 @@ function MetricCard({
  * qui intéresse, pas la part du total. Les barres poussent de gauche à
  * droite à l'arrivée, en cascade.
  */
-function Funnel({ current }: { current: import('@prospect/core').WindowCounts }) {
+function Funnel({ current }: { current: WindowCounts }) {
   const steps: Array<{ label: string; value: number; tone: string }> = [
     { label: 'Proposées', value: current.proposed, tone: 'bg-[var(--brand)]/25' },
     { label: 'Contactées', value: current.contacted, tone: 'bg-[var(--brand)]/55' },
