@@ -139,6 +139,7 @@ function fixtures(): DailyOpportunity[] {
     viewedAt: null,
     snoozedAt: null,
     exclusiveUntil: '2026-01-01T00:00:00Z',
+      assignedAt: new Date().toISOString(),
   };
 
   return [
@@ -153,6 +154,7 @@ function fixtures(): DailyOpportunity[] {
         name: 'Boulangerie du Théâtre',
         city: 'Angers',
         industry: 'Boulangerie-pâtisserie',
+      industryIcon: '🏪',
         phone: '+33241000001',
         email: null,
         address: null,
@@ -182,6 +184,7 @@ function fixtures(): DailyOpportunity[] {
         name: 'Menuiserie Blanchard',
         city: 'Rennes',
         industry: 'Menuiserie',
+      industryIcon: '🏪',
         phone: '+33299000002',
         email: null,
         address: null,
@@ -211,6 +214,7 @@ function fixtures(): DailyOpportunity[] {
         name: 'Pizzeria Fratelli',
         city: 'Nantes',
         industry: 'Restauration',
+      industryIcon: '🏪',
         phone: null,
         email: null,
         address: null,

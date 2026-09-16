@@ -107,8 +107,8 @@ export function scoreSite(m: SiteMeasures, now = new Date()): SiteAudit {
 
   // ── Confiance ────────────────────────────────────────────────────────
   let trust = 100;
-  if (!m.https) { trust -= 45; note(88, 'Servi sans HTTPS : « non sécurisé » dans la barre du navigateur'); }
-  else if (m.tlsValid === false) { trust -= 45; note(88, 'Certificat refusé par les navigateurs : avertissement de sécurité'); }
+  if (!m.https) { trust -= 45; note(88, 'Servi sans HTTPS : « Non sécurisé » dans la barre d’adresse, et Google le pénalise'); }
+  else if (m.tlsValid === false) { trust -= 45; note(88, 'Certificat refusé par les navigateurs : page d’avertissement avant le site'); }
   if (m.mixedContent > 0) { trust -= 15; note(50, `${m.mixedContent} élément(s) chargés sans sécurité sur une page sécurisée`); }
   if (!m.hasTelLink && !m.hasForm && !m.hasMailLink) { trust -= 25; note(55, 'Aucun moyen de contact cliquable : ni téléphone, ni formulaire, ni e-mail'); }
   if (m.copyrightYear !== null) {

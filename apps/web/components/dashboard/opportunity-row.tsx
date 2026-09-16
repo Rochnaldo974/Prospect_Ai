@@ -22,7 +22,12 @@ export function OpportunityRow({ opportunity }: { opportunity: DailyOpportunity 
       href={`/dashboard/opportunite/${opportunity.assignmentId}`}
       className="group flex items-center gap-4 rounded-2xl border bg-card px-4 py-4 shadow-[0_1px_2px_rgba(11,13,20,.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-16px_rgba(11,13,20,.25)] sm:gap-5 sm:px-6"
     >
-      <Score value={opportunity.matchScore} done={done} />
+      <Tile
+        screenshotUrl={company.screenshotUrl}
+        icon={company.industryIcon}
+        industry={company.industry}
+        done={done}
+      />
 
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold tracking-tight">
@@ -50,7 +55,15 @@ export function OpportunityRow({ opportunity }: { opportunity: DailyOpportunity 
             {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
           </span>
         </span>
-        <Remaining hoursLeft={opportunity.hoursLeft} />
+        <span className="flex items-center gap-2">
+          <span
+            className="tabular font-mono text-[11px] text-muted-foreground"
+            title="Pertinence pour vous : vos prestations et votre zone, pondérées"
+          >
+            {Math.round(opportunity.matchScore)} %
+          </span>
+          <Remaining hoursLeft={opportunity.hoursLeft} />
+        </span>
       </span>
 
       <span
@@ -64,11 +77,16 @@ export function OpportunityRow({ opportunity }: { opportunity: DailyOpportunity 
 }
 
 /**
- * La pertinence, telle que le moteur la calcule pour CET utilisateur.
- * Pondérée par ses prestations et sa zone : deux freelances voyant la même
- * entreprise n'y lisent pas le même nombre.
+ * La vignette : le site tel qu'il est, quand le moteur l'a photographié,
+ * sinon le métier en un signe. Un carré bleu avec un nombre dedans ne
+ * disait rien ; une devanture ou une capture se reconnaît avant de lire.
+ * La coche remplace tout quand le dossier a été appelé.
  */
-function Score({ value, done }: { value: number; done: boolean }) {
+function Tile({
+  screenshotUrl, icon, industry, done,
+}: {
+  screenshotUrl: string | null; icon: string; industry: string | null; done: boolean;
+}) {
   if (done) {
     return (
       <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[var(--mist)] text-[var(--brand)]">
@@ -76,15 +94,22 @@ function Score({ value, done }: { value: number; done: boolean }) {
       </span>
     );
   }
-
-  const intensity = Math.min(1, Math.max(0.55, (value - 45) / 45));
-
+  if (screenshotUrl) {
+    return (
+      <span className="block size-12 shrink-0 overflow-hidden rounded-xl border bg-[var(--mist)]" title={industry ?? undefined}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- capture distante */}
+        <img src={screenshotUrl} alt="" className="size-full object-cover object-top" />
+      </span>
+    );
+  }
   return (
     <span
-      className="tabular grid size-12 shrink-0 place-items-center rounded-xl font-mono text-sm font-medium text-white"
-      style={{ backgroundColor: 'var(--brand)', opacity: intensity }}
+      role="img"
+      aria-label={industry ?? 'Commerce'}
+      title={industry ?? undefined}
+      className="grid size-12 shrink-0 place-items-center rounded-xl bg-[var(--mist)] text-2xl leading-none"
     >
-      {Math.round(value)}
+      {icon}
     </span>
   );
 }
@@ -98,13 +123,15 @@ function Remaining({ hoursLeft }: { hoursLeft: number }) {
   const label =
     hoursLeft >= 24 ? `${Math.floor(hoursLeft / 24)} j ${hoursLeft % 24} h` : `${hoursLeft} h`;
 
+  // « Expire dans » plutôt qu'un nombre nu : le freelance doit comprendre
+  // sans légende que passé ce délai, le dossier part chez quelqu'un d'autre.
   return (
     <span
       className="shrink-0 font-mono text-[11px]"
       style={{ color: hoursLeft < 12 ? 'var(--finding)' : 'var(--ink-2)' }}
-      title="Temps d’exclusivité restant sur cette entreprise"
+      title="Passé ce délai, l’entreprise est proposée à un autre freelance"
     >
-      {label}
+      expire dans {label}
     </span>
   );
 }
@@ -132,20 +159,17 @@ function SiteScore({ value }: { value: number }) {
  * l'œil doit aller au dossier qui réunit le plus d'atouts.
  */
 function TierBadge({ tier }: { tier: DailyOpportunity['tier'] }) {
-  const styles: Record<typeof tier.level, { color: string; bg: string }> = {
-    diamant: { color: '#1d4ed8', bg: '#dbeafe' },
-    or: { color: '#92400e', bg: '#fef3c7' },
-    argent: { color: '#475569', bg: '#f1f5f9' },
-    bronze: { color: '#78716c', bg: '#f5f5f4' },
-  };
-  const s = styles[tier.level];
+  // Une icône, pas un mot : elle se lit d'un coup d'œil dans une liste, et
+  // le mot reste dans l'infobulle avec les raisons.
+  const icons: Record<typeof tier.level, string> = { diamant: '💎', or: '🥇', argent: '🥈', bronze: '🥉' };
   return (
     <span
-      className="rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]"
-      style={{ color: s.color, backgroundColor: s.bg }}
-      title={tier.reasons.length > 0 ? `Réunit ${tier.reasons.join(', ')}` : 'Aucun atout mesuré'}
+      role="img"
+      aria-label={`Palier ${TIER_LABELS[tier.level]}`}
+      className="text-base leading-none"
+      title={`${TIER_LABELS[tier.level]}${tier.reasons.length > 0 ? ` — réunit ${tier.reasons.join(', ')}` : ' — aucun atout mesuré'}`}
     >
-      {TIER_LABELS[tier.level]}
+      {icons[tier.level]}
     </span>
   );
 }

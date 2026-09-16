@@ -85,17 +85,28 @@ export interface Explanation {
  * Ce qu'un certificat refusé provoque, formulé pour être vérifié en une
  * minute par le freelance comme par le commerçant.
  */
-function describeCertificate(reason: string | null): string {
+/**
+ * Deux situations que le freelance doit distinguer avant d'appeler : un site
+ * qui s'ouvre en http avec un certificat cassé à côté n'affiche qu'un
+ * « Non sécurisé » discret ; un site qui envoie en https sur ce certificat
+ * met une page pleine d'avertissement devant chaque visiteur. Exagérer le
+ * premier cas se paie au premier appel.
+ */
+function describeCertificate(reason: string | null, servedOverHttps: boolean | null): string {
+  const blocking = servedOverHttps !== false;
+  const effect = blocking
+    ? 'les navigateurs affichent une page d’avertissement avant le site'
+    : 'le site s’ouvre en http, sans avertissement bloquant, mais « Non sécurisé » dans la barre d’adresse';
   switch (reason) {
     case 'CERT_HAS_EXPIRED':
-      return 'Certificat de sécurité expiré : les navigateurs affichent un avertissement avant le site';
+      return `Certificat de sécurité expiré : ${effect}`;
     case 'DEPTH_ZERO_SELF_SIGNED_CERT':
     case 'SELF_SIGNED_CERT_IN_CHAIN':
-      return 'Certificat auto-signé : les navigateurs le refusent et avertissent le visiteur';
+      return `Certificat auto-signé : ${effect}`;
     case 'ERR_TLS_CERT_ALTNAME_INVALID':
-      return 'Certificat émis pour un autre nom de domaine que celui du site';
+      return `Certificat émis pour un autre nom de domaine : ${effect}`;
     default:
-      return 'Certificat de sécurité refusé par les navigateurs';
+      return `Certificat de sécurité refusé par les navigateurs : ${effect}`;
   }
 }
 
@@ -181,7 +192,7 @@ function describeSignal(signal: string, facts: ExplanationInput['facts']): strin
         ? `Temps de réponse du serveur mesuré à ${fr(facts.ttfbMs / 1000)} s`
         : 'Temps de réponse du serveur élevé';
     case 'no_ssl':
-      return 'Site servi sans HTTPS — les navigateurs affichent un avertissement aux visiteurs';
+      return 'Site servi sans HTTPS : « Non sécurisé » dans la barre d’adresse, et Google le pénalise';
     case 'no_contact_form':
       return 'Aucun formulaire ni page de contact trouvé sur le site';
     case 'retail_without_ecommerce':
@@ -233,7 +244,7 @@ function describeSignal(signal: string, facts: ExplanationInput['facts']): strin
     case 'frozen_site_woke_up':
       return null; // porté par « pourquoi maintenant »
     case 'invalid_certificate':
-      return describeCertificate(facts.tlsReason ?? null);
+      return describeCertificate(facts.tlsReason ?? null, facts.hasSsl ?? null);
     case 'certificate_expired':
       return facts.tlsValidTo
         ? `Certificat expiré le ${formatDate(`${facts.tlsValidTo}T00:00:00Z`) ?? facts.tlsValidTo}`
@@ -489,7 +500,9 @@ function buildHeadline(input: ExplanationInput, signals: string[]): string {
       : 'Site en panne — proposer une remise en ligne rapide';
   }
   if (has('certificate_expired') || has('invalid_certificate')) {
-    return 'Avertissement de sécurité à chaque visite — proposer la remise en conformité du site';
+    return f.hasSsl === false
+      ? 'Site « Non sécurisé » et certificat cassé — proposer la remise en conformité, rapide'
+      : 'Avertissement de sécurité à chaque visite — proposer la remise en conformité, rapide';
   }
 
   const proofs: string[] = [];

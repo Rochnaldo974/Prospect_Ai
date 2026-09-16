@@ -10,9 +10,9 @@ import type { TodayOpportunity } from '../../packages/core/src/allocation/today'
  */
 const opportunity = (): TodayOpportunity => ({
   assignmentId: 'a1', rank: 1, type: 'website_redesign', matchScore: 80,
-  exclusiveUntil: new Date().toISOString(), viewedAt: null, contactedAt: null, snoozedAt: null,
+  exclusiveUntil: new Date().toISOString(), assignedAt: new Date().toISOString(), viewedAt: null, contactedAt: null, snoozedAt: null,
   company: {
-    name: 'Boulangerie Moreau', city: 'Angers', industry: 'Boulangerie', phone: '+33241222479',
+    name: 'Boulangerie Moreau', city: 'Angers', industry: 'Boulangerie', industryIcon: '🥖', phone: '+33241222479',
     email: null, address: null, contactFormUrl: null, websiteUrl: 'https://moreau.fr',
   },
   explanation: {

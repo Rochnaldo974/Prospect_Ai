@@ -31,6 +31,35 @@ export default async function DashboardPage() {
   const done = today.filter((o) => o.contactedAt !== null).length;
   const total = today.length;
 
+  // Ce qui est arrivé ce matin, et ce qui reste ouvert des jours d'avant :
+  // deux listes, parce que ce ne sont pas les mêmes décisions. Le second
+  // groupe a une échéance qui approche ; c'est elle qu'on affiche en gros.
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const arrivedToday = today.filter((o) => new Date(o.assignedAt) >= startOfDay);
+  const stillOpen = today.filter((o) => new Date(o.assignedAt) < startOfDay);
+
+  // Les jours précédents, un groupe par jour d'arrivée, du plus récent au
+  // plus ancien : « hier » se traite avant « il y a trois jours », parce que
+  // l'exclusivité du second tombe plus tôt.
+  const dayKey = (iso: string) => {
+    const d = new Date(iso);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  const byDay = new Map<number, typeof stillOpen>();
+  for (const o of stillOpen) {
+    const key = dayKey(o.assignedAt);
+    byDay.set(key, [...(byDay.get(key) ?? []), o]);
+  }
+  const previousDays = [...byDay.entries()].sort((a, b) => b[0] - a[0]);
+  const dayLabel = (key: number) => {
+    const days = Math.round((startOfDay.getTime() - key) / 86_400_000);
+    if (days === 1) return 'Arrivées hier';
+    if (days === 2) return 'Arrivées avant-hier';
+    return `Arrivées le ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(new Date(key))}`;
+  };
+
   const dateLabel = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
     day: 'numeric',
@@ -105,12 +134,34 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <>
-          <h2 className="mt-10 text-sm font-medium">À prospecter aujourd’hui</h2>
-          <div className="mt-3 space-y-3">
-            {today.map((opportunity) => (
-              <OpportunityRow key={opportunity.assignmentId} opportunity={opportunity} />
-            ))}
-          </div>
+          <h2 className="mt-10 text-sm font-medium">Arrivées aujourd’hui</h2>
+          {arrivedToday.length > 0 ? (
+            <div className="mt-3 space-y-3">
+              {arrivedToday.map((opportunity) => (
+                <OpportunityRow key={opportunity.assignmentId} opportunity={opportunity} />
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-2xl border border-dashed px-5 py-4 text-sm text-muted-foreground">
+              Rien de nouveau ce matin. Les dossiers ci-dessous restent à traiter avant la fin de leur exclusivité.
+            </p>
+          )}
+
+          {previousDays.map(([key, group]) => (
+            <section key={key}>
+              <h2 className="mt-10 text-sm font-medium">
+                {dayLabel(key)}
+                <span className="ml-2 font-normal text-muted-foreground">
+                  — encore ouvertes, elles disparaissent à la fin de leur exclusivité
+                </span>
+              </h2>
+              <div className="mt-3 space-y-3">
+                {group.map((opportunity) => (
+                  <OpportunityRow key={opportunity.assignmentId} opportunity={opportunity} />
+                ))}
+              </div>
+            </section>
+          ))}
         </>
       )}
 

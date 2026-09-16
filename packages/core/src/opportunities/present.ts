@@ -1,5 +1,6 @@
 import type { Db } from '../db/client';
 import type { OpportunityType } from '../domain/types';
+import { describeIndustry } from '../domain/industries';
 import { explainOpportunity, type Explanation } from './explain';
 
 /**
@@ -135,7 +136,8 @@ export async function presentOpportunities(
         // souvent rien à personne, pas même au dirigeant au téléphone.
         name: company.commercial_name ?? company.legal_name,
         city: company.city,
-        industry: company.industry_label,
+        industry: describeIndustry(company.industry_label).label,
+        industryIcon: describeIndustry(company.industry_label).icon,
         phone: company.phone,
         contactFormUrl: company.contact_form_url,
         domain: company.domain,
@@ -144,7 +146,7 @@ export async function presentOpportunities(
         opportunityType: row.opportunity_type as OpportunityType,
         companyName: company.commercial_name ?? company.legal_name,
         city: company.city,
-        industryLabel: company.industry_label,
+        industryLabel: describeIndustry(company.industry_label).label,
         triggerType: reason.trigger ?? null,
         triggerOccurredAt: reason.trigger_occurred_at ?? null,
         needSignals: (reason.need_breakdown ?? []).map((c) => ({

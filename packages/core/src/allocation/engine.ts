@@ -63,7 +63,12 @@ export interface AllocationOptions {
 interface CandidateRow extends OpportunityCandidate {
   opportunityId: string;
   companyId: string;
+  /** Ce qui porte le dossier : le fait daté, sinon le constat le plus lourd. */
+  theme: string;
 }
+
+/** Combien de dossiers d'un même thème dans un lot : au-delà, la journée se répète. */
+const MAX_PER_THEME = 2;
 
 /** Une opportunité sur cinq, conformément à la décision de départ. */
 const CONTROL_RATE = 5;
@@ -156,7 +161,7 @@ export async function runAllocation(
 async function loadCandidates(db: Db): Promise<CandidateRow[]> {
   const { data, error } = await db
     .from('opportunities')
-    .select('id, company_id, opportunity_type, base_score, confidence_score, companies!inner(id, city, region, industry_code, prospecting_allowed, suppression_global, cooldown_until, has_live_assignment)')
+    .select('id, company_id, opportunity_type, base_score, confidence_score, reason_data, companies!inner(id, city, region, industry_code, prospecting_allowed, suppression_global, cooldown_until, has_live_assignment)')
     .eq('status', 'available')
     .gt('expires_at', new Date().toISOString())
     .order('base_score', { ascending: false })
@@ -180,9 +185,12 @@ async function loadCandidates(db: Db): Promise<CandidateRow[]> {
     if (company.cooldown_until !== null) continue;
     if (company.has_live_assignment) continue;
 
+    const reason = (row as unknown as { reason_data?: { trigger?: string | null; need_breakdown?: { signal: string; points: number }[] } | null }).reason_data;
+    const strongest = [...(reason?.need_breakdown ?? [])].sort((a, b) => b.points - a.points)[0]?.signal;
     rows.push({
       opportunityId: row.id,
       companyId: row.company_id,
+      theme: reason?.trigger ?? strongest ?? row.opportunity_type,
       opportunityType: row.opportunity_type as OpportunityType,
       baseScore: Number(row.base_score),
       confidenceScore: Number(row.confidence_score),
@@ -288,11 +296,27 @@ async function allocateFor(
     return verdict;
   };
 
+  // Un lot varié : cinq « certificat expiré » d'affilée, même vrais, font
+  // une journée qui se répète et un freelance qui ne clique plus. On descend
+  // le classement en limitant chaque thème ; si le stock ne permet pas la
+  // variété, on complète ensuite sans la contrainte plutôt que de livrer
+  // moins.
   const chosen: { candidate: CandidateRow; score: number }[] = [];
+  const perTheme = new Map<string, number>();
+  const passedOver: { candidate: CandidateRow; score: number }[] = [];
   let cursor = 0;
   while (chosen.length < limit && cursor < ranked.length) {
     const entry = ranked[cursor]!;
     cursor += 1;
+    const count = perTheme.get(entry.candidate.theme) ?? 0;
+    if (count >= MAX_PER_THEME) { passedOver.push(entry); continue; }
+    if (await holds(entry)) {
+      chosen.push(entry);
+      perTheme.set(entry.candidate.theme, count + 1);
+    }
+  }
+  for (const entry of passedOver) {
+    if (chosen.length >= limit) break;
     if (await holds(entry)) chosen.push(entry);
   }
 

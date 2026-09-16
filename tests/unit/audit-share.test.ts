@@ -5,11 +5,11 @@ import { mergeFindings } from '../../packages/core/src/allocation/audit-share';
 describe('constats de l’audit', () => {
   it('garde la mesure et écarte le relevé qui parle du même sujet', () => {
     const merged = mergeFindings(
-      ['Servi sans HTTPS : « non sécurisé » dans la barre du navigateur', 'Aucun moyen de contact cliquable : ni téléphone, ni formulaire, ni e-mail'],
+      ['Servi sans HTTPS : « Non sécurisé » dans la barre d’adresse, et Google le pénalise', 'Aucun moyen de contact cliquable : ni téléphone, ni formulaire, ni e-mail'],
       ['Certificat de sécurité expiré : les navigateurs affichent un avertissement', 'Certificat expiré le 11 août 2026', 'Site servi sans HTTPS — les navigateurs affichent un avertissement', 'Site figé à 2011 d\'après sa mention de copyright'],
     );
     expect(merged).toEqual([
-      'Servi sans HTTPS : « non sécurisé » dans la barre du navigateur',
+      'Servi sans HTTPS : « Non sécurisé » dans la barre d’adresse, et Google le pénalise',
       'Aucun moyen de contact cliquable : ni téléphone, ni formulaire, ni e-mail',
       'Site figé à 2011 d\'après sa mention de copyright',
     ]);

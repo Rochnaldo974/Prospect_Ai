@@ -1,6 +1,7 @@
 import type { Db } from '../db/client';
 import type { OpportunityType } from '../domain/types';
 import { explainOpportunity, type Explanation } from '../opportunities/explain';
+import { describeIndustry } from '../domain/industries';
 import { loadWrittenCards } from './written-card';
 import { screenshotUrl } from '../enrichment/screenshot';
 import type { SiteScores } from '../enrichment/audit';
@@ -24,6 +25,8 @@ export interface TodayOpportunity {
   type: OpportunityType;
   matchScore: number;
   exclusiveUntil: string;
+  /** Quand le dossier est arrivé : ce qui sépare « aujourd'hui » des jours précédents. */
+  assignedAt: string;
   viewedAt: string | null;
   contactedAt: string | null;
   /** Mis de côté par le freelance — un marque-page, pas un droit de plus. */
@@ -32,6 +35,8 @@ export interface TodayOpportunity {
     name: string;
     city: string | null;
     industry: string | null;
+    /** Le signe du métier, pour la liste. */
+    industryIcon: string;
     phone: string | null;
     /**
      * E-mail GÉNÉRIQUE relevé sur le site (contact@, info@…). Jamais un
@@ -93,7 +98,7 @@ export async function getTodayOpportunities(
 ): Promise<TodayOpportunity[]> {
   const { data, error } = await db
     .from('assignments')
-    .select('id, rank, match_score, exclusive_until, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, social_links, siren, identity_confidence, google_rating, google_review_count, google_photo_count, google_maps_url, google_checked_at, website_url, domain, creation_date, employee_min)')
+    .select('id, rank, match_score, exclusive_until, assigned_at, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, social_links, siren, identity_confidence, google_rating, google_review_count, google_photo_count, google_maps_url, google_checked_at, website_url, domain, creation_date, employee_min)')
     .eq('user_id', userId)
     .in('status', ['active', 'contacted'])
     .order('rank', { ascending: true });
@@ -174,13 +179,15 @@ export async function getTodayOpportunities(
       type: opportunity.opportunity_type as OpportunityType,
       matchScore: Number(row.match_score),
       exclusiveUntil: row.exclusive_until,
+      assignedAt: (row as unknown as { assigned_at: string }).assigned_at,
       viewedAt: row.viewed_at,
       contactedAt: row.contacted_at,
       snoozedAt: (row as unknown as { snoozed_at: string | null }).snoozed_at,
       company: {
         name,
         city: company.city,
-        industry: company.industry_label,
+        industry: describeIndustry(company.industry_label).label,
+        industryIcon: describeIndustry(company.industry_label).icon,
         phone: company.phone,
         email: pickGenericEmail((site as unknown as { emails_found?: unknown })?.emails_found),
         address: [company.address, company.postal_code, company.city].filter(Boolean).join(', ') || null,
@@ -209,7 +216,7 @@ export async function getTodayOpportunities(
         opportunityType: opportunity.opportunity_type as OpportunityType,
         companyName: name,
         city: company.city,
-        industryLabel: company.industry_label,
+        industryLabel: describeIndustry(company.industry_label).label,
         triggerType: reason.trigger ?? null,
         triggerOccurredAt: reason.trigger_occurred_at ?? null,
         needSignals: (reason.need_breakdown ?? []).map((c) => ({
