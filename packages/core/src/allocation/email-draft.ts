@@ -92,16 +92,13 @@ function introduction(options: DraftOptions): string {
   return presentation ? `${who}${where}. ${sentence(presentation)}` : `${who}${where}.`;
 }
 
-/** L'accroche de secours : sans fiche rédigée, on situe la rencontre et on cite le fait. */
+/** L'accroche de secours : sans fiche rédigée, le premier fait, poliment, en une phrase. */
 function fallbackHook(opportunity: Pick<TodayOpportunity, 'company' | 'explanation'>): string {
   const { company, explanation } = opportunity;
-  const trade = company.industry?.trim() ? lower(company.industry.trim()) : null;
-  const where = company.city ? ` à ${company.city}` : '';
-  const met = trade
-    ? `En regardant les ${trade}s${where} présents sur internet, je suis arrivé sur ${company.name}.`
-    : `En regardant les commerces${where} présents sur internet, je suis arrivé sur ${company.name}.`;
   const fact = explanation.signals[0];
-  return fact ? `${met} Une chose m’a frappé : ${sentence(lower(fact))}` : `${met} Une chose m’a frappé en ouvrant votre site.`;
+  return fact
+    ? `En regardant le site de ${company.name}, j’ai remarqué que ${sentence(lower(fact))}`
+    : `En regardant la présence de ${company.name} sur internet, un point m’a semblé mériter un échange.`;
 }
 
 export function draftProspectingEmail(
@@ -117,41 +114,25 @@ export function draftProspectingEmail(
 
   const lines: string[] = ['Bonjour,', '', introduction(options), '', hook, ''];
 
+  // Le problème, la proposition, la demande : trois phrases, pas plus. Ce
+  // qui suit change seulement la demande, selon ce que le freelance veut.
   switch (intent) {
     case 'audit':
       if (options.auditUrl) {
-        // L'audit existe déjà : on le donne, on ne le promet pas. Un lien
-        // qu'on peut ouvrir vaut mieux qu'une offre à accepter.
-        lines.push(
-          'J’ai regardé votre site comme le ferait un client, et j’ai noté ce qu’il voit, '
-          + 'en quelques points simples, sur cette page :',
-          '',
-          options.auditUrl,
-          '',
-          'Ça se lit en deux minutes, et vous pouvez tout vérifier vous-même. Si une question vous vient en le lisant, je suis joignable.',
-        );
+        // L'audit existe déjà : on le donne, on ne le promet pas.
+        lines.push(`${proposal} J’ai résumé ce que j’ai vu sur cette page, à lire en deux minutes :`, '', options.auditUrl);
       } else {
-        lines.push(
-          'Si vous le souhaitez, je vous envoie ce que j’ai noté en regardant votre site comme le ferait un client : '
-          + 'trois points simples, que vous pourrez vérifier vous-même. C’est offert, sans engagement.',
-          '',
-          'Voulez-vous que je vous l’envoie ?',
-        );
+        lines.push(`${proposal} Je peux d’abord vous envoyer un court état des lieux de votre site, sans engagement.`, '', 'Souhaitez-vous que je vous l’envoie ?');
       }
       break;
 
     case 'intro':
-      lines.push(proposal);
-      if (hasCv) lines.push('', 'Mon CV est joint à ce message, si vous voulez voir ce que j’ai déjà fait.');
-      lines.push('', 'Si le sujet vous parle, on en discute au moment qui vous arrange.');
+      lines.push(hasCv ? `${proposal} Mon CV est joint à ce message.` : proposal);
+      lines.push('', 'Si le sujet vous parle, je suis joignable au moment qui vous arrange.');
       break;
 
     default:
-      lines.push(
-        proposal,
-        '',
-        'Si vous avez dix minutes cette semaine, je vous explique ça de vive voix, sans engagement. Quel moment vous arrangerait ?',
-      );
+      lines.push(proposal, '', 'Auriez-vous dix minutes cette semaine pour en parler ?');
   }
 
   lines.push('', 'Bien à vous,');

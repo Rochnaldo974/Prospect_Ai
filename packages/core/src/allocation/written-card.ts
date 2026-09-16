@@ -27,8 +27,10 @@ export const WrittenCardSchema = z.object({
    */
   email: z.object({
     subject: z.string().min(8).max(80),
-    hook: z.string().min(60).max(600),
-    proposal: z.string().min(30).max(400),
+    /** Le problème principal, en une phrase polie. */
+    hook: z.string().min(30).max(240),
+    /** Ce qu'on ferait, en une phrase concrète. */
+    proposal: z.string().min(20).max(220),
   }).optional(),
 });
 

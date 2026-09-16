@@ -42,8 +42,8 @@ const card = {
   opener: 'Bonjour, je suis développeur web à Angers ; j’ai vu que votre site date de 2011 et ne s’ouvre pas bien sur téléphone. Est-ce quelque chose que vous avez prévu de revoir ?',
   email: {
     subject: 'Votre site vu depuis un téléphone',
-    hook: 'En cherchant une boulangerie à Angers, je suis tombé sur Boulangerie Moreau. Votre site s’affiche tout petit sur téléphone, et la date en bas de page remonte à 2011 : un client qui cherche vos horaires repart sans les avoir trouvés.',
-    proposal: 'Je peux remettre votre site au goût du jour, lisible sur téléphone, avec vos horaires et votre adresse bien en vue.',
+    hook: 'En regardant votre site, j’ai remarqué qu’il date de 2011 et qu’il s’affiche difficilement sur téléphone.',
+    proposal: 'Je vous propose de le remettre au goût du jour, lisible sur téléphone, avec vos horaires et votre adresse bien en vue.',
   },
 };
 
@@ -64,7 +64,7 @@ describe('rédaction des fiches', () => {
   });
 
   it('écarte la part e-mail qui parle en informaticien, et garde la fiche', async () => {
-    const jargon = { ...card, email: { ...card.email, hook: 'Votre certificat HTTPS est expiré et le site n’est pas responsive, ce qui pénalise votre SEO auprès de vos clients.' } };
+    const jargon = { ...card, email: { ...card.email, hook: 'En regardant votre site, votre certificat HTTPS est expiré et le site n’est pas responsive.' } };
     const { client } = fakeClient(jargon);
     const write = createClaudeWriter({ client });
     const result = await write({ opportunity: opportunity(), services: [] });
@@ -79,6 +79,7 @@ describe('rédaction des fiches', () => {
     expect(result.email?.subject).toBe(card.email.subject);
     const params = calls[0] as { system: string };
     expect(params.system).toMatch(/AUCUN mot technique/);
+    expect(params.system).toMatch(/Pas de mise en scène/);
     expect(params.system).toMatch(/ne salue pas et ne présente pas le freelance/);
   });
 

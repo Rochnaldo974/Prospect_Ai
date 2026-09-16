@@ -35,8 +35,8 @@ const sender = {
 
 const written = {
   subject: 'Votre site vu depuis un téléphone',
-  hook: 'En cherchant un restaurant où réserver à Angers, je suis tombé sur Le Vieux Pressoir. Votre site ne s’ouvre pas en ce moment : un client qui veut voir la carte ou réserver repart ailleurs.',
-  proposal: 'Je peux remettre votre site en ligne rapidement, et faire en sorte qu’il s’ouvre bien sur téléphone, là où vos clients vous cherchent.',
+  hook: 'En regardant votre site, j’ai remarqué qu’il ne s’ouvre plus en ce moment.',
+  proposal: 'Je vous propose de le remettre en ligne rapidement, et de faire en sorte qu’il s’ouvre bien sur téléphone.',
 };
 
 describe('brouillon de prospection', () => {
@@ -56,10 +56,10 @@ describe('brouillon de prospection', () => {
     expect(draft.body).not.toContain(base.explanation.angle);
   });
 
-  it('sans fiche rédigée, situe la rencontre et cite le fait, sans le relevé du moteur', () => {
+  it('sans fiche rédigée, dit le fait poliment en une phrase, sans le relevé du moteur', () => {
     const draft = draftProspectingEmail(base, 'call', { sender });
-    expect(draft.body).toContain('Le Vieux Pressoir');
-    expect(draft.body).toContain('le site ne répond pas (erreur HTTP 503)');
+    expect(draft.body).toContain('En regardant le site de Le Vieux Pressoir, j’ai remarqué que le site ne répond pas (erreur HTTP 503).');
+    expect(draft.body).not.toMatch(/je cherchais|je suis tombé/i);
     expect(draft.body).not.toContain(base.explanation.angle);
     expect(draft.body).not.toMatch(/audit centré|jugement esthétique/);
     // La signature n'est PAS dans le brouillon : l'identité d'expéditeur
@@ -69,8 +69,8 @@ describe('brouillon de prospection', () => {
 
   it('reste court : un dirigeant ne lit pas une plaquette', () => {
     const draft = draftProspectingEmail(base, 'call', { sender });
-    expect(draft.body.split('\n').length).toBeLessThanOrEqual(12);
-    expect(draft.body.length).toBeLessThan(900);
+    expect(draft.body.split('\n').length).toBeLessThanOrEqual(11);
+    expect(draft.body.length).toBeLessThan(700);
   });
 
   it('tient sans constat, sans ville, sans nom et sans présentation', () => {
@@ -97,9 +97,11 @@ describe('brouillon de prospection', () => {
     }
 
     expect(call.body).toContain('dix minutes');
-    expect(audit.body).toContain('comme le ferait un client');
+    expect(audit.body).toContain('état des lieux');
     expect(audit.body).toContain('sans engagement');
     expect(intro.body).toContain('Mon CV est joint');
+    // Le remplissage a disparu : ni promesse d'envoi en plusieurs lignes, ni « vous décidez ».
+    for (const draft of [call, audit, intro]) expect(draft.body).not.toMatch(/quelques lignes|vous décidez|de vive voix/);
   });
 
   it('ne promet pas de CV joint quand il n’y en a pas', () => {
@@ -128,11 +130,11 @@ describe('le lien de l’audit', () => {
   it('donne l’audit quand il existe, au lieu de le promettre', () => {
     const draft = draftProspectingEmail(base, 'audit', { auditUrl: 'https://prospect.ai/audit/abc' });
     expect(draft.body).toContain('https://prospect.ai/audit/abc');
-    expect(draft.body).not.toMatch(/Voulez-vous que je vous l’envoie/);
+    expect(draft.body).not.toMatch(/Souhaitez-vous que je vous l’envoie/);
   });
 
   it('promet l’audit quand aucun lien n’est prêt', () => {
     const draft = draftProspectingEmail(base, 'audit');
-    expect(draft.body).toMatch(/Voulez-vous que je vous l’envoie/);
+    expect(draft.body).toMatch(/Souhaitez-vous que je vous l’envoie/);
   });
 });
