@@ -6,8 +6,9 @@ import { draftProspectingEmail } from '../../packages/core/src/allocation/email-
  *
  * C'est un texte envoyé sous le nom du CLIENT à un inconnu : chaque défaut
  * ici est un défaut qu'un freelance paye de sa réputation. Les tests
- * vérifient la matière (les faits du dossier), la brièveté, et la tenue
- * quand les données manquent.
+ * vérifient la colonne vertébrale (qui écrit, ce qu'un client voit, ce
+ * qu'on propose), l'absence de jargon, la brièveté, et la tenue quand les
+ * données manquent.
  */
 const base = {
   type: 'website_redesign' as const,
@@ -25,55 +26,92 @@ const base = {
   },
 };
 
+const sender = {
+  name: 'Eliott Roche',
+  title: 'Développeur web indépendant',
+  city: 'Angers',
+  presentation: 'Je crée des sites pour des commerces et des artisans, simples et lisibles sur téléphone',
+};
+
+const written = {
+  subject: 'Votre site vu depuis un téléphone',
+  hook: 'En cherchant un restaurant où réserver à Angers, je suis tombé sur Le Vieux Pressoir. Votre site ne s’ouvre pas en ce moment : un client qui veut voir la carte ou réserver repart ailleurs.',
+  proposal: 'Je peux remettre votre site en ligne rapidement, et faire en sorte qu’il s’ouvre bien sur téléphone, là où vos clients vous cherchent.',
+};
+
 describe('brouillon de prospection', () => {
-  it('ancre le message dans le premier constat du dossier', () => {
-    const draft = draftProspectingEmail(base);
+  it('commence par dire qui écrit, avec la présentation de la signature', () => {
+    const draft = draftProspectingEmail(base, 'call', { sender });
+    const lines = draft.body.split('\n');
+    expect(lines[0]).toBe('Bonjour,');
+    expect(lines[2]).toBe('Je suis Eliott Roche, développeur web indépendant à Angers. Je crée des sites pour des commerces et des artisans, simples et lisibles sur téléphone.');
+  });
+
+  it('reprend l’accroche et la proposition rédigées quand elles existent', () => {
+    const draft = draftProspectingEmail({ ...base, explanation: { ...base.explanation, email: written } }, 'call', { sender });
+    expect(draft.subject).toBe(written.subject);
+    expect(draft.body).toContain(written.hook);
+    expect(draft.body).toContain(written.proposal);
+    // Le relevé du moteur, écrit pour le freelance, ne part jamais au commerçant.
+    expect(draft.body).not.toContain(base.explanation.angle);
+  });
+
+  it('sans fiche rédigée, situe la rencontre et cite le fait, sans le relevé du moteur', () => {
+    const draft = draftProspectingEmail(base, 'call', { sender });
     expect(draft.body).toContain('Le Vieux Pressoir');
     expect(draft.body).toContain('le site ne répond pas (erreur HTTP 503)');
-    expect(draft.body).toContain(base.explanation.angle);
+    expect(draft.body).not.toContain(base.explanation.angle);
+    expect(draft.body).not.toMatch(/audit centré|jugement esthétique/);
     // La signature n'est PAS dans le brouillon : l'identité d'expéditeur
     // l'ajoute au rendu — un seul endroit fait foi.
     expect(draft.body.trim().endsWith('Bien à vous,')).toBe(true);
   });
 
   it('reste court : un dirigeant ne lit pas une plaquette', () => {
-    const draft = draftProspectingEmail(base);
+    const draft = draftProspectingEmail(base, 'call', { sender });
     expect(draft.body.split('\n').length).toBeLessThanOrEqual(12);
-    expect(draft.body.length).toBeLessThan(700);
+    expect(draft.body.length).toBeLessThan(900);
   });
 
-  it('tient sans constat, sans ville et sans prénom', () => {
+  it('tient sans constat, sans ville, sans nom et sans présentation', () => {
     const draft = draftProspectingEmail({
       ...base,
-      company: { ...base.company, city: null },
+      company: { ...base.company, city: null, industry: null },
       explanation: { ...base.explanation, signals: [] },
     });
     expect(draft.body).toContain('Le Vieux Pressoir');
+    expect(draft.body).toContain('Je suis développeur web indépendant.');
     expect(draft.body).not.toContain('undefined');
     expect(draft.body).not.toContain('null');
     expect(draft.subject.length).toBeGreaterThan(0);
   });
 
   it('chaque intention a son registre, sur la même colonne vertébrale', () => {
-    const call = draftProspectingEmail(base, 'call');
-    const audit = draftProspectingEmail(base, 'audit');
-    const intro = draftProspectingEmail(base, 'intro', { hasCv: true, title: 'Développeur web' });
+    const call = draftProspectingEmail(base, 'call', { sender });
+    const audit = draftProspectingEmail(base, 'audit', { sender });
+    const intro = draftProspectingEmail(base, 'intro', { sender, hasCv: true });
 
-    // Le constat ouvre les trois : c'est lui qui rend l'e-mail non ignorable.
     for (const draft of [call, audit, intro]) {
+      expect(draft.body).toContain('Je suis Eliott Roche');
       expect(draft.body).toContain('le site ne répond pas (erreur HTTP 503)');
     }
 
     expect(call.body).toContain('dix minutes');
-    expect(audit.body).toContain('audit');
-    expect(audit.body).toContain('Gratuit, sans engagement');
-    expect(intro.body).toContain('développeur web');
-    expect(intro.body).toContain('mon CV est joint');
+    expect(audit.body).toContain('comme le ferait un client');
+    expect(audit.body).toContain('sans engagement');
+    expect(intro.body).toContain('Mon CV est joint');
   });
 
   it('ne promet pas de CV joint quand il n’y en a pas', () => {
     const intro = draftProspectingEmail(base, 'intro', { hasCv: false });
     expect(intro.body).not.toContain('CV');
+  });
+
+  it('ne parle jamais la langue des informaticiens', () => {
+    for (const intent of ['call', 'audit', 'intro'] as const) {
+      const draft = draftProspectingEmail({ ...base, explanation: { ...base.explanation, email: written } }, intent, { sender, hasCv: true });
+      expect(`${draft.subject} ${draft.body}`).not.toMatch(/HTTPS|SSL|certificat|responsive|SEO|CMS|refonte/i);
+    }
   });
 
   it('n’écrit jamais un objet racoleur', () => {

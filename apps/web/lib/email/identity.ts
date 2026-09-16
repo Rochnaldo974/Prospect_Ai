@@ -8,6 +8,8 @@ export interface EmailIdentity {
   company: string;
   phone: string;
   website: string;
+  /** Deux ou trois phrases sur ce qu'il fait, reprises en tête de chaque e-mail. */
+  presentation: string;
   logoUrl: string | null;
   cvUrl: string | null;
 }
@@ -15,7 +17,7 @@ export interface EmailIdentity {
 export async function getIdentity(userId: string): Promise<EmailIdentity> {
   const { data } = await getServiceClient()
     .from('email_identities')
-    .select('from_name, title, company, phone, website, logo_url, cv_url')
+    .select('from_name, title, company, phone, website, presentation, logo_url, cv_url')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -25,6 +27,7 @@ export async function getIdentity(userId: string): Promise<EmailIdentity> {
     company: data?.company ?? '',
     phone: data?.phone ?? '',
     website: data?.website ?? '',
+    presentation: data?.presentation ?? '',
     logoUrl: data?.logo_url ?? null,
     cvUrl: data?.cv_url ?? null,
   };

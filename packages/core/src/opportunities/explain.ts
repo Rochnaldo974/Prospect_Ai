@@ -79,6 +79,8 @@ export interface Explanation {
   opener?: string;
   /** Vrai quand pourquoi, pourquoi maintenant et angle viennent de la fiche rédigée. */
   written?: boolean;
+  /** La part de l'e-mail rédigée pour le commerçant, sans un mot technique. */
+  email?: { subject: string; hook: string; proposal: string };
 }
 
 /**

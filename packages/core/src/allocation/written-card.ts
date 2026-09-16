@@ -19,7 +19,29 @@ export const WrittenCardSchema = z.object({
   angle: z.string().min(20).max(500),
   /** La première phrase à prononcer au téléphone, vouvoiement, sans formule creuse. */
   opener: z.string().min(20).max(260),
+  /**
+   * La part de l'e-mail que seule la rédaction peut écrire : comment on est
+   * tombé sur ce commerce dans son métier, ce qu'un client voit, ce qu'on
+   * propose — avec des mots de tous les jours. La présentation du freelance
+   * et la signature sont ajoutées à part.
+   */
+  email: z.object({
+    subject: z.string().min(8).max(80),
+    hook: z.string().min(60).max(600),
+    proposal: z.string().min(30).max(400),
+  }).optional(),
 });
+
+/**
+ * Les mots qu'un commerçant ne comprend pas. Un e-mail qui en contient un
+ * est un e-mail qu'on ne lit pas jusqu'au bout ; la part e-mail d'une fiche
+ * qui en contient est écartée, la fiche reste.
+ */
+const JARGON = /\b(https?|ssl|tls|certificat|responsive|seo|cms|audit|refonte|stack|framework|h[ée]bergement|cache|balise|r[ée]f[ée]rencement|ttfb|html|css|javascript|wordpress|plugin|backend|frontend|serveur|navigateur|http)\b/i;
+
+export function emailHasJargon(email: NonNullable<WrittenCard['email']>): boolean {
+  return JARGON.test(`${email.subject} ${email.hook} ${email.proposal}`);
+}
 
 export type WrittenCard = z.infer<typeof WrittenCardSchema>;
 

@@ -81,8 +81,13 @@ export default async function EmailPage({
               id,
               draftProspectingEmail(opportunity, id, {
                 hasCv: identity.cvUrl !== null,
-                title: identity.title,
                 auditUrl,
+                sender: {
+                  name: identity.fromName,
+                  title: identity.title,
+                  city: profile.city ?? null,
+                  presentation: identity.presentation,
+                },
               }),
             ]),
           ) as Record<EmailIntent, { subject: string; body: string }>}

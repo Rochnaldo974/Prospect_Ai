@@ -40,6 +40,11 @@ const card = {
   whyNow: '',
   angle: 'Proposer une refonte légère, mobile d’abord, en gardant le contenu existant.',
   opener: 'Bonjour, je suis développeur web à Angers ; j’ai vu que votre site date de 2011 et ne s’ouvre pas bien sur téléphone. Est-ce quelque chose que vous avez prévu de revoir ?',
+  email: {
+    subject: 'Votre site vu depuis un téléphone',
+    hook: 'En cherchant une boulangerie à Angers, je suis tombé sur Boulangerie Moreau. Votre site s’affiche tout petit sur téléphone, et la date en bas de page remonte à 2011 : un client qui cherche vos horaires repart sans les avoir trouvés.',
+    proposal: 'Je peux remettre votre site au goût du jour, lisible sur téléphone, avec vos horaires et votre adresse bien en vue.',
+  },
 };
 
 describe('rédaction des fiches', () => {
@@ -56,6 +61,25 @@ describe('rédaction des fiches', () => {
     expect(params.messages[0]!.content).toMatch(/Services du freelance : website_redesign/);
     expect(params.messages[0]!.content).toMatch(/Ville du freelance : non fournie — ne pas le situer/);
     expect(params.system).toMatch(/ni sa ville/);
+  });
+
+  it('écarte la part e-mail qui parle en informaticien, et garde la fiche', async () => {
+    const jargon = { ...card, email: { ...card.email, hook: 'Votre certificat HTTPS est expiré et le site n’est pas responsive, ce qui pénalise votre SEO auprès de vos clients.' } };
+    const { client } = fakeClient(jargon);
+    const write = createClaudeWriter({ client });
+    const result = await write({ opportunity: opportunity(), services: [] });
+    expect(result.headline).toBe(card.headline);
+    expect(result.email).toBeUndefined();
+  });
+
+  it('demande un e-mail sans mot technique, qui situe la rencontre dans le métier', async () => {
+    const { client, calls } = fakeClient(card);
+    const write = createClaudeWriter({ client });
+    const result = await write({ opportunity: opportunity(), services: [] });
+    expect(result.email?.subject).toBe(card.email.subject);
+    const params = calls[0] as { system: string };
+    expect(params.system).toMatch(/AUCUN mot technique/);
+    expect(params.system).toMatch(/ne salue pas et ne présente pas le freelance/);
   });
 
   it('refuse une fiche qui ne respecte pas le schéma', async () => {

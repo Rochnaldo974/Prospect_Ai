@@ -30,6 +30,21 @@ export function IdentityForm({
       <Field label="Site web" name="website" value={identity.website} placeholder="votresite.fr" />
 
       <label className="block">
+        <span className="field-label">Courte présentation (facultatif)</span>
+        <textarea
+          name="presentation"
+          defaultValue={identity.presentation}
+          rows={3}
+          maxLength={600}
+          placeholder="Je crée des sites pour des commerces et des artisans : simples, lisibles sur téléphone, faciles à mettre à jour. Je m’occupe de tout, de la première maquette à la mise en ligne."
+          className="mt-2 w-full resize-y rounded-lg border bg-card px-3.5 py-2.5 text-sm leading-relaxed placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+        />
+        <span className="mt-1.5 block text-xs text-muted-foreground">
+          Reprise au début de chaque e-mail, juste après « Bonjour, je suis … ». Deux ou trois phrases, avec vos mots.
+        </span>
+      </label>
+
+      <label className="block">
         <span className="field-label">Logo (PNG, JPG, SVG — 512 Ko max)</span>
         <input
           type="file"

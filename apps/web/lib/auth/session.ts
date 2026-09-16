@@ -8,6 +8,8 @@ export interface SessionProfile {
   plan: 'free' | 'premium';
   onboarding_completed: boolean;
   daily_opportunity_limit: number;
+  /** Où le freelance est basé, pour se présenter dans ses e-mails. */
+  city: string | null;
   email: string;
 }
 
@@ -27,7 +29,7 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, role, plan, onboarding_completed, daily_opportunity_limit')
+    .select('id, full_name, role, plan, onboarding_completed, daily_opportunity_limit, city')
     .eq('id', user.id)
     .single();
 

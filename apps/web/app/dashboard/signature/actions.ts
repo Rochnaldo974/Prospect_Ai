@@ -68,6 +68,7 @@ export async function saveIdentity(
     company: field('company'),
     phone: field('phone'),
     website: field('website'),
+    presentation: String(formData.get('presentation') ?? '').trim().slice(0, 600),
     ...(logoUrl ? { logo_url: logoUrl } : {}),
     ...(cvUrl ? { cv_url: cvUrl } : {}),
     updated_at: new Date().toISOString(),

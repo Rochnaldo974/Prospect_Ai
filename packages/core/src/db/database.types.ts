@@ -1025,6 +1025,7 @@ export type Database = {
           cv_url: string | null
           from_name: string
           logo_url: string | null
+          presentation: string
           phone: string
           title: string
           updated_at: string
@@ -1037,6 +1038,7 @@ export type Database = {
           cv_url?: string | null
           from_name?: string
           logo_url?: string | null
+          presentation?: string
           phone?: string
           title?: string
           updated_at?: string
@@ -1049,6 +1051,7 @@ export type Database = {
           cv_url?: string | null
           from_name?: string
           logo_url?: string | null
+          presentation?: string
           phone?: string
           title?: string
           updated_at?: string

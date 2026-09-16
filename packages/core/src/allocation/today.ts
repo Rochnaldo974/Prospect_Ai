@@ -272,6 +272,7 @@ function withWrittenCard(
     headline: card.headline,
     opener: card.opener,
     written: true,
+    ...(card.email ? { email: card.email } : {}),
   };
 }
 
