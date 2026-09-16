@@ -33,6 +33,10 @@ export interface CardInput {
   opportunity: TodayOpportunity;
   /** Les services que le freelance propose, pour orienter l'angle. */
   services: string[];
+  /** Où le freelance est basé, s'il l'a dit. Sinon l'accroche ne situe personne. */
+  freelanceCity?: string | null;
+  /** Comment le freelance se présente, tel qu'il l'a écrit dans sa signature. */
+  freelanceTitle?: string | null;
 }
 
 export type CardWriter = (input: CardInput) => Promise<WrittenCard>;
@@ -44,6 +48,7 @@ Règles absolues :
 - Tu ne prêtes jamais d'intention à l'entreprise : elle n'a rien demandé. Tu dis ce qui a été constaté, pas ce qu'elle veut.
 - Tu n'inventes pas d'urgence. Si aucun fait daté n'est fourni, "whyNow" est une chaîne vide.
 - Tu écris en français, au vouvoiement, sans jargon, sans superlatif, sans promesse de résultat.
+- Tu ne sais rien du freelance en dehors de ce qui est fourni : ni sa ville, ni son nom, ni son expérience, ni sa spécialité. L'accroche le présente exactement par le titre fourni, sans rien y ajouter. Si sa ville n'est pas fournie, l'accroche ne le situe nulle part.
 - Le titre nomme le défaut ou l'occasion comme on le dirait au commerçant, en une ligne.
 - L'accroche téléphonique est une phrase qu'on peut dire telle quelle : elle se présente, cite le fait le plus visible, et pose une question courte. Jamais "je me permets de vous contacter".
 - Le constat cite les faits avec leurs valeurs (année, secondes, technologie) plutôt que des adjectifs.
@@ -61,6 +66,8 @@ function factsForPrompt(input: CardInput): string {
     `Site web : ${o.company.websiteUrl ?? 'aucun'}`,
     `Formulaire de contact : ${o.company.contactFormUrl ?? 'aucun'}`,
     `Services du freelance : ${input.services.length > 0 ? input.services.join(', ') : 'non précisés'}`,
+    `Ville du freelance : ${input.freelanceCity?.trim() || 'non fournie — ne pas le situer'}`,
+    `Le freelance se présente comme : ${input.freelanceTitle?.trim() || 'développeur web indépendant'}`,
     '',
     'Faits constatés par le moteur (la seule source autorisée) :',
     ...e.signals.map((s) => `- ${s}`),
@@ -147,12 +154,16 @@ export async function writeCards(db: Db, options: WritingOptions = {}): Promise<
     if (options.signal?.aborted || report.written >= limit) break;
     report.usersExamined += 1;
 
-    const [opportunities, preferences, existing] = await Promise.all([
+    const [opportunities, preferences, existing, profile, identity] = await Promise.all([
       getTodayOpportunities(db, userId),
       db.from('user_preferences').select('services').eq('user_id', userId).maybeSingle(),
       db.from('assignment_cards').select('assignment_id, card').eq('user_id', userId),
+      db.from('profiles').select('city').eq('id', userId).maybeSingle(),
+      db.from('email_identities').select('title').eq('user_id', userId).maybeSingle(),
     ]);
     const services = ((preferences.data?.services ?? []) as string[]);
+    const freelanceCity = profile.data?.city ?? null;
+    const freelanceTitle = identity.data?.title ?? null;
     const written = new Set(
       (existing.data ?? [])
         .filter((c) => (c.card as { written?: unknown } | null)?.written)
@@ -166,7 +177,7 @@ export async function writeCards(db: Db, options: WritingOptions = {}): Promise<
       if (opportunity.contactedAt !== null) { report.skipped += 1; continue; }
 
       try {
-        const card = await writer({ opportunity, services });
+        const card = await writer({ opportunity, services, freelanceCity, freelanceTitle });
         const { error: upsertError } = await db.from('assignment_cards').upsert({
           assignment_id: opportunity.assignmentId,
           user_id: userId,

@@ -54,6 +54,8 @@ describe('rédaction des fiches', () => {
     expect(params.system).toMatch(/QUE les faits fournis/);
     expect(params.messages[0]!.content).toMatch(/Site figé à 2011/);
     expect(params.messages[0]!.content).toMatch(/Services du freelance : website_redesign/);
+    expect(params.messages[0]!.content).toMatch(/Ville du freelance : non fournie — ne pas le situer/);
+    expect(params.system).toMatch(/ni sa ville/);
   });
 
   it('refuse une fiche qui ne respecte pas le schéma', async () => {
