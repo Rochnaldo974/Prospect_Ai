@@ -25,6 +25,8 @@ export interface PageAnalysis {
   emails: string[];
   /** Liens vers les pages de mentions légales, à explorer ensuite. */
   legalPageLinks: string[];
+  /** Liens vers la page de contact : c'est là que vivent l'e-mail et le formulaire. */
+  contactPageLinks: string[];
   /** Feuilles de style externes, dans l'ordre de la page. */
   stylesheets: string[];
   contactFormUrl: string | null;
@@ -186,6 +188,22 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
     const email = normalizeEmailDetailed(decodeURIComponent(match[1] ?? '')).email;
     if (email) emails.add(email);
   }
+  // Les adresses écrites dans le texte, y compris obfusquées — « contact (at)
+  // domaine.fr », « info [arobase] domaine . fr » — et celles des données
+  // structurées. Deux commerces sur cent mettent un lien mailto ; les autres
+  // écrivent leur adresse comme ils peuvent, et c'est elle qu'on cherche.
+  const deobfuscated = text
+    .replace(/\s*[\[(]\s*(?:at|arobase|@)\s*[\])]\s*/gi, '@')
+    .replace(/\s+(?:at|arobase)\s+/gi, '@')
+    .replace(/\s*[\[(]\s*(?:dot|point)\s*[\])]\s*/gi, '.');
+  for (const match of deobfuscated.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)) {
+    const email = normalizeEmailDetailed(match[0]).email;
+    if (email && !/\.(png|jpe?g|gif|svg|webp|css|js)$/i.test(email)) emails.add(email);
+  }
+  for (const match of source.matchAll(/"email"\s*:\s*"(?:mailto:)?([^"]+)"/gi)) {
+    const email = normalizeEmailDetailed(match[1] ?? '').email;
+    if (email) emails.add(email);
+  }
 
   // Les feuilles externes portent presque toujours la mise en page : le HTML
   // seul ne permet pas de conclure sur l'adaptation au mobile.
@@ -204,11 +222,12 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
     if (link) legalPageLinks.add(link);
   }
 
-  let contactFormUrl: string | null = null;
+  const contactPageLinks = new Set<string>();
   for (const match of source.matchAll(CONTACT_LINK_PATTERN)) {
-    contactFormUrl = resolveLink(match[1], baseUrl);
-    if (contactFormUrl) break;
+    const link = resolveLink(match[1], baseUrl);
+    if (link) contactPageLinks.add(link);
   }
+  const contactFormUrl: string | null = [...contactPageLinks][0] ?? null;
 
   const hasForm = /<form\b/i.test(source) && !/type=["']search["']/i.test(source);
 
@@ -222,6 +241,7 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
     phones: [...phones],
     emails: [...emails],
     legalPageLinks: [...legalPageLinks],
+    contactPageLinks: [...contactPageLinks],
     stylesheets: [...stylesheets],
     contactFormUrl,
     hasContactForm: hasForm || contactFormUrl !== null,

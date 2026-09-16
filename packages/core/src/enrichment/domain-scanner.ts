@@ -180,6 +180,25 @@ export async function scanDomain(
     }
   }
 
+  // La page Contact : c'est là que vivent l'e-mail et le formulaire, presque
+  // jamais sur l'accueil. Une requête de plus, seulement quand l'accueil n'a
+  // rien donné — et ce qu'elle apporte remonte dans l'analyse de l'accueil,
+  // qui est ce que le reste du moteur lit.
+  const contactTarget = analysis.contactPageLinks[0];
+  if (contactTarget && (analysis.emails.length === 0 || !analysis.hasContactForm)) {
+    const contact = await fetcher.fetchPage(contactTarget, signal);
+    if (contact.html !== null) {
+      const found = analyzePage(contact.html, contact.finalUrl);
+      analysis.emails = [...new Set([...analysis.emails, ...found.emails])];
+      analysis.phones = [...new Set([...analysis.phones, ...found.phones])];
+      for (const siren of found.sirens) sirens.add(siren);
+      if (/<form\b/i.test(contact.html) && !/type=["']search["']/i.test(contact.html)) {
+        analysis.hasContactForm = true;
+        analysis.contactFormUrl = contact.finalUrl;
+      }
+    }
+  }
+
   return {
     domain,
     status: analysis.placeholder ? 'placeholder' : 'reachable',
@@ -555,6 +574,16 @@ async function scanAndPersist(
       }
 
       await persistScan(db, scan, row.check_attempts);
+
+      // Un formulaire trouvé est un moyen de contact : il ouvre la porte de
+      // qualité pour l'entreprise qui revendique ce site et n'en avait pas.
+      if (scan.analysis?.contactFormUrl) {
+        await db
+          .from('companies')
+          .update({ contact_form_url: scan.analysis.contactFormUrl })
+          .eq('domain', scan.domain)
+          .is('contact_form_url', null);
+      }
       await recordScanEvents(db, scan, row.content_hash, row.check_attempts, row.tech_year);
 
       if (scan.sirens.length > 0) {

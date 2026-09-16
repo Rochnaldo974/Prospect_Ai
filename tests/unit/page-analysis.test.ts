@@ -79,6 +79,27 @@ describe('contact', () => {
     const html = '<form><input type="search" name="q"></form>';
     expect(analyzePage(html).hasContactForm).toBe(false);
   });
+
+  it('lit une adresse écrite dans le texte, même déguisée', () => {
+    expect(analyzePage('<p>Écrivez-nous : contact@boulangerie-martin.fr</p>').emails).toEqual(['contact@boulangerie-martin.fr']);
+    expect(analyzePage('<p>info (at) garage-dupont.fr</p>').emails).toEqual(['info@garage-dupont.fr']);
+    expect(analyzePage('<p>bonjour [arobase] atelier-lys [point] com</p>').emails).toEqual(['bonjour@atelier-lys.com']);
+    expect(analyzePage('<p>reservation at le-bistrot.fr</p>').emails).toEqual(['reservation@le-bistrot.fr']);
+  });
+
+  it('lit l’adresse des données structurées et ignore les fichiers', () => {
+    const html = `
+      <script type="application/ld+json">{"@type":"LocalBusiness","email":"mailto:contact@cabinet-roux.fr"}</script>
+      <img src="logo@2x.png"><p>photo@2x.jpg</p>`;
+    expect(analyzePage(html).emails).toEqual(['contact@cabinet-roux.fr']);
+  });
+
+  it('donne les liens vers la page de contact, à explorer ensuite', () => {
+    const html = '<a href="/nous-contacter">Contact</a><a href="/mentions-legales">Mentions</a>';
+    const result = analyzePage(html, 'https://x.fr/');
+    expect(result.contactPageLinks).toEqual(['https://x.fr/nous-contacter']);
+    expect(result.contactFormUrl).toBe('https://x.fr/nous-contacter');
+  });
 });
 
 describe('détection des technologies', () => {

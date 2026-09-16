@@ -6,6 +6,7 @@ import {
   type OpportunityCandidate, type MatchingPreferences,
 } from './fit';
 import { defaultVerifier, type OpportunityVerifier } from './verify';
+import { pickGenericEmail } from './today';
 
 /**
  * Attribution quotidienne.
@@ -41,6 +42,8 @@ export interface AllocationReport {
   rejectedByGuards: number;
   /** Écartées à la vérification avant livraison : le site ne montre plus le défaut. */
   rejectedByVerification: number;
+  /** Dossiers échangés pour qu'un lot compte au moins une adresse e-mail. */
+  swappedForEmail: number;
   errors: number;
 }
 
@@ -65,10 +68,22 @@ interface CandidateRow extends OpportunityCandidate {
   companyId: string;
   /** Ce qui porte le dossier : le fait daté, sinon le constat le plus lourd. */
   theme: string;
+  /** Une adresse générique connue (contact@, info@…) : l'e-mail est envoyable. */
+  hasEmail: boolean;
 }
 
 /** Combien de dossiers d'un même thème dans un lot : au-delà, la journée se répète. */
 const MAX_PER_THEME = 2;
+
+/**
+ * Combien de dossiers avec e-mail un lot doit compter, quand le stock le
+ * permet : deux sur cinq, un sur moins. L'outil vend l'e-mail personnalisé ;
+ * un matin sans une seule adresse à qui l'envoyer est un matin où il ne sert
+ * à rien.
+ */
+function emailFloor(limit: number): number {
+  return limit >= 5 ? 2 : Math.min(1, limit);
+}
 
 /** Une opportunité sur cinq, conformément à la décision de départ. */
 const CONTROL_RATE = 5;
@@ -80,7 +95,7 @@ export async function runAllocation(
   const report: AllocationReport = {
     usersExamined: 0, usersServed: 0, usersAlreadyServed: 0,
     assignmentsCreated: 0, controlsPlaced: 0, usersUnderserved: 0,
-    rejectedByGuards: 0, rejectedByVerification: 0, errors: 0,
+    rejectedByGuards: 0, rejectedByVerification: 0, swappedForEmail: 0, errors: 0,
   };
 
   const log = options.logger;
@@ -161,7 +176,7 @@ export async function runAllocation(
 async function loadCandidates(db: Db): Promise<CandidateRow[]> {
   const { data, error } = await db
     .from('opportunities')
-    .select('id, company_id, opportunity_type, base_score, confidence_score, reason_data, companies!inner(id, city, region, industry_code, prospecting_allowed, suppression_global, cooldown_until, has_live_assignment)')
+    .select('id, company_id, opportunity_type, base_score, confidence_score, reason_data, companies!inner(id, city, region, industry_code, domain, prospecting_allowed, suppression_global, cooldown_until, has_live_assignment)')
     .eq('status', 'available')
     .gt('expires_at', new Date().toISOString())
     .order('base_score', { ascending: false })
@@ -169,10 +184,15 @@ async function loadCandidates(db: Db): Promise<CandidateRow[]> {
 
   if (error) throw new Error(`loadCandidates : ${error.message}`);
 
+  const withEmail = await domainsWithGenericEmail(
+    db,
+    (data ?? []).map((row) => (row.companies as unknown as { domain: string | null }).domain),
+  );
+
   const rows: CandidateRow[] = [];
   for (const row of data ?? []) {
     const company = row.companies as unknown as {
-      city: string | null; region: string | null; industry_code: string | null;
+      city: string | null; region: string | null; industry_code: string | null; domain: string | null;
       prospecting_allowed: boolean; suppression_global: boolean;
       cooldown_until: string | null; has_live_assignment: boolean;
     };
@@ -191,6 +211,7 @@ async function loadCandidates(db: Db): Promise<CandidateRow[]> {
       opportunityId: row.id,
       companyId: row.company_id,
       theme: reason?.trigger ?? strongest ?? row.opportunity_type,
+      hasEmail: company.domain !== null && withEmail.has(company.domain),
       opportunityType: row.opportunity_type as OpportunityType,
       baseScore: Number(row.base_score),
       confidenceScore: Number(row.confidence_score),
@@ -201,6 +222,23 @@ async function loadCandidates(db: Db): Promise<CandidateRow[]> {
   }
 
   return rows;
+}
+
+/** Les domaines, parmi ceux donnés, dont le relevé a trouvé une adresse générique. */
+async function domainsWithGenericEmail(db: Db, domains: (string | null)[]): Promise<Set<string>> {
+  const wanted = [...new Set(domains.filter((d): d is string => d !== null))];
+  const found = new Set<string>();
+  for (let at = 0; at < wanted.length; at += 200) {
+    const { data, error } = await db
+      .from('domains')
+      .select('domain, emails_found')
+      .in('domain', wanted.slice(at, at + 200));
+    if (error) throw new Error(`domainsWithGenericEmail : ${error.message}`);
+    for (const row of data ?? []) {
+      if (pickGenericEmail(row.emails_found) !== null) found.add(row.domain);
+    }
+  }
+  return found;
 }
 
 async function allocateFor(
@@ -337,6 +375,39 @@ async function allocateFor(
         break;
       }
     }
+  }
+
+  // Un lot où l'on peut écrire. Le freelance paie pour un e-mail
+  // personnalisé : s'il n'a que des téléphones, il ne l'utilisera pas. Quand
+  // le lot manque d'adresses, on cède la place du moins bien classé des
+  // dossiers sans e-mail — jamais celle du tirage de contrôle — au meilleur
+  // dossier avec e-mail qui tient encore à la vérification. Sans stock
+  // d'adresses, le lot reste tel quel : on ne livre pas moins pour ça.
+  const floor = emailFloor(limit);
+  let emailed = chosen.filter((entry) => entry.candidate.hasEmail).length;
+  if (emailed < floor && chosen.length === limit) {
+    const inBatch = new Set(chosen.map((entry) => entry.candidate.opportunityId));
+    const spare = ranked.filter((entry) => entry.candidate.hasEmail
+      && !inBatch.has(entry.candidate.opportunityId)
+      && verdicts.get(entry.candidate.opportunityId) !== false);
+    for (const entry of spare) {
+      if (emailed >= floor) break;
+      let seat = -1;
+      for (let i = chosen.length - 1; i >= 0; i -= 1) {
+        if (i !== controlIndex && !chosen[i]!.candidate.hasEmail) { seat = i; break; }
+      }
+      if (seat < 0) break;
+      if (!(await holds(entry))) continue;
+      chosen[seat] = entry;
+      emailed += 1;
+      report.swappedForEmail += 1;
+    }
+    // Le rang suit le score, contrôle exclu : un dossier entré par la petite
+    // porte n'a pas à passer devant ceux qui l'avaient mérité.
+    const control = controlIndex === null ? null : chosen[controlIndex]!;
+    const others = chosen.filter((entry) => entry !== control).sort((a, b) => b.score - a.score);
+    chosen.splice(0, chosen.length, ...others, ...(control ? [control] : []));
+    if (control) controlIndex = chosen.length - 1;
   }
 
   // Le lot est créé avant les attributions, qui le référencent. Son compte
