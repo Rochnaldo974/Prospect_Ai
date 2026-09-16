@@ -61,6 +61,30 @@ ${paragraphs}
 </div>`;
 }
 
+/**
+ * La signature seule, en HTML, à coller une fois dans les réglages de
+ * Gmail : Gmail l'ajoutera ensuite lui-même, logo compris, à chaque
+ * message — y compris ceux que Prospect ouvre pour lui.
+ */
+export function renderSignatureFragment(identity: EmailIdentity): string {
+  const meta = [identity.title, identity.company].filter(Boolean).map(escapeHtml).join(' · ');
+  const contact = [
+    identity.phone ? escapeHtml(identity.phone) : null,
+    identity.website
+      ? `<a href="${escapeHtml(withProtocol(identity.website))}" style="color:#2c4bff;text-decoration:none;">${escapeHtml(stripProtocol(identity.website))}</a>`
+      : null,
+  ].filter(Boolean).join(' · ');
+  const logo = identity.logoUrl
+    ? `<img src="${escapeHtml(identity.logoUrl)}" alt="" height="40" style="height:40px;max-width:160px;object-fit:contain;display:block;margin-bottom:10px;">`
+    : '';
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+${logo}
+<p style="margin:0;font-size:14px;font-weight:600;color:#1a1d26;">${escapeHtml(identity.fromName)}</p>
+${meta ? `<p style="margin:2px 0 0 0;font-size:13px;color:#5b6274;">${meta}</p>` : ''}
+${contact ? `<p style="margin:6px 0 0 0;font-size:13px;color:#5b6274;">${contact}</p>` : ''}
+</div>`;
+}
+
 export function renderEmailHtml(body: string, identity: EmailIdentity): string {
   return `<!doctype html>
 <html lang="fr">

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { requireOnboardedUser } from '@/lib/auth/session';
 import { getIdentity } from '@/lib/email/identity';
 import { IdentityForm } from './form';
+import { GmailSignature } from './gmail-signature';
 
 export const metadata: Metadata = { title: 'Signature e-mail' };
 
@@ -63,6 +64,7 @@ export default async function SignaturePage() {
             Les réponses de vos prospects arrivent directement dans votre boîte
             ({/* l'adresse du compte est celle de connexion */}celle de votre compte).
           </p>
+          <GmailSignature identity={identity} />
         </div>
       </div>
     </main>

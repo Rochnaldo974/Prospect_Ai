@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useState } from 'react';
 import { EMAIL_INTENTS, type EmailIntent } from '@prospect/core';
 import type { EmailIdentity } from '@/lib/email/identity';
-import { renderEmailFragment, renderEmailText } from '@/lib/email/render';
+import { renderEmailText } from '@/lib/email/render';
 import { recordExternalSend, sendProspectingEmail, type SendState } from './actions';
 
 /**
@@ -41,7 +41,7 @@ export function EmailSendForm({
   const [subject, setSubject] = useState(drafts.call.subject);
   const [body, setBody] = useState(drafts.call.body);
   const [attachCv, setAttachCv] = useState(false);
-  const [gmail, setGmail] = useState<'idle' | 'copied' | 'text-only'>('idle');
+  const [gmail, setGmail] = useState<'idle' | 'opened'>('idle');
 
   const pick = (next: EmailIntent) => {
     setIntent(next);
@@ -51,43 +51,25 @@ export function EmailSendForm({
   };
 
   /**
-   * La copie d'abord, Gmail ensuite — le tout dans les secondes qui suivent
-   * le clic, pendant lesquelles le navigateur accepte encore d'ouvrir une
-   * fenêtre. Le presse-papiers reçoit le HTML (texte, signature, logo) et le
-   * texte brut. S'il refuse ou tarde, le texte part dans l'adresse Gmail et
-   * la signature s'écrit sans logo : le message part quand même. Le lien
-   * « Ouvrir Gmail » reste affiché au cas où la fenêtre a été bloquée.
+   * Gmail reçoit tout par l'adresse : destinataire, objet, message. Rien ne
+   * passe par le presse-papiers — il ne tient pas ses promesses d'un
+   * navigateur à l'autre. La signature suit le réglage du freelance : si
+   * elle est dans Gmail, Gmail l'ajoute lui-même avec le logo ; sinon elle
+   * part en texte à la fin du message.
    */
-  const composeUrl = (withBody: boolean) => {
+  const composeUrl = () => {
     const compose = new URL('https://mail.google.com/mail/');
     compose.searchParams.set('view', 'cm');
     compose.searchParams.set('fs', '1');
     compose.searchParams.set('to', to);
     compose.searchParams.set('su', subject);
-    if (withBody) compose.searchParams.set('body', renderEmailText(body, identity));
+    compose.searchParams.set('body', identity.gmailSignature ? body.trim() : renderEmailText(body, identity));
     return compose.toString();
   };
 
-  const openGmail = async () => {
-    const html = renderEmailFragment(body, identity);
-    const text = renderEmailText(body, identity);
-    let copied = false;
-    if (typeof ClipboardItem !== 'undefined' && typeof navigator.clipboard?.write === 'function') {
-      try {
-        const write = navigator.clipboard.write([
-          new ClipboardItem({
-            'text/html': new Blob([html], { type: 'text/html' }),
-            'text/plain': new Blob([text], { type: 'text/plain' }),
-          }),
-        ]).then(() => true);
-        const late = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500));
-        copied = await Promise.race([write, late]);
-      } catch {
-        copied = false;
-      }
-    }
-    setGmail(copied ? 'copied' : 'text-only');
-    window.open(composeUrl(!copied), '_blank', 'noopener');
+  const openGmail = () => {
+    setGmail('opened');
+    window.open(composeUrl(), '_blank', 'noopener');
   };
 
   if (state.sent || external.sent) {
@@ -163,7 +145,7 @@ export function EmailSendForm({
           </p>
         ) : null}
 
-        {/* ── Gmail : copier tout, ouvrir, coller, envoyer ── */}
+        {/* ── Gmail : tout est rempli, il reste « Envoyer » ── */}
         {gmail === 'idle' ? (
           <button
             type="button"
@@ -174,18 +156,12 @@ export function EmailSendForm({
           </button>
         ) : (
           <div className="rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-wash)] px-4 py-4 text-sm leading-relaxed">
-            <p className="font-medium text-[var(--brand)]">Gmail est ouvert, avec l’adresse et l’objet déjà remplis.</p>
-            {gmail === 'copied' ? (
-              <p className="mt-1.5 text-[var(--brand)]/85">
-                Cliquez dans le message et collez (<kbd className="rounded border bg-card px-1.5 font-mono text-xs">⌘ V</kbd> ou{' '}
-                <kbd className="rounded border bg-card px-1.5 font-mono text-xs">Ctrl V</kbd>) : le texte, votre signature et votre
-                logo se posent d’un coup. Puis « Envoyer ».
-              </p>
-            ) : (
-              <p className="mt-1.5 text-[var(--brand)]/85">
-                Le texte est déjà dans le message. Votre navigateur n’a pas laissé copier le logo : la signature part en texte.
-              </p>
-            )}
+            <p className="font-medium text-[var(--brand)]">Gmail est ouvert : adresse, objet et message sont remplis.</p>
+            <p className="mt-1.5 text-[var(--brand)]/85">
+              {identity.gmailSignature
+                ? 'Votre signature Gmail, avec le logo, se place toute seule. Relisez, puis « Envoyer ».'
+                : 'Relisez, puis « Envoyer ». Pour que votre logo apparaisse, mettez votre signature dans Gmail depuis la page Signature e-mail.'}
+            </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -202,16 +178,13 @@ export function EmailSendForm({
                 {confirming ? 'Un instant…' : 'C’est envoyé'}
               </button>
               <a
-                href={composeUrl(gmail !== 'copied')}
+                href={composeUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-[var(--brand)] underline-offset-4 hover:underline"
               >
-                Ouvrir Gmail
+                Rouvrir Gmail
               </a>
-              <button type="button" onClick={openGmail} className="text-sm text-muted-foreground underline-offset-4 hover:underline">
-                Recopier le message
-              </button>
             </div>
             {external.problem ? <p className="mt-2 text-[var(--finding)]">{external.problem}</p> : null}
           </div>
@@ -250,7 +223,13 @@ export function EmailSendForm({
 
         <p className="text-xs leading-relaxed text-muted-foreground">
           L’e-mail part de votre boîte Gmail, sous votre nom : les réponses y arrivent directement. L’adresse du
-          destinataire est celle que l’entreprise publie sur son site.
+          destinataire est celle que l’entreprise publie sur son site.{' '}
+          {identity.gmailSignature ? null : (
+            <>
+              Votre logo apparaîtra une fois votre signature mise dans Gmail, depuis{' '}
+              <a href="/dashboard/signature" className="text-[var(--brand)] underline-offset-4 hover:underline">Signature e-mail</a>.
+            </>
+          )}
         </p>
       </div>
 

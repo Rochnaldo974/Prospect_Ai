@@ -10,6 +10,8 @@ export interface EmailIdentity {
   website: string;
   /** Deux ou trois phrases sur ce qu'il fait, reprises en tête de chaque e-mail. */
   presentation: string;
+  /** La signature (avec logo) est déjà dans Gmail : ne pas la répéter dans le message. */
+  gmailSignature: boolean;
   logoUrl: string | null;
   cvUrl: string | null;
 }
@@ -17,7 +19,7 @@ export interface EmailIdentity {
 export async function getIdentity(userId: string): Promise<EmailIdentity> {
   const { data } = await getServiceClient()
     .from('email_identities')
-    .select('from_name, title, company, phone, website, presentation, logo_url, cv_url')
+    .select('from_name, title, company, phone, website, presentation, gmail_signature, logo_url, cv_url')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -28,6 +30,7 @@ export async function getIdentity(userId: string): Promise<EmailIdentity> {
     phone: data?.phone ?? '',
     website: data?.website ?? '',
     presentation: data?.presentation ?? '',
+    gmailSignature: data?.gmail_signature ?? false,
     logoUrl: data?.logo_url ?? null,
     cvUrl: data?.cv_url ?? null,
   };

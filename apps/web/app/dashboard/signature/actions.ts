@@ -69,6 +69,7 @@ export async function saveIdentity(
     phone: field('phone'),
     website: field('website'),
     presentation: String(formData.get('presentation') ?? '').trim().slice(0, 600),
+    gmail_signature: formData.get('gmail_signature') === 'on',
     ...(logoUrl ? { logo_url: logoUrl } : {}),
     ...(cvUrl ? { cv_url: cvUrl } : {}),
     updated_at: new Date().toISOString(),

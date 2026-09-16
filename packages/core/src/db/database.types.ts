@@ -1026,6 +1026,7 @@ export type Database = {
           from_name: string
           logo_url: string | null
           presentation: string
+          gmail_signature: boolean
           phone: string
           title: string
           updated_at: string
@@ -1039,6 +1040,7 @@ export type Database = {
           from_name?: string
           logo_url?: string | null
           presentation?: string
+          gmail_signature?: boolean
           phone?: string
           title?: string
           updated_at?: string
@@ -1052,6 +1054,7 @@ export type Database = {
           from_name?: string
           logo_url?: string | null
           presentation?: string
+          gmail_signature?: boolean
           phone?: string
           title?: string
           updated_at?: string
