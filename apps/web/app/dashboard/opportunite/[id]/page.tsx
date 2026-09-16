@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
+import { OPPORTUNITY_TYPE_LABELS, getAuditShareForAssignment, getServiceClient } from '@prospect/core';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
-import { toggleSnooze } from '@/app/dashboard/actions';
+import { shareAudit, toggleSnooze } from '@/app/dashboard/actions';
+import { requireUser } from '@/lib/auth/session';
+import { siteOrigin } from '@/lib/site-url';
 import { OutcomeForm } from '@/components/outcome-form';
 import { SitePreview } from '@/components/dashboard/site-preview';
 import type { DailyOpportunity } from '@/lib/opportunities/mine';
@@ -33,9 +35,12 @@ export default async function OpportunityPage({
   const found = await getMyOpportunity(id);
   if (!found) notFound();
 
-  const { opportunity } = found;
+  const { opportunity, plan } = found;
   const { company, explanation } = opportunity;
   const snoozed = opportunity.snoozedAt !== null;
+  const profile = await requireUser();
+  const share = await getAuditShareForAssignment(getServiceClient(), opportunity.assignmentId, profile.id);
+  const auditUrl = share ? `${await siteOrigin()}/audit/${share.id}` : null;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
@@ -221,6 +226,52 @@ export default async function OpportunityPage({
           </section>
         </div>
       </div>
+
+      {/* ── Envoyer : l'audit d'une page, au nom du freelance ── */}
+      <section className="mt-10 rounded-2xl border bg-card px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="field-label">Audit à envoyer</h2>
+            <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
+              Une page à votre nom : la capture, la note, les constats et votre proposition. Le prospect l’ouvre sans compte ;
+              vous saurez quand.
+            </p>
+            {auditUrl ? (
+              <p className="mt-3 break-all font-mono text-[13px]">
+                <a href={auditUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline-offset-4 hover:underline">{auditUrl}</a>
+              </p>
+            ) : null}
+          </div>
+          {share ? (
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <span
+                className="tabular rounded-full border px-3 py-1.5 font-mono text-xs"
+                style={{ color: share.openCount > 0 ? 'var(--brand)' : 'var(--ink-2)' }}
+              >
+                {share.openCount === 0
+                  ? 'pas encore ouvert'
+                  : `ouvert ${share.openCount} fois${share.lastOpenedAt ? `, dernière le ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(new Date(share.lastOpenedAt))}` : ''}`}
+              </span>
+              {company.email ? (
+                <Link href={`/dashboard/opportunite/${opportunity.assignmentId}/email`} className="text-sm text-[var(--brand)] underline-offset-4 hover:underline">
+                  L’envoyer par e-mail →
+                </Link>
+              ) : null}
+            </div>
+          ) : plan === 'premium' ? (
+            <form action={shareAudit}>
+              <input type="hidden" name="assignmentId" value={opportunity.assignmentId} />
+              <button type="submit" className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-5 py-3 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5">
+                Préparer l’audit
+              </button>
+            </form>
+          ) : (
+            <Link href="/dashboard/abonnement" className="rounded-full border px-5 py-3 text-sm text-muted-foreground">
+              Réservé au plan Solo
+            </Link>
+          )}
+        </div>
+      </section>
 
       {/* ── Vérifier : le site tel que ses clients le voient ── */}
       {company.websiteUrl ? (

@@ -43,7 +43,7 @@ const SUBJECTS: Record<string, (city: string | null) => string> = {
 export function draftProspectingEmail(
   opportunity: Pick<TodayOpportunity, 'type' | 'company' | 'explanation'>,
   intent: EmailIntent = 'call',
-  options: { hasCv?: boolean; title?: string } = {},
+  options: { hasCv?: boolean; title?: string; auditUrl?: string | null } = {},
 ): EmailDraft {
   const { company, explanation } = opportunity;
   const firstFact = explanation.signals[0];
@@ -62,13 +62,26 @@ export function draftProspectingEmail(
     case 'audit':
       // L'offre : un livrable concret et gratuit — la réciprocité avant la
       // vente, et une promesse assez petite pour être crédible.
-      lines.push(
-        'Si le sujet vous intéresse, je peux vous envoyer un court audit — trois constats '
-        + 'concrets et vérifiables sur votre site, avec ce que chacun coûte à vos visiteurs. '
-        + 'Gratuit, sans engagement.',
-      );
-      lines.push('');
-      lines.push('Voulez-vous que je vous l’envoie ?');
+      if (options.auditUrl) {
+        // L'audit existe déjà : on le donne, on ne le promet pas. Un lien
+        // qu'on peut ouvrir vaut mieux qu'une offre à accepter.
+        lines.push(
+          "J'ai préparé un court audit de votre site — quelques constats concrets et "
+          + 'vérifiables, avec ce que chacun coûte à vos visiteurs, et ce que je vous propose :',
+        );
+        lines.push('');
+        lines.push(options.auditUrl);
+        lines.push('');
+        lines.push("Il se lit en deux minutes. Si vous avez une question en le parcourant, je suis joignable.");
+      } else {
+        lines.push(
+          'Si le sujet vous intéresse, je peux vous envoyer un court audit — trois constats '
+          + 'concrets et vérifiables sur votre site, avec ce que chacun coûte à vos visiteurs. '
+          + 'Gratuit, sans engagement.',
+        );
+        lines.push('');
+        lines.push('Voulez-vous que je vous l’envoie ?');
+      }
       break;
 
     case 'intro': {

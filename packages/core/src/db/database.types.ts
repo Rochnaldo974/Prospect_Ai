@@ -204,6 +204,54 @@ export type Database = {
           },
         ]
       }
+      audit_shares: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          last_opened_at: string | null
+          open_count: number
+          opened_at: string | null
+          snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string | null
+          open_count?: number
+          opened_at?: string | null
+          snapshot: Json
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string | null
+          open_count?: number
+          opened_at?: string | null
+          snapshot?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_shares_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_shares_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           active_signal_count: number

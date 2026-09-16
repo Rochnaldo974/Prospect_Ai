@@ -85,3 +85,16 @@ describe('brouillon de prospection', () => {
     }
   });
 });
+
+describe('le lien de l’audit', () => {
+  it('donne l’audit quand il existe, au lieu de le promettre', () => {
+    const draft = draftProspectingEmail(base, 'audit', { auditUrl: 'https://prospect.ai/audit/abc' });
+    expect(draft.body).toContain('https://prospect.ai/audit/abc');
+    expect(draft.body).not.toMatch(/Voulez-vous que je vous l’envoie/);
+  });
+
+  it('promet l’audit quand aucun lien n’est prêt', () => {
+    const draft = draftProspectingEmail(base, 'audit');
+    expect(draft.body).toMatch(/Voulez-vous que je vous l’envoie/);
+  });
+});

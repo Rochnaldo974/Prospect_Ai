@@ -97,7 +97,7 @@ export async function enrichFromSirene(
 
   const { data: targets, error } = await db
     .from('companies')
-    .select('id, siren, siret, creation_date, employee_min, industry_code, lat, commercial_name, city, postal_code')
+    .select('id, siren, siret, legal_name, creation_date, employee_min, industry_code, lat, commercial_name, city, postal_code')
     .not('siren', 'is', null)
     .is('creation_date', null)
     // Les jamais interrogées d'abord, puis les plus anciennement vues : une
@@ -181,7 +181,17 @@ export async function enrichFromSirene(
   return report;
 }
 
+/** Une raison sociale : tout en capitales, ou portant une forme juridique. */
+export function looksLikeRegistryName(name: string | null | undefined): boolean {
+  if (!name) return false;
+  const trimmed = name.trim();
+  if (/\b(SARL|SAS|SASU|EURL|SCI|SNC|SA|EI|EIRL|SELARL|SCP|SCM|GIE)\b/i.test(trimmed)) return true;
+  const letters = trimmed.replace(/[^A-Za-zÀ-ÿ]/g, '');
+  return letters.length >= 4 && letters === letters.toUpperCase();
+}
+
 export type RegistryTarget = {
+  legal_name: string;
   creation_date: string | null;
   employee_min: number | null;
   industry_code: string | null;
@@ -231,7 +241,13 @@ export function buildRegistryPatch(
     if (postal) patch.postal_code = postal;
   }
 
-  if (company.commercial_name === null) {
+  // L'enseigne du répertoire ne remplace jamais un nom relevé sur le
+  // terrain. Un point d'intérêt cartographié porte le nom de la devanture ;
+  // le répertoire, lui, porte celle de l'unité légale — et « The Albion »
+  // devenait « L'IDOLE DES JEUNES » sur la fiche. L'enseigne n'est prise que
+  // quand le nom connu ressemble à une raison sociale, celle d'une
+  // entreprise arrivée par le BODACC ou le répertoire.
+  if (company.commercial_name === null && looksLikeRegistryName(company.legal_name)) {
     const enseigne = establishment?.liste_enseignes?.[0] ?? establishment?.nom_commercial ?? null;
     if (enseigne) patch.commercial_name = enseigne.slice(0, 300);
   }

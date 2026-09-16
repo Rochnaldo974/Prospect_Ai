@@ -2,9 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import {
-  getServiceClient, logger, markContacted, recordOptOut, recordOutcome, setSnoozed,
-  simulateNextDelivery,
+  ensureAuditShare, getServiceClient, logger, markContacted, recordOptOut, recordOutcome,
+  setSnoozed, simulateNextDelivery,
 } from '@prospect/core';
+import { getMyOpportunity } from '@/lib/opportunities/mine';
+import { getIdentity } from '@/lib/email/identity';
 import type { DeclarableOutcome } from '@prospect/core';
 import { requireAdmin, requireUser } from '@/lib/auth/session';
 
@@ -108,4 +110,40 @@ export async function simulateMyNextDelivery(): Promise<void> {
   ]) {
     revalidatePath(path);
   }
+}
+
+/**
+ * Préparer l'audit d'une page pour un dossier.
+ *
+ * Le lien est créé une fois par dossier, figé, et réservé au plan Solo
+ * comme l'e-mail : c'est un livrable au nom du freelance, il suppose une
+ * signature. L'identifiant du dossier passe par la session, jamais par le
+ * formulaire seul.
+ */
+export async function shareAudit(formData: FormData): Promise<void> {
+  const profile = await requireUser();
+  if (profile.plan !== 'premium') return;
+  const assignmentId = String(formData.get('assignmentId') ?? '');
+  if (!assignmentId) return;
+
+  const found = await getMyOpportunity(assignmentId);
+  if (!found) return;
+  const identity = await getIdentity(profile.id);
+
+  await ensureAuditShare(getServiceClient(), {
+    assignmentId,
+    userId: profile.id,
+    opportunity: found.opportunity,
+    author: {
+      name: identity.fromName || (profile.full_name ?? ''),
+      title: identity.title,
+      company: identity.company,
+      phone: identity.phone,
+      website: identity.website,
+      email: profile.email,
+      logoUrl: identity.logoUrl,
+    },
+  });
+  revalidatePath(`/dashboard/opportunite/${assignmentId}`);
+  revalidatePath(`/dashboard/opportunite/${assignmentId}/email`);
 }

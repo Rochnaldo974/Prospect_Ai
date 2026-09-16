@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { EMAIL_INTENTS, draftProspectingEmail, getServiceClient, type EmailIntent } from '@prospect/core';
+import { EMAIL_INTENTS, draftProspectingEmail, ensureAuditShare, getServiceClient, type EmailIntent } from '@prospect/core';
+import { siteOrigin } from '@/lib/site-url';
 import { requireUser } from '@/lib/auth/session';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { getIdentity, identityReady } from '@/lib/email/identity';
@@ -35,6 +36,22 @@ export default async function EmailPage({
   const profile = await requireUser();
   const identity = await getIdentity(profile.id);
 
+  // L'audit est prêt avant même qu'on l'ait demandé : le brouillon
+  // « audit » le donne en lien, plutôt que de le promettre.
+  let auditUrl: string | null = null;
+  if (plan === 'premium' && identityReady(identity)) {
+    const share = await ensureAuditShare(getServiceClient(), {
+      assignmentId: opportunity.assignmentId,
+      userId: profile.id,
+      opportunity,
+      author: {
+        name: identity.fromName, title: identity.title, company: identity.company,
+        phone: identity.phone, website: identity.website, email: profile.email, logoUrl: identity.logoUrl,
+      },
+    });
+    auditUrl = `${await siteOrigin()}/audit/${share.id}`;
+  }
+
   const back = `/dashboard/opportunite/${id}`;
 
   return (
@@ -65,6 +82,7 @@ export default async function EmailPage({
               draftProspectingEmail(opportunity, id, {
                 hasCv: identity.cvUrl !== null,
                 title: identity.title,
+                auditUrl,
               }),
             ]),
           ) as Record<EmailIntent, { subject: string; body: string }>}
