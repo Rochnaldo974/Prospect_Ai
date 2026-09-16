@@ -155,7 +155,15 @@ export async function ensureAuditShare(
     .insert({ assignment_id: input.assignmentId, user_id: input.userId, snapshot: snapshot as unknown as Json })
     .select('id, assignment_id, snapshot, created_at, opened_at, last_opened_at, open_count')
     .single();
-  if (error) throw new Error(`ensureAuditShare : ${error.message}`);
+  if (error) {
+    // Deux clics dans la même seconde : le second trouve le lien que le
+    // premier vient d'écrire. Un seul lien par dossier, jamais une erreur.
+    if (error.code === '23505') {
+      const raced = await getAuditShareForAssignment(db, input.assignmentId, input.userId);
+      if (raced) return raced;
+    }
+    throw new Error(`ensureAuditShare : ${error.message}`);
+  }
   const share = rowToShare(data);
   if (!share) throw new Error('ensureAuditShare : instantané illisible');
   return share;

@@ -1,4 +1,8 @@
-import { existsSync } from 'node:fs';
+// Le navigateur, Chromium et le système de fichiers sont chargés à l'appel
+// et marqués ignorés pour les empaqueteurs : ce module est atteint depuis
+// l'index du cœur, que les composants du tableau de bord importent côté
+// client pour ses constantes. Sans ces marques, Next tente d'embarquer
+// puppeteer dans la page, et la page ne compile plus.
 import type { Db } from '../db/client';
 import type { Json } from '../db/database.types';
 import type { Logger } from '../logger';
@@ -39,13 +43,14 @@ export interface CaptureOptions {
 }
 
 async function resolveChromium(): Promise<{ executablePath: string; args: string[] }> {
+  const { existsSync } = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ 'node:fs');
   const configured = process.env['CHROME_PATH'];
   const local = configured && existsSync(configured)
     ? configured
     : CANDIDATE_CHROME_PATHS.find((p) => existsSync(p));
   if (local) return { executablePath: local, args: ['--no-sandbox', '--disable-gpu'] };
 
-  const chromium = (await import('@sparticuz/chromium')).default;
+  const chromium = (await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ '@sparticuz/chromium')).default;
   return { executablePath: await chromium.executablePath(), args: chromium.args };
 }
 
@@ -110,7 +115,7 @@ export async function captureScreenshot(
   url: string,
   options: CaptureOptions & { tlsValid?: boolean | null } = {},
 ): Promise<Capture> {
-  const puppeteer = (await import('puppeteer-core')).default;
+  const puppeteer = (await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ 'puppeteer-core')).default;
   const { executablePath, args } = await resolveChromium();
   const browser = await puppeteer.launch({ executablePath, args, headless: true });
 
