@@ -94,6 +94,7 @@ export default async function EmailPage({
           identity={identity}
           sentBefore={await lastSend(opportunity.assignmentId)}
           firstName={firstName}
+          smtpReady={Boolean(process.env['SMTP_HOST'])}
         />
       </div>
     </main>
@@ -112,7 +113,7 @@ async function lastSend(assignmentId: string): Promise<string | null> {
 }
 
 function EmailPageBody({
-  plan, identityOk, email, contactFormUrl, assignmentId, drafts, identity, sentBefore, firstName,
+  plan, identityOk, email, contactFormUrl, assignmentId, drafts, identity, sentBefore, firstName, smtpReady,
 }: {
   plan: 'free' | 'premium';
   identityOk: boolean;
@@ -123,6 +124,8 @@ function EmailPageBody({
   identity: Awaited<ReturnType<typeof getIdentity>>;
   sentBefore: string | null;
   firstName: string;
+  /** Un serveur d'envoi est configuré : le bouton « Envoyer » direct existe. */
+  smtpReady: boolean;
 }) {
   if (plan !== 'premium') {
     return (
@@ -196,6 +199,7 @@ function EmailPageBody({
         to={email}
         drafts={drafts}
         identity={identity}
+        smtpReady={smtpReady}
       />
     </>
   );

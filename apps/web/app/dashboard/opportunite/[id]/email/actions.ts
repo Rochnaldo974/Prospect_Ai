@@ -96,3 +96,35 @@ export async function sendProspectingEmail(
   revalidatePath('/dashboard');
   return { sent: true };
 }
+
+/**
+ * L'envoi fait depuis Gmail, déclaré après coup.
+ *
+ * Sans serveur d'e-mail, le message part depuis la boîte du freelance :
+ * on lui ouvre Gmail rempli, il clique « Envoyer » là-bas, puis revient
+ * dire qu'il l'a fait. On note ce qui a été envoyé, à qui, et l'entreprise
+ * passe en contactée — la même boucle de suivi que pour l'envoi direct.
+ */
+export async function recordExternalSend(
+  _previous: SendState,
+  formData: FormData,
+): Promise<SendState> {
+  const profile = await requireUser();
+  const assignmentId = String(formData.get('assignmentId') ?? '');
+  const subject = String(formData.get('subject') ?? '').trim().slice(0, 200);
+  const body = String(formData.get('body') ?? '').trim().slice(0, 5000);
+  if (!assignmentId || !subject || !body) return { problem: 'L’objet et le message ne peuvent pas être vides.' };
+
+  const found = await getMyOpportunity(assignmentId);
+  if (!found) return { problem: 'Dossier introuvable.' };
+  const to = found.opportunity.company.email;
+  if (!to) return { problem: 'Aucune adresse générique n’a été relevée pour cette entreprise.' };
+
+  const db = getServiceClient();
+  await db.from('assignment_emails').insert({ assignment_id: assignmentId, user_id: profile.id, to_email: to, subject, body });
+  await markContacted(db, { assignmentId, userId: profile.id });
+
+  revalidatePath(`/dashboard/opportunite/${assignmentId}`);
+  revalidatePath('/dashboard');
+  return { sent: true };
+}

@@ -1,34 +1,39 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { startTransition, useActionState, useState } from 'react';
 import { EMAIL_INTENTS, type EmailIntent } from '@prospect/core';
 import type { EmailIdentity } from '@/lib/email/identity';
-import { sendProspectingEmail, type SendState } from './actions';
+import { renderEmailFragment, renderEmailText } from '@/lib/email/render';
+import { recordExternalSend, sendProspectingEmail, type SendState } from './actions';
 
 /**
  * L'éditeur d'envoi : le message à gauche, l'e-mail final à droite.
  *
  * L'aperçu montre EXACTEMENT ce qui partira — signature, logo, mise en
  * page — parce que c'est la promesse de la page : pas de surprise entre ce
- * qu'on relit et ce que le prospect reçoit. Le bouton dit le destinataire,
- * et l'état « envoyé » remplace le formulaire : un envoi n'est pas un
- * brouillon qu'on rejoue.
+ * qu'on relit et ce que le prospect reçoit.
+ *
+ * L'envoi passe par Gmail, sans serveur à payer : un clic copie le message
+ * entier — texte, signature, logo — et ouvre Gmail avec le destinataire
+ * et l'objet remplis. Le freelance colle, envoie, et revient le dire ; le
+ * dossier passe en contacté comme pour un envoi direct. Quand un serveur
+ * d'envoi est configuré, le bouton « Envoyer » direct s'ajoute à côté.
  */
 export function EmailSendForm({
   assignmentId,
   to,
   drafts,
   identity,
+  smtpReady,
 }: {
   assignmentId: string;
   to: string;
   drafts: Record<EmailIntent, { subject: string; body: string }>;
   identity: EmailIdentity;
+  smtpReady: boolean;
 }) {
-  const [state, action, pending] = useActionState<SendState, FormData>(
-    sendProspectingEmail,
-    {},
-  );
+  const [state, action, pending] = useActionState<SendState, FormData>(sendProspectingEmail, {});
+  const [external, confirmExternal, confirming] = useActionState<SendState, FormData>(recordExternalSend, {});
 
   // L'intention pilote le texte. Changer d'intention remplace le brouillon
   // entier — assumé et annoncé : mieux vaut un texte cohérent qu'un collage.
@@ -36,6 +41,7 @@ export function EmailSendForm({
   const [subject, setSubject] = useState(drafts.call.subject);
   const [body, setBody] = useState(drafts.call.body);
   const [attachCv, setAttachCv] = useState(false);
+  const [gmail, setGmail] = useState<'idle' | 'copied' | 'text-only'>('idle');
 
   const pick = (next: EmailIntent) => {
     setIntent(next);
@@ -44,7 +50,47 @@ export function EmailSendForm({
     if (next === 'intro' && identity.cvUrl) setAttachCv(true);
   };
 
-  if (state.sent) {
+  /**
+   * La copie d'abord, Gmail ensuite — le tout dans les secondes qui suivent
+   * le clic, pendant lesquelles le navigateur accepte encore d'ouvrir une
+   * fenêtre. Le presse-papiers reçoit le HTML (texte, signature, logo) et le
+   * texte brut. S'il refuse ou tarde, le texte part dans l'adresse Gmail et
+   * la signature s'écrit sans logo : le message part quand même. Le lien
+   * « Ouvrir Gmail » reste affiché au cas où la fenêtre a été bloquée.
+   */
+  const composeUrl = (withBody: boolean) => {
+    const compose = new URL('https://mail.google.com/mail/');
+    compose.searchParams.set('view', 'cm');
+    compose.searchParams.set('fs', '1');
+    compose.searchParams.set('to', to);
+    compose.searchParams.set('su', subject);
+    if (withBody) compose.searchParams.set('body', renderEmailText(body, identity));
+    return compose.toString();
+  };
+
+  const openGmail = async () => {
+    const html = renderEmailFragment(body, identity);
+    const text = renderEmailText(body, identity);
+    let copied = false;
+    if (typeof ClipboardItem !== 'undefined' && typeof navigator.clipboard?.write === 'function') {
+      try {
+        const write = navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/plain': new Blob([text], { type: 'text/plain' }),
+          }),
+        ]).then(() => true);
+        const late = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500));
+        copied = await Promise.race([write, late]);
+      } catch {
+        copied = false;
+      }
+    }
+    setGmail(copied ? 'copied' : 'text-only');
+    window.open(composeUrl(!copied), '_blank', 'noopener');
+  };
+
+  if (state.sent || external.sent) {
     return (
       <div className="rounded-2xl border border-[var(--brand)]/30 bg-[var(--brand-wash)] px-6 py-8 text-center">
         <p className="text-lg font-semibold text-[var(--brand)]">E-mail envoyé à {to}</p>
@@ -109,26 +155,92 @@ export function EmailSendForm({
         </label>
 
         {identity.cvUrl ? (
-          <label className="flex items-center gap-2.5 text-sm">
-            <input
-              type="checkbox"
-              name="attachCv"
-              value="true"
-              checked={attachCv}
-              onChange={(event) => setAttachCv(event.target.checked)}
-              className="size-4 accent-[var(--brand)]"
-            />
-            Joindre mon CV (PDF)
-          </label>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Ajoutez votre CV dans{' '}
-            <a href="/dashboard/signature" className="text-[var(--brand)] underline-offset-4 hover:underline">
-              Signature e-mail
-            </a>{' '}
-            pour pouvoir le joindre.
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Pour joindre votre CV dans Gmail, glissez-le dans le message :{' '}
+            <a href={identity.cvUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline-offset-4 hover:underline">
+              télécharger mon CV
+            </a>.
           </p>
+        ) : null}
+
+        {/* ── Gmail : copier tout, ouvrir, coller, envoyer ── */}
+        {gmail === 'idle' ? (
+          <button
+            type="button"
+            onClick={openGmail}
+            className="rounded-full bg-[var(--brand)] px-6 py-3 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-transform duration-200 hover:-translate-y-px"
+          >
+            Envoyer avec Gmail à {to}
+          </button>
+        ) : (
+          <div className="rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-wash)] px-4 py-4 text-sm leading-relaxed">
+            <p className="font-medium text-[var(--brand)]">Gmail est ouvert, avec l’adresse et l’objet déjà remplis.</p>
+            {gmail === 'copied' ? (
+              <p className="mt-1.5 text-[var(--brand)]/85">
+                Cliquez dans le message et collez (<kbd className="rounded border bg-card px-1.5 font-mono text-xs">⌘ V</kbd> ou{' '}
+                <kbd className="rounded border bg-card px-1.5 font-mono text-xs">Ctrl V</kbd>) : le texte, votre signature et votre
+                logo se posent d’un coup. Puis « Envoyer ».
+              </p>
+            ) : (
+              <p className="mt-1.5 text-[var(--brand)]/85">
+                Le texte est déjà dans le message. Votre navigateur n’a pas laissé copier le logo : la signature part en texte.
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const data = new FormData();
+                  data.set('assignmentId', assignmentId);
+                  data.set('subject', subject);
+                  data.set('body', body);
+                  startTransition(() => confirmExternal(data));
+                }}
+                disabled={confirming}
+                className="rounded-full bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+              >
+                {confirming ? 'Un instant…' : 'C’est envoyé'}
+              </button>
+              <a
+                href={composeUrl(gmail !== 'copied')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[var(--brand)] underline-offset-4 hover:underline"
+              >
+                Ouvrir Gmail
+              </a>
+              <button type="button" onClick={openGmail} className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+                Recopier le message
+              </button>
+            </div>
+            {external.problem ? <p className="mt-2 text-[var(--finding)]">{external.problem}</p> : null}
+          </div>
         )}
+
+        {smtpReady ? (
+          <>
+            {identity.cvUrl ? (
+              <label className="flex items-center gap-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  name="attachCv"
+                  value="true"
+                  checked={attachCv}
+                  onChange={(event) => setAttachCv(event.target.checked)}
+                  className="size-4 accent-[var(--brand)]"
+                />
+                Joindre mon CV (PDF) à l’envoi direct
+              </label>
+            ) : null}
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-full border px-6 py-3 text-sm font-medium transition-colors hover:bg-[var(--mist)] disabled:opacity-60"
+            >
+              {pending ? 'Envoi…' : `Envoyer directement à ${to}`}
+            </button>
+          </>
+        ) : null}
 
         {state.problem ? (
           <p className="rounded-lg bg-[var(--finding-wash)] px-4 py-3 text-sm text-[var(--finding)]">
@@ -136,24 +248,16 @@ export function EmailSendForm({
           </p>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-full bg-[var(--brand)] px-6 py-3 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-transform duration-200 hover:-translate-y-px disabled:opacity-60"
-        >
-          {pending ? 'Envoi…' : `Envoyer à ${to}`}
-        </button>
-
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Les réponses arrivent dans votre boîte mail. L’adresse du destinataire est celle
-          que l’entreprise publie sur son site.
+          L’e-mail part de votre boîte Gmail, sous votre nom : les réponses y arrivent directement. L’adresse du
+          destinataire est celle que l’entreprise publie sur son site.
         </p>
       </div>
 
       {/* ── L'e-mail tel qu'il partira ── */}
       <div>
         <p className="field-label">Ce que le prospect recevra</p>
-        <LivePreview identity={identity} body={body} attachCv={attachCv} />
+        <LivePreview identity={identity} body={body} attachCv={attachCv && smtpReady} />
       </div>
     </form>
   );

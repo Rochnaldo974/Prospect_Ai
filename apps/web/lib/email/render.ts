@@ -18,7 +18,12 @@ const escapeHtml = (value: string): string =>
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-export function renderEmailHtml(body: string, identity: EmailIdentity): string {
+/**
+ * Le message et la signature, sans l'enveloppe du document : ce qui se
+ * colle tel quel dans Gmail. Le presse-papiers accepte du HTML, et Gmail
+ * garde les styles en ligne et l'image du logo.
+ */
+export function renderEmailFragment(body: string, identity: EmailIdentity): string {
   const paragraphs = body
     .split(/\n{2,}/)
     .map((block) => block.trim())
@@ -43,20 +48,26 @@ export function renderEmailHtml(body: string, identity: EmailIdentity): string {
     ? `<img src="${escapeHtml(identity.logoUrl)}" alt="" height="40" style="height:40px;max-width:160px;object-fit:contain;display:block;margin-bottom:10px;">`
     : '';
 
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1d26;">
+${paragraphs}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:1px solid #e7e9f2;">
+  <tr><td style="padding-top:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+    ${logo}
+    <p style="margin:0;font-size:14px;font-weight:600;color:#1a1d26;">${escapeHtml(identity.fromName)}</p>
+    ${meta ? `<p style="margin:2px 0 0 0;font-size:13px;color:#5b6274;">${meta}</p>` : ''}
+    ${contact ? `<p style="margin:6px 0 0 0;font-size:13px;color:#5b6274;">${contact}</p>` : ''}
+  </td></tr>
+</table>
+</div>`;
+}
+
+export function renderEmailHtml(body: string, identity: EmailIdentity): string {
   return `<!doctype html>
 <html lang="fr">
 <body style="margin:0;padding:0;background:#ffffff;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0;">
-    <tr><td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1d26;padding:8px 4px;">
-${paragraphs}
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;border-top:1px solid #e7e9f2;padding-top:0;">
-        <tr><td style="padding-top:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-          ${logo}
-          <p style="margin:0;font-size:14px;font-weight:600;color:#1a1d26;">${escapeHtml(identity.fromName)}</p>
-          ${meta ? `<p style="margin:2px 0 0 0;font-size:13px;color:#5b6274;">${meta}</p>` : ''}
-          ${contact ? `<p style="margin:6px 0 0 0;font-size:13px;color:#5b6274;">${contact}</p>` : ''}
-        </td></tr>
-      </table>
+    <tr><td style="padding:8px 4px;">
+${renderEmailFragment(body, identity)}
     </td></tr>
   </table>
 </body>
