@@ -3,11 +3,14 @@ import { detectDuplicates } from '../../dedup/engine';
 import { ingestFromSource } from '../../ingestion/pipeline';
 import { syncBodacc } from '../../ingestion/bodacc-sync';
 import { OsmCompanySource } from '../../sources/osm/adapter';
+import { recordDiscoveryRun } from '../../discovery/planner';
 import type { JobHandler } from '../types';
 
 const osmPayload = z.object({
   cities: z.array(z.string().min(1).max(80)).min(1).max(20),
   limit: z.number().int().min(1).max(10_000).default(2000),
+  /** La zone de découverte qui a demandé ce passage : ses chiffres y sont reportés. */
+  areaId: z.number().int().optional(),
 });
 
 /**
@@ -28,12 +31,31 @@ export const discoverOsmHandler: JobHandler<z.infer<typeof osmPayload>> = {
     // Le périmètre géographique est porté par la source : le pipeline
     // d'ingestion est générique et n'a pas à connaître la géographie.
     const source = new OsmCompanySource({ cities: payload.cities });
+    const t0 = Date.now();
 
-    const report = await ingestFromSource(db, source, {
-      logger,
-      signal,
-      limit: payload.limit,
-    });
+    let report;
+    try {
+      report = await ingestFromSource(db, source, {
+        logger,
+        signal,
+        limit: payload.limit,
+      });
+    } catch (cause: unknown) {
+      if (payload.areaId !== undefined) {
+        await recordDiscoveryRun(db, payload.areaId, {
+          ok: false, error: cause instanceof Error ? cause.message : String(cause),
+          durationMs: Date.now() - t0, seen: 0, created: 0, updated: 0, contacts: 0,
+        });
+      }
+      throw cause;
+    }
+
+    if (payload.areaId !== undefined) {
+      await recordDiscoveryRun(db, payload.areaId, {
+        ok: true, durationMs: Date.now() - t0,
+        seen: report.read, created: report.created, updated: report.merged, contacts: report.contactsFound ?? 0,
+      });
+    }
 
     return {
       processed: report.read,

@@ -145,3 +145,21 @@ export async function upsertContacts(
 function clamp(value: number): number {
   return Math.max(0, Math.min(1, Number(value.toFixed(2))));
 }
+
+/**
+ * Avant qu'une fusion supprime l'entreprise absorbée, ses contacts passent
+ * au survivant. Les doublons exacts (même type, même valeur) sont ignorés :
+ * le survivant garde sa ligne et sa provenance.
+ */
+export async function moveContactsBeforeMerge(db: Db, absorbedId: string, survivorId: string): Promise<number> {
+  const { data: moving } = await db.from('company_contacts')
+    .select('type, value, normalized_value, source, source_url, is_generic, is_personal, person_name, role, confidence, prospecting_allowed, first_seen_at, last_seen_at, metadata')
+    .eq('company_id', absorbedId);
+  if (!moving || moving.length === 0) return 0;
+  const { error } = await db.from('company_contacts').upsert(
+    moving.map((row) => ({ ...row, company_id: survivorId })),
+    { onConflict: 'company_id,type,normalized_value', ignoreDuplicates: true },
+  );
+  if (error) throw new Error(`moveContactsBeforeMerge : ${error.message}`);
+  return moving.length;
+}

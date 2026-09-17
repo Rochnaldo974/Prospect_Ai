@@ -18,6 +18,8 @@ export interface IngestReport {
   /** Champs présents mais écartés à la normalisation, par motif. */
   fieldRejections: Record<string, number>;
   sample: { line: string; reason: string }[];
+  /** Contacts écrits (téléphones, e-mails, formulaires, réseaux) par cette passe. */
+  contactsFound: number;
 }
 
 export interface IngestOptions {
@@ -39,6 +41,7 @@ const emptyReport = (): IngestReport => ({
   rejectionReasons: {},
   fieldRejections: {},
   sample: [],
+  contactsFound: 0,
 });
 
 function bump(counter: Record<string, number>, key: string): void {
@@ -391,7 +394,7 @@ export async function ingestFromSource(
       }
 
       await recordSourcesBatch(db, written);
-      await recordContactsBatch(db, written, log);
+      report.contactsFound += await recordContactsBatch(db, written, log);
     } catch (error: unknown) {
       report.errors += current.length;
       const message = error instanceof Error ? error.message : String(error);
@@ -543,7 +546,8 @@ async function recordContactsBatch(
   db: Db,
   written: { companyId: string; candidate: NormalizedCompanyCandidate }[],
   log?: Logger,
-): Promise<void> {
+): Promise<number> {
+  let found = 0;
   const sourceOf = (name: string): ContactSource =>
     name === 'openstreetmap' ? 'osm' : name === 'csv' ? 'csv' : 'other';
 
@@ -561,7 +565,7 @@ async function recordContactsBatch(
     if (candidates.length === 0) continue;
 
     try {
-      await upsertContacts(db, companyId, candidates);
+      found += (await upsertContacts(db, companyId, candidates)).written;
       if (candidate.email && isUsableBusinessEmail(candidate.email)) {
         await db.from('companies').update({ best_email: candidate.email }).eq('id', companyId).is('best_email', null);
       }
@@ -569,4 +573,5 @@ async function recordContactsBatch(
       log?.warn('Contacts non enregistrés', { company_id: companyId, error: error instanceof Error ? error.message : String(error) });
     }
   }
+  return found;
 }

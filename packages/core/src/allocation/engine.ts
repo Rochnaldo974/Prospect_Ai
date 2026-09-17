@@ -120,8 +120,6 @@ export async function runAllocation(
   if (error) throw new Error(`runAllocation : ${error.message}`);
   if (!profiles || profiles.length === 0) return report;
 
-  const candidates = await loadCandidates(db);
-
   // L'ordre de service est MÉLANGÉ à chaque passe. Sans cela, les profils
   // sortent de la requête dans un ordre stable : quand deux abonnés ont des
   // préférences qui se recouvrent, le même passe premier tous les jours et
@@ -145,9 +143,8 @@ export async function runAllocation(
     report.usersExamined += 1;
 
     try {
-        const served = await allocateFor(
-        db, profile, candidates.filter((c) => !taken.has(c.companyId)),
-        taken, report, random, version, log, verify, verdicts,
+      const served = await allocateFor(
+        db, profile, taken, report, random, version, log, verify, verdicts,
       );
       if (served === null) report.usersAlreadyServed += 1;
     } catch (cause: unknown) {
@@ -170,61 +167,55 @@ export async function runAllocation(
 }
 
 /**
- * Opportunités attribuables, chargées une seule fois pour tous les
- * utilisateurs — le stock est le même pour tout le monde, et le relire par
- * personne coûterait autant de requêtes que d'abonnés.
+ * Les candidates d'un profil, choisies en base.
+ *
+ * La fonction SQL fait tout ce qui n'a pas besoin de lire le dossier :
+ * statut et validité de l'opportunité, garde-fous de l'entreprise, mémoire
+ * du freelance (issue déclarée = jamais, sinon trente jours), services
+ * choisis, secteurs exclus, zone, téléphone exigé pour le gratuit. Ce qui
+ * revient est trié par score ; Node applique l'adéquation fine et la
+ * vérification. Le plafond se règle en base (allocation_candidates_per_user).
  */
-async function loadCandidates(db: Db): Promise<CandidateRow[]> {
-  const { data, error } = await db
-    .from('opportunities')
-    .select('id, company_id, opportunity_type, base_score, confidence_score, reason_data, phone_ready, outreach_ready, companies!inner(id, city, region, industry_code, domain, best_email, prospecting_allowed, suppression_global, cooldown_until, has_live_assignment)')
-    .eq('status', 'available')
-    .gt('expires_at', new Date().toISOString())
-    .order('base_score', { ascending: false })
-    .limit(1000);
+async function loadCandidatesFor(
+  db: Db,
+  profile: { id: string; plan: 'free' | 'premium' },
+  preferences: MatchingPreferences,
+): Promise<CandidateRow[]> {
+  const { data: perUser } = await db.rpc('engine_setting_int', { p_key: 'allocation_candidates_per_user', p_default: 300 });
+  const { data, error } = await db.rpc('select_allocation_candidates', {
+    p_user_id: profile.id,
+    p_services: preferences.services as OpportunityType[],
+    p_location_mode: preferences.locationMode,
+    p_city: preferences.city,
+    p_region: preferences.region,
+    p_excluded_industries: preferences.excludedIndustries,
+    p_require_phone: profile.plan === 'free',
+    p_limit: perUser ?? 300,
+  });
+  if (error) throw new Error(`loadCandidatesFor : ${error.message}`);
 
-  if (error) throw new Error(`loadCandidates : ${error.message}`);
-
-  const rows: CandidateRow[] = [];
-  for (const row of data ?? []) {
-    const company = row.companies as unknown as {
-      city: string | null; region: string | null; industry_code: string | null; domain: string | null; best_email: string | null;
-      prospecting_allowed: boolean; suppression_global: boolean;
-      cooldown_until: string | null; has_live_assignment: boolean;
-    };
-
-    // Ces conditions sont aussi des garde-fous en base ; les appliquer ici
-    // évite de proposer une entreprise que l'insertion refusera, ce qui
-    // coûterait une place dans la journée du freelance.
-    if (!company.prospecting_allowed) continue;
-    if (company.suppression_global) continue;
-    if (company.cooldown_until !== null) continue;
-    if (company.has_live_assignment) continue;
-
-    const reason = (row as unknown as { reason_data?: { trigger?: string | null; need_breakdown?: { signal: string; points: number }[] } | null }).reason_data;
+  return (data ?? []).map((row) => {
+    const reason = row.reason_data as { trigger?: string | null; need_breakdown?: { signal: string; points: number }[] } | null;
     const strongest = [...(reason?.need_breakdown ?? [])].sort((a, b) => b.points - a.points)[0]?.signal;
-    rows.push({
-      opportunityId: row.id,
+    return {
+      opportunityId: row.opportunity_id,
       companyId: row.company_id,
       theme: reason?.trigger ?? strongest ?? row.opportunity_type,
-      hasEmail: company.best_email !== null,
-      phoneReady: (row as unknown as { phone_ready?: boolean }).phone_ready === true,
+      hasEmail: row.best_email !== null,
+      phoneReady: row.phone_ready,
       opportunityType: row.opportunity_type as OpportunityType,
       baseScore: Number(row.base_score),
       confidenceScore: Number(row.confidence_score),
-      city: company.city,
-      region: company.region,
-      industryCode: company.industry_code,
-    });
-  }
-
-  return rows;
+      city: row.city,
+      region: row.region,
+      industryCode: row.industry_code,
+    };
+  });
 }
 
 async function allocateFor(
   db: Db,
   profile: { id: string; city: string | null; region: string | null; daily_opportunity_limit: number; plan: 'free' | 'premium' },
-  candidates: CandidateRow[],
   taken: Set<string>,
   report: AllocationReport,
   random: () => number,
@@ -256,6 +247,13 @@ async function allocateFor(
   if ((count ?? 0) > 0) return null;
 
   const preferences = await loadPreferences(db, profile);
+
+  // Le stock, filtré en base pour ce profil : statut, validité, garde-fous,
+  // mémoire du freelance, services choisis, secteurs exclus, zone, canal.
+  // Plus de plafond à mille lignes chargées pour tout le monde : chaque
+  // profil reçoit ses trois cents meilleures candidates, déjà triées.
+  const candidates = (await loadCandidatesFor(db, profile, preferences))
+    .filter((c) => !taken.has(c.companyId));
 
   // La mémoire par personne : les exclusions globales — cooldown,
   // exclusivité — n'empêchent pas une entreprise de REVENIR AU MÊME
@@ -418,15 +416,17 @@ async function allocateFor(
     // Insertion une par une : les garde-fous lèvent une exception par ligne,
     // et un lot entier échouerait pour une seule entreprise devenue
     // inéligible entre le chargement et l'écriture.
-    const { error: insertError } = await db.from('assignments').insert({
-      user_id: profile.id,
-      company_id: entry.candidate.companyId,
-      opportunity_id: entry.candidate.opportunityId,
-      batch_id: batch?.id ?? null,
-      rank: index + 1,
-      match_score: entry.score,
-      is_control: index === controlIndex,
-      exclusive_until: exclusiveUntil,
+    // L'attribution et le passage de l'opportunité à « assigned » dans une
+    // seule transaction : une opportunité prise entre-temps fait échouer
+    // l'appel, et rien n'est écrit.
+    const { error: insertError } = await db.rpc('assign_opportunity', {
+      p_user_id: profile.id,
+      p_opportunity_id: entry.candidate.opportunityId,
+      p_batch_id: batch?.id ?? null,
+      p_rank: index + 1,
+      p_match_score: entry.score,
+      p_is_control: index === controlIndex,
+      p_exclusive_until: exclusiveUntil,
     });
 
     if (insertError) {
@@ -444,11 +444,6 @@ async function allocateFor(
     created += 1;
     taken.add(entry.candidate.companyId);
     if (index === controlIndex) report.controlsPlaced += 1;
-
-    await db
-      .from('opportunities')
-      .update({ status: 'assigned' })
-      .eq('id', entry.candidate.opportunityId);
   }
 
   if (batch) {

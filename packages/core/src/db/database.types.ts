@@ -355,6 +355,99 @@ export type Database = {
           },
         ]
       }
+      discovery_areas: {
+        Row: {
+          area_id: string
+          area_type: string
+          companies_created: number
+          companies_seen: number
+          companies_updated: number
+          contacts_found: number
+          created_at: string
+          department: string | null
+          id: number
+          last_duration_ms: number | null
+          last_error: string | null
+          last_scanned_at: string | null
+          last_success_at: string | null
+          name: string
+          next_scan_at: string
+          population: number | null
+          priority: number
+          runs: number
+          source: string
+          stats: Json
+          status: string
+        }
+        Insert: {
+          area_id: string
+          area_type: string
+          companies_created?: number
+          companies_seen?: number
+          companies_updated?: number
+          contacts_found?: number
+          created_at?: string
+          department?: string | null
+          id?: never
+          last_duration_ms?: number | null
+          last_error?: string | null
+          last_scanned_at?: string | null
+          last_success_at?: string | null
+          name: string
+          next_scan_at?: string
+          population?: number | null
+          priority?: number
+          runs?: number
+          source?: string
+          stats?: Json
+          status?: string
+        }
+        Update: {
+          area_id?: string
+          area_type?: string
+          companies_created?: number
+          companies_seen?: number
+          companies_updated?: number
+          contacts_found?: number
+          created_at?: string
+          department?: string | null
+          id?: never
+          last_duration_ms?: number | null
+          last_error?: string | null
+          last_scanned_at?: string | null
+          last_success_at?: string | null
+          name?: string
+          next_scan_at?: string
+          population?: number | null
+          priority?: number
+          runs?: number
+          source?: string
+          stats?: Json
+          status?: string
+        }
+        Relationships: []
+      }
+      engine_settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           active_signal_count: number
@@ -1956,6 +2049,45 @@ export type Database = {
       prune_event_keys: { Args: { older_than?: string }; Returns: number }
       prune_opportunity_rejections: { Args: { older_than?: string }; Returns: number }
       engine_metrics: { Args: { p_day?: string }; Returns: Json }
+      engine_setting_int: { Args: { p_key: string; p_default: number }; Returns: number }
+      assign_opportunity: {
+        Args: {
+          p_user_id: string
+          p_opportunity_id: string
+          p_batch_id: string | null
+          p_rank: number
+          p_match_score: number
+          p_is_control: boolean
+          p_exclusive_until: string
+        }
+        Returns: string
+      }
+      select_allocation_candidates: {
+        Args: {
+          p_user_id: string
+          p_services?: Database["public"]["Enums"]["opportunity_type"][]
+          p_location_mode?: string
+          p_city?: string | null
+          p_region?: string | null
+          p_excluded_industries?: string[]
+          p_require_phone?: boolean
+          p_limit?: number
+        }
+        Returns: {
+          opportunity_id: string
+          company_id: string
+          opportunity_type: Database["public"]["Enums"]["opportunity_type"]
+          base_score: number
+          confidence_score: number
+          reason_data: Json
+          phone_ready: boolean
+          outreach_ready: boolean
+          city: string | null
+          region: string | null
+          industry_code: string | null
+          best_email: string | null
+        }[]
+      }
       reclaim_stalled_jobs: {
         Args: { stalled_after?: string }
         Returns: number

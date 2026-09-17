@@ -1,6 +1,7 @@
 import type { Db } from '../db/client';
 import type { Json } from '../db/database.types';
 import type { Logger } from '../logger';
+import { moveContactsBeforeMerge } from '../contacts/ingest';
 
 /**
  * Déduplication approchée.
@@ -138,6 +139,10 @@ export async function detectDuplicates(
 
           const loserId = survivorId === target.id ? candidate.candidate_id : target.id;
 
+          // Les contacts de l'absorbée suivent le survivant : la fusion
+          // supprime la ligne, et la cascade emporterait ses contacts.
+          await moveContactsBeforeMerge(db, loserId, survivorId);
+
           const { error: mergeError } = await db.rpc('merge_companies', {
             p_survivor_id: survivorId,
             p_absorbed_id: loserId,
@@ -230,6 +235,7 @@ export async function decideDuplicate(
   }
 
   const loserId = survivorId === pair.company_a_id ? pair.company_b_id : pair.company_a_id;
+  await moveContactsBeforeMerge(db, loserId, survivorId);
 
   const { error: mergeError } = await db.rpc('merge_companies', {
     p_survivor_id: survivorId,
