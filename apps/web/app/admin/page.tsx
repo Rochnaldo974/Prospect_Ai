@@ -1,16 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getAdminStats, getInventory, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
+import { getAdminStats, getEngineMetrics, getInventory, getQueueHealth, getSourcePerformance, getTypePerformance, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
 import { getAdminDb } from '@/lib/supabase/admin';
 import { Section, StatCard } from '@/components/admin/primitives';
 
 export const metadata: Metadata = { title: 'Vue d’ensemble' };
 
 const n = (value: number | null) => (value ?? 0).toLocaleString('fr-FR');
+const m = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
 
 export default async function AdminOverviewPage() {
   const db = await getAdminDb();
-  const [stats, inventory] = await Promise.all([getAdminStats(db), getInventory(db)]);
+  const [stats, inventory, metrics, sources, types, queue] = await Promise.all([
+    getAdminStats(db), getInventory(db), getEngineMetrics(db), getSourcePerformance(db), getTypePerformance(db), getQueueHealth(db),
+  ]);
 
   if (!stats) {
     return <p className="text-sm text-muted-foreground">Compteurs indisponibles.</p>;
@@ -68,6 +71,88 @@ export default async function AdminOverviewPage() {
           <StatCard label="Utilisateurs" value={n(stats.users_total)} hint={`${n(stats.users_onboarded)} onboardés`} />
         </div>
       </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-medium text-muted-foreground">Aujourd’hui</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <StatCard label="Entreprises découvertes" value={n(m(metrics.discovery['companies_discovered_today']))} />
+          <StatCard label="Domaines découverts" value={n(m(metrics.domains['domains_discovered_today']))} />
+          <StatCard label="Sites scannés" value={n(m(metrics.domains['domains_scanned_today']))} />
+          <StatCard label="Contacts trouvés" value={n(m(metrics.contacts['contacts_found_today']))} />
+          <StatCard label="Qualifiées" value={n(m(metrics.opportunities['qualified_created_today']))} />
+          <StatCard label="PHONE_READY" value={n(m(metrics.opportunities['phone_ready_created_today']))} />
+          <StatCard label="OUTREACH_READY" value={n(m(metrics.opportunities['outreach_ready_created_today']))} />
+          <StatCard label="Rejetées" value={n(m(metrics.rejections['opportunities_rejected_today']))} hint={Object.entries((metrics.rejections['rejections_by_reason'] as Record<string, number>) ?? {}).map(([k, v]) => `${k} ${v}`).join(' · ') || undefined} />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-medium text-muted-foreground">Stock et pipeline</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <StatCard label="Stock qualifié" value={n(m(metrics.opportunities['stock_qualified']))} />
+          <StatCard label="Stock PHONE_READY" value={n(m(metrics.opportunities['stock_phone_ready']))} />
+          <StatCard label="Stock OUTREACH_READY" value={n(m(metrics.opportunities['stock_outreach_ready']))} />
+          <StatCard label="Tél + e-mail" value={n(m(metrics.opportunities['stock_phone_and_email_ready']))} />
+          <StatCard label="Domaines dus au scan" value={n(m(metrics.domains['domains_due_for_scan']))} />
+          <StatCard label="Jobs en attente" value={n(queue.pending)} hint={queue.oldestPendingAt ? `le plus ancien : ${new Date(queue.oldestPendingAt).toLocaleString('fr-FR')}` : undefined} tone={queue.pending > 200 ? 'warning' : 'default'} />
+          <StatCard label="Jobs en cours" value={n(queue.running)} />
+          <StatCard label="Jobs en échec" value={n(queue.failed)} tone={queue.failed > 0 ? 'danger' : 'default'} />
+        </div>
+      </section>
+
+      <Section title="Performance par source" count={sources.length}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="py-2 pr-3">Source</th><th className="py-2 pr-3 text-right">Vues</th><th className="py-2 pr-3 text-right">Joignables</th><th className="py-2 pr-3 text-right">Tél</th><th className="py-2 pr-3 text-right">E-mail</th><th className="py-2 pr-3 text-right">Opp. créées</th><th className="py-2 pr-3 text-right">PHONE_READY</th><th className="py-2 pr-3 text-right">OUTREACH_READY</th><th className="py-2 pr-3 text-right">Attribuées</th><th className="py-2 pr-3 text-right">Contactées</th><th className="py-2 text-right">Positives</th>
+            </tr></thead>
+            <tbody>
+              {sources.map((row) => (
+                <tr key={row.source ?? '?'} className="border-t">
+                  <td className="py-2 pr-3">{row.source}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.companies_seen)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.companies_contactable)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.companies_with_phone)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.companies_with_email)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.opportunities_created)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.stock_phone_ready)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.stock_outreach_ready)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.assigned)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.contacted)}</td>
+                  <td className="py-2 text-right tabular-nums">{n(row.positive_outcomes)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <Section title="Performance par type" count={types.length}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="py-2 pr-3">Type</th><th className="py-2 pr-3 text-right">Créées</th><th className="py-2 pr-3 text-right">Stock</th><th className="py-2 pr-3 text-right">PHONE_READY</th><th className="py-2 pr-3 text-right">OUTREACH_READY</th><th className="py-2 pr-3 text-right">Attribuées</th><th className="py-2 pr-3 text-right">Contactées</th><th className="py-2 pr-3 text-right">Intéressées</th><th className="py-2 pr-3 text-right">RDV</th><th className="py-2 pr-3 text-right">Devis</th><th className="py-2 text-right">Clients</th>
+            </tr></thead>
+            <tbody>
+              {types.map((row) => (
+                <tr key={row.opportunity_type ?? '?'} className="border-t">
+                  <td className="py-2 pr-3">{row.opportunity_type ? OPPORTUNITY_TYPE_LABELS[row.opportunity_type] : '?'}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.created)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.stock)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.stock_phone_ready)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.stock_outreach_ready)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.assigned)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.contacted)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.interested)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.meetings)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{n(row.quotes)}</td>
+                  <td className="py-2 text-right tabular-nums">{n(row.clients)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
 
       <section>
         <h2 className="mb-2 text-sm font-medium text-muted-foreground">Conversion</h2>

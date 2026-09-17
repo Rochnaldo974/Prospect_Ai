@@ -184,7 +184,12 @@ export function scoreOpportunity(
     // présent mais sans poids dans cette règle ne prouve rien la concernant.
     if (contributions.length < minimum) return null;
     if (rule.diagnosticMinNeed !== undefined && needScore < rule.diagnosticMinNeed) return null;
-    if (rule.diagnosticRequires?.some((required) => !present.has(required))) return null;
+    if (rule.diagnosticRequires && !rule.diagnosticRequires.some((required) => present.has(required))) return null;
+    if (rule.diagnosticSeverity) {
+      const criticals = rule.diagnosticSeverity.critical.filter((t) => present.has(t)).length;
+      const majors = rule.diagnosticSeverity.major.filter((t) => present.has(t)).length;
+      if (criticals === 0 && majors < 2) return null;
+    }
   }
 
   const timingScore = best !== null ? clamp(best.strength * 100, 0, 100) : 0;

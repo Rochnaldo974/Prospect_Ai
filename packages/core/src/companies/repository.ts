@@ -395,3 +395,49 @@ export async function getDuplicateCounts(db: Db): Promise<DuplicateCounts> {
     autoMerges: autoMerges.count ?? 0,
   };
 }
+
+/** Ce qu'une source a produit, de l'entreprise vue au client signé. */
+export type SourcePerformanceRow = Database['public']['Views']['source_performance']['Row'];
+export type TypePerformanceRow = Database['public']['Views']['opportunity_type_performance']['Row'];
+
+export async function getSourcePerformance(db: Db): Promise<SourcePerformanceRow[]> {
+  const { data, error } = await db.from('source_performance').select('*').order('companies_seen', { ascending: false });
+  if (error) throw new Error(`getSourcePerformance : ${error.message}`);
+  return data ?? [];
+}
+
+export async function getTypePerformance(db: Db): Promise<TypePerformanceRow[]> {
+  const { data, error } = await db.from('opportunity_type_performance').select('*').order('created', { ascending: false });
+  if (error) throw new Error(`getTypePerformance : ${error.message}`);
+  return data ?? [];
+}
+
+export interface EngineMetrics {
+  day: string;
+  discovery: Record<string, number | Record<string, number>>;
+  domains: Record<string, number | null>;
+  contacts: Record<string, number | Record<string, number>>;
+  opportunities: Record<string, number | Record<string, number>>;
+  rejections: Record<string, number | Record<string, number>>;
+}
+
+/** Les métriques du moteur, calculées par la base pour un jour (défaut : aujourd'hui). */
+export async function getEngineMetrics(db: Db, day?: string): Promise<EngineMetrics> {
+  const { data, error } = await db.rpc('engine_metrics', day ? { p_day: day } : {});
+  if (error) throw new Error(`getEngineMetrics : ${error.message}`);
+  return data as unknown as EngineMetrics;
+}
+
+/** L'état de la file : ce qui attend, ce qui tourne, ce qui a échoué, et depuis quand. */
+export async function getQueueHealth(db: Db): Promise<{ pending: number; running: number; failed: number; oldestPendingAt: string | null }> {
+  const [pending, running, failed, oldest] = await Promise.all([
+    db.from('job_queue').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    db.from('job_queue').select('id', { count: 'exact', head: true }).eq('status', 'running'),
+    db.from('job_queue').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
+    db.from('job_queue').select('created_at').eq('status', 'pending').order('created_at', { ascending: true }).limit(1).maybeSingle(),
+  ]);
+  return {
+    pending: pending.count ?? 0, running: running.count ?? 0, failed: failed.count ?? 0,
+    oldestPendingAt: oldest.data?.created_at ?? null,
+  };
+}

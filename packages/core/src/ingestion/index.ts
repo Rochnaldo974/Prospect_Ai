@@ -3,3 +3,4 @@ export * from './bodacc-sync';
 export * from './domain-to-company';
 export * from './tenders';
 export * from './bodacc-contacts';
+export * from './identity-local';

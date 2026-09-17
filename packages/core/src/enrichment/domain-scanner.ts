@@ -75,7 +75,28 @@ export interface ScanOptions {
  */
 const BLOCKING_STATUSES = new Set([401, 403, 429]);
 
-/** Intervalle avant le prochain passage, selon ce qu'on a trouvé. */
+/**
+ * Intervalle avant le prochain passage, selon ce qu'on a trouvé — et selon
+ * l'histoire du domaine. Un site qui n'a pas bougé en trois passages peut
+ * attendre ; un domaine déposé le mois dernier est à revoir dans la semaine,
+ * c'est le moment où le site apparaît ; un site cassé se recontrôle vite.
+ */
+export function rescanIntervalDays(
+  status: DomainScanResult['status'],
+  hasSiren: boolean,
+  history: { unchangedStreak?: number; registeredAt?: string | null } = {},
+): number {
+  const base = nextCheckDays(status, hasSiren);
+  if (status !== 'reachable' && status !== 'placeholder') return base;
+  const registered = history.registeredAt ? Date.parse(history.registeredAt) : Number.NaN;
+  const recentDomain = Number.isFinite(registered) && Date.now() - registered < 60 * 86_400_000;
+  if (recentDomain) return Math.min(base, status === 'placeholder' ? 5 : 7);
+  const streak = history.unchangedStreak ?? 0;
+  if (streak >= 6) return Math.min(120, base * 3);
+  if (streak >= 3) return Math.min(90, base * 2);
+  return base;
+}
+
 function nextCheckDays(status: DomainScanResult['status'], hasSiren: boolean): number {
   switch (status) {
     case 'reachable':
@@ -240,7 +261,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
 
   let query = db
     .from('domains')
-    .select('domain, content_hash, check_attempts, tech_year')
+    .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at')
     .neq('status', 'excluded')
     // Le parc national compte 4,59 millions de domaines : l'ordre de passage
     // décide de ce qu'on trouve les premiers jours. La priorité est calculée
@@ -346,9 +367,13 @@ async function persistScan(
   db: Db,
   scan: DomainScanResult,
   previousFailures: number,
+  history: { unchangedStreak?: number; registeredAt?: string | null; previousHash?: string | null } = {},
 ): Promise<void> {
   const analysis = scan.analysis;
-  const days = nextCheckDays(scan.status, scan.sirens.length > 0);
+  // La série d'« inchangé » : repart à zéro dès que le contenu bouge ou que le site tombe.
+  const unchanged = scan.analysis !== null && history.previousHash != null && !scan.contentChanged;
+  const streak = unchanged ? (history.unchangedStreak ?? 0) + 1 : 0;
+  const days = rescanIntervalDays(scan.status, scan.sirens.length > 0, { unchangedStreak: streak, registeredAt: history.registeredAt ?? null });
 
   // Échecs consécutifs. Une coupure d'une seconde arrive à n'importe quel
   // hébergeur : annoncer à un artisan que son site est en panne sur la foi
@@ -392,6 +417,7 @@ async function persistScan(
       next_check_at: new Date(Date.now() + days * 86_400_000).toISOString(),
       check_error: scan.fetch.error,
       check_attempts: down ? previousFailures + 1 : 0,
+      unchanged_streak: streak,
       tls_valid: scan.tls?.valid ?? null,
       tls_reason: scan.tls?.reason ?? null,
       tls_valid_to: scan.tls?.validTo?.slice(0, 10) ?? null,
@@ -547,6 +573,7 @@ async function recordScanEvents(
 interface DueRow {
   domain: string; content_hash: string | null;
   check_attempts: number; tech_year: number | null;
+  unchanged_streak?: number; registered_at?: string | null;
 }
 
 /** Scanne un domaine et enregistre tout ce qui en découle : faits, événements, rattachements. */
@@ -576,7 +603,7 @@ async function scanAndPersist(
         report.unchanged += 1;
       }
 
-      await persistScan(db, scan, row.check_attempts);
+      await persistScan(db, scan, row.check_attempts, { unchangedStreak: row.unchanged_streak ?? 0, registeredAt: row.registered_at ?? null, previousHash: row.content_hash });
 
       // Un formulaire trouvé est un moyen de contact : il ouvre la porte de
       // qualité pour l'entreprise qui revendique ce site et n'en avait pas.
@@ -655,7 +682,7 @@ export async function rescanDomain(
   };
   const { data: row, error } = await db
     .from('domains')
-    .select('domain, content_hash, check_attempts, tech_year')
+    .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at')
     .eq('domain', domain)
     .maybeSingle();
   if (error) throw new Error(`rescanDomain : ${error.message}`);

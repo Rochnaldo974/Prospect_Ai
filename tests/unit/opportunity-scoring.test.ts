@@ -123,10 +123,12 @@ describe('conditions d’existence', () => {
       .toBeNull();
   });
 
-  it('exige un déclencheur daté', () => {
-    // Un état, si marqué soit-il, ne justifie jamais un appel.
-    expect(scoreOpportunity(ruleFor('website_creation')!, input({
-      signals: [signal({ strength: 1 }), signal({ signalType: 'active_business', strength: 1 })],
+  it('exige un déclencheur daté pour une famille sans mode diagnostic', () => {
+    // La maintenance n'a pas de diagnostic : un état, si marqué soit-il, ne
+    // justifie jamais un appel sans fait daté. (La création de site, elle,
+    // accepte depuis le lot 3 une absence de site prouvée comme diagnostic.)
+    expect(scoreOpportunity(ruleFor('maintenance')!, input({
+      signals: [signal({ signalType: 'invalid_certificate', strength: 1 }), signal({ signalType: 'slow_website', strength: 1 })],
     }))).toBeNull();
   });
 

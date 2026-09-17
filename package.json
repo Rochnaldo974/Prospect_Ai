@@ -33,7 +33,8 @@
     "import:afnic": "node --import tsx scripts/import-afnic.mjs",
     "backfill:contacts": "node --import tsx scripts/backfill-contacts.mjs",
     "metrics": "node --import tsx scripts/engine-metrics.mjs",
-    "seed:discovery": "node --import tsx scripts/seed-discovery-areas.mjs"
+    "seed:discovery": "node --import tsx scripts/seed-discovery-areas.mjs",
+    "import:sirene": "node --import tsx scripts/import-sirene.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

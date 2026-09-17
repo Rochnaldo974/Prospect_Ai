@@ -30,11 +30,17 @@ export interface OpportunityRule {
    */
   diagnosticMinNeed?: number;
   /**
-   * Faits sans lesquels le diagnostic ne se propose pas, quel que soit le
-   * reste. Pour une création de site : la présence sociale, seule preuve
-   * montrable que l'entreprise veut exister en ligne.
+   * Faits dont AU MOINS UN doit être présent pour qu'un diagnostic se
+   * propose. Pour une création de site : une preuve montrable que le site
+   * manque — présence sociale sans site, absence constatée après recherche,
+   * domaine parké — et pas seulement le silence d'un annuaire.
    */
   diagnosticRequires?: string[];
+  /**
+   * Gravité des constats pour un diagnostic : au moins un critique, ou deux
+   * majeurs. Les autres signaux ne comptent que dans le besoin.
+   */
+  diagnosticSeverity?: { critical: string[]; major: string[] };
   /** Signaux de besoin et leur contribution, en points sur 100. */
   needWeights: Record<string, number>;
   /**
@@ -73,7 +79,11 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     // site » resterait une opinion d'annuaire.
     diagnosticMinFacts: 2,
     diagnosticMinNeed: 60,
-    diagnosticRequires: ['social_without_website'],
+    // Plusieurs chemins indépendants vers le même dossier : réseaux sans
+    // site (chemin C), absence prouvée après recherche (chemin A), domaine
+    // parké d'une entreprise identifiée (chemin E). Les chemins B et D
+    // passent par un déclencheur daté (création, immatriculation).
+    diagnosticRequires: ['social_without_website', 'no_website_proven', 'website_placeholder'],
     needWeights: {
       // La preuve la plus parlante : l'entreprise existe en ligne, sans
       // vitrine à elle.
@@ -100,6 +110,14 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     // l'absence d'urgence se compense par la précision du constat.
     diagnosticMinFacts: 3,
     diagnosticMinNeed: 60,
+    // Une seule anomalie mineure n'est pas une opportunité. Sans fait daté,
+    // il faut un défaut critique, ou deux défauts majeurs, en plus du
+    // plancher de besoin : c'est ce qu'un freelance peut montrer sans
+    // discussion.
+    diagnosticSeverity: {
+      critical: ['website_broken', 'not_responsive', 'invalid_certificate', 'no_ssl'],
+      major: ['outdated_stack', 'dated_platform', 'website_found_down', 'stale_content', 'slow_website', 'website_placeholder'],
+    },
     needWeights: {
       website_broken: 55,
       website_found_down: 50,

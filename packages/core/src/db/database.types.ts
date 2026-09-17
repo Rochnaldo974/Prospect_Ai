@@ -12,6 +12,7 @@ export type Database = {
       [_ in never]: never
     }
     Views: {
+
       [_ in never]: never
     }
     Functions: {
@@ -445,6 +446,90 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json
+        }
+        Relationships: []
+      }
+      sirene_reference: {
+        Row: {
+          active: boolean
+          city: string | null
+          creation_date: string | null
+          diffusible: boolean
+          employee_range: string | null
+          imported_at: string
+          is_head_office: boolean
+          naf_code: string | null
+          name_key: string | null
+          postal_code: string | null
+          siren: string
+          siret: string
+          storefront_name: string | null
+        }
+        Insert: {
+          active?: boolean
+          city?: string | null
+          creation_date?: string | null
+          diffusible?: boolean
+          employee_range?: string | null
+          imported_at?: string
+          is_head_office?: boolean
+          naf_code?: string | null
+          name_key?: never
+          postal_code?: string | null
+          siren: string
+          siret: string
+          storefront_name?: string | null
+        }
+        Update: {
+          active?: boolean
+          city?: string | null
+          creation_date?: string | null
+          diffusible?: boolean
+          employee_range?: string | null
+          imported_at?: string
+          is_head_office?: boolean
+          naf_code?: string | null
+          name_key?: never
+          postal_code?: string | null
+          siren?: string
+          siret?: string
+          storefront_name?: string | null
+        }
+        Relationships: []
+      }
+      sirene_units: {
+        Row: {
+          active: boolean
+          creation_date: string | null
+          diffusible: boolean
+          imported_at: string
+          legal_category: string | null
+          legal_name: string
+          naf_code: string | null
+          name_key: string | null
+          siren: string
+        }
+        Insert: {
+          active?: boolean
+          creation_date?: string | null
+          diffusible?: boolean
+          imported_at?: string
+          legal_category?: string | null
+          legal_name: string
+          naf_code?: string | null
+          name_key?: never
+          siren: string
+        }
+        Update: {
+          active?: boolean
+          creation_date?: string | null
+          diffusible?: boolean
+          imported_at?: string
+          legal_category?: string | null
+          legal_name?: string
+          naf_code?: string | null
+          name_key?: never
+          siren?: string
         }
         Relationships: []
       }
@@ -1130,6 +1215,7 @@ export type Database = {
           tls_reason: string | null
           tls_valid: boolean | null
           tls_valid_to: string | null
+          unchanged_streak: number
           ttfb_ms: number | null
           updated_at: string
         }
@@ -1180,6 +1266,7 @@ export type Database = {
           tls_reason?: string | null
           tls_valid?: boolean | null
           tls_valid_to?: string | null
+          unchanged_streak?: number
           ttfb_ms?: number | null
           updated_at?: string
         }
@@ -1230,6 +1317,7 @@ export type Database = {
           tls_reason?: string | null
           tls_valid?: boolean | null
           tls_valid_to?: string | null
+          unchanged_streak?: number
           ttfb_ms?: number | null
           updated_at?: string
         }
@@ -1782,6 +1870,39 @@ export type Database = {
       }
     }
     Views: {
+      source_performance: {
+        Row: {
+          source: string | null
+          companies_seen: number | null
+          companies_contactable: number | null
+          companies_with_phone: number | null
+          companies_with_email: number | null
+          opportunities_created: number | null
+          stock_qualified: number | null
+          stock_phone_ready: number | null
+          stock_outreach_ready: number | null
+          assigned: number | null
+          contacted: number | null
+          positive_outcomes: number | null
+        }
+        Relationships: []
+      }
+      opportunity_type_performance: {
+        Row: {
+          opportunity_type: Database["public"]["Enums"]["opportunity_type"] | null
+          created: number | null
+          stock: number | null
+          stock_phone_ready: number | null
+          stock_outreach_ready: number | null
+          assigned: number | null
+          contacted: number | null
+          interested: number | null
+          meetings: number | null
+          quotes: number | null
+          clients: number | null
+        }
+        Relationships: []
+      }
       admin_company_overview: {
         Row: {
           active_signal_count: number | null
@@ -2049,6 +2170,10 @@ export type Database = {
       prune_event_keys: { Args: { older_than?: string }; Returns: number }
       prune_opportunity_rejections: { Args: { older_than?: string }; Returns: number }
       engine_metrics: { Args: { p_day?: string }; Returns: Json }
+      match_company_to_sirene: {
+        Args: { p_company_id: string }
+        Returns: { siret: string; siren: string; naf_code: string | null; creation_date: string | null; is_head_office: boolean; candidates: number }[]
+      }
       engine_setting_int: { Args: { p_key: string; p_default: number }; Returns: number }
       assign_opportunity: {
         Args: {

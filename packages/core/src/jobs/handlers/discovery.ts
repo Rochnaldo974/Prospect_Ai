@@ -3,6 +3,7 @@ import type { JobHandler } from '../types';
 import { planDiscovery } from '../../discovery/planner';
 import { importAfnicDaily } from '../../sources/afnic/daily';
 import { resolveBodaccContacts } from '../../ingestion/bodacc-contacts';
+import { resolveIdentityLocally } from '../../ingestion/identity-local';
 
 const planPayload = z.object({ perNight: z.number().int().min(1).max(200).optional() });
 
@@ -59,6 +60,29 @@ export const resolveBodaccContactsHandler: JobHandler<z.infer<typeof bodaccPaylo
       succeeded: report.merged,
       failed: report.errors,
       metadata: { matched: report.matched, now_contactable: report.nowContactable, ambiguous: report.ambiguous, unmatched: report.unmatched, dry_run: payload.dryRun },
+    };
+  },
+};
+
+const identityPayload = z.object({
+  limit: z.number().int().min(1).max(20_000).default(1000),
+  dryRun: z.boolean().default(false),
+});
+
+/** L'identité par le référentiel SIRENE local : même enseigne, même code postal, un seul SIREN. */
+export const resolveIdentityLocalHandler: JobHandler<z.infer<typeof identityPayload>> = {
+  type: 'resolve_identity_local',
+  schema: identityPayload,
+  defaultPriority: 69,
+  maxAttempts: 2,
+
+  async run(payload, { db, logger, signal }) {
+    const report = await resolveIdentityLocally(db, { limit: payload.limit, dryRun: payload.dryRun, logger, signal });
+    return {
+      processed: report.examined,
+      succeeded: report.matched,
+      failed: report.errors,
+      metadata: { ambiguous: report.ambiguous, unmatched: report.unmatched, dry_run: payload.dryRun },
     };
   },
 };

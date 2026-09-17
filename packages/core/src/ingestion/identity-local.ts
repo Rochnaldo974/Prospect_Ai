@@ -1,0 +1,84 @@
+import type { Db } from '../db/client';
+import type { Logger } from '../logger';
+
+/**
+ * L'identité par le référentiel local.
+ *
+ * Même règle que le rapprochement par API — même clé de nom, même code
+ * postal, un seul SIREN — mais servie par une requête sur sirene_reference
+ * au lieu d'un appel unité par unité limité à trois par seconde. C'est ce
+ * qui permet de traiter les dizaines de milliers d'entreprises OSM sans
+ * SIREN qui restaient sous le seuil d'identité, et de rendre leur
+ * opportunité recevable au gate.
+ */
+
+export interface LocalIdentityReport {
+  examined: number;
+  matched: number;
+  ambiguous: number;
+  unmatched: number;
+  errors: number;
+}
+
+export async function resolveIdentityLocally(
+  db: Db,
+  options: { limit?: number; dryRun?: boolean; logger?: Logger; signal?: AbortSignal } = {},
+): Promise<LocalIdentityReport> {
+  const report: LocalIdentityReport = { examined: 0, matched: 0, ambiguous: 0, unmatched: 0, errors: 0 };
+  const log = options.logger;
+  const limit = Math.min(options.limit ?? 1000, 20_000);
+
+  // Sans SIREN, avec un code postal et un nom : ce que le référentiel peut
+  // reconnaître. Les plus anciennes tentatives d'abord.
+  const { data: targets, error } = await db
+    .from('companies')
+    .select('id, legal_name, postal_code')
+    .is('siren', null)
+    .not('postal_code', 'is', null)
+    .eq('prospecting_allowed', true)
+    .order('identity_lookup_at', { ascending: true, nullsFirst: true })
+    .limit(Math.min(limit, 1000));
+  if (error) throw new Error(`resolveIdentityLocally : ${error.message}`);
+
+  for (const target of targets ?? []) {
+    if (options.signal?.aborted) break;
+    report.examined += 1;
+    try {
+      const { data: found, error: matchError } = await db.rpc('match_company_to_sirene', { p_company_id: target.id });
+      if (matchError) throw new Error(matchError.message);
+      const hit = found?.[0];
+      if (!hit) {
+        // Plusieurs SIREN possibles ou aucun : on ne tranche pas, on date.
+        report.unmatched += 1;
+        if (!options.dryRun) await db.from('companies').update({ identity_lookup_at: new Date().toISOString() }).eq('id', target.id);
+        continue;
+      }
+      if ((hit.candidates ?? 1) > 1) report.ambiguous += 1;
+      report.matched += 1;
+      if (options.dryRun) continue;
+
+      const { error: updateError } = await db.from('companies').update({
+        siren: hit.siren,
+        siret: hit.siret,
+        ...(hit.naf_code ? { industry_code: hit.naf_code } : {}),
+        ...(hit.creation_date ? { creation_date: hit.creation_date } : {}),
+        // Une enseigne exacte au même code postal, un seul SIREN : c'est
+        // l'identité par nom, au niveau de confiance de l'API.
+        identity_confidence: 0.8,
+        identity_lookup_at: new Date().toISOString(),
+      }).eq('id', target.id).is('siren', null);
+      if (updateError) {
+        // Le SIRET est déjà porté par une autre fiche : on garde le SIREN seul.
+        if (updateError.code === '23505') {
+          await db.from('companies').update({ siren: hit.siren, identity_confidence: 0.8, identity_lookup_at: new Date().toISOString() }).eq('id', target.id).is('siren', null);
+        } else throw new Error(updateError.message);
+      }
+    } catch (cause: unknown) {
+      report.errors += 1;
+      log?.warn('Identité locale en échec', { company_id: target.id, error: cause instanceof Error ? cause.message : String(cause) });
+    }
+  }
+
+  log?.info('Identité par le référentiel local', { ...report, dry_run: options.dryRun ?? false });
+  return report;
+}

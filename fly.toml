@@ -23,7 +23,7 @@ kill_timeout = "5m"
   # page du site. La clé service_role, ELLE, passe par `fly secrets set`.
   NEXT_PUBLIC_SUPABASE_URL = "https://tjeqsghmlwxmedumsdyt.supabase.co"
   WORKER_ID = "fly-cdg-1"
-  WORKER_CONCURRENCY = "4"
+  WORKER_CONCURRENCY = "6"
   WORKER_POLL_INTERVAL_MS = "2000"
 
 [[restart]]
@@ -31,4 +31,4 @@ kill_timeout = "5m"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "512mb"
+  memory = "1024mb"
