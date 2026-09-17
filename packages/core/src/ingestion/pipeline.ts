@@ -2,6 +2,9 @@ import type { Db } from '../db/client';
 import type { Json } from '../db/database.types';
 import type { Company, Insert, Update } from '../domain/types';
 import type { Logger } from '../logger';
+import { upsertContacts } from '../contacts/ingest';
+import type { ContactCandidate, ContactSource } from '../contacts/types';
+import { isUsableBusinessEmail } from '../normalization/email';
 import type { CompanySourceAdapter, NormalizedCompanyCandidate } from '../sources/types';
 
 export interface IngestReport {
@@ -388,6 +391,7 @@ export async function ingestFromSource(
       }
 
       await recordSourcesBatch(db, written);
+      await recordContactsBatch(db, written, log);
     } catch (error: unknown) {
       report.errors += current.length;
       const message = error instanceof Error ? error.message : String(error);
@@ -524,5 +528,45 @@ async function recordSourcesBatch(
     await db.from('company_field_provenance').upsert(provenance, {
       onConflict: 'company_id,field,source_name',
     });
+  }
+}
+
+/**
+ * Les contacts que la source apporte, écrits avec leur provenance.
+ *
+ * Téléphone, e-mail, formulaire, réseaux sociaux : une ligne par moyen de
+ * joindre l'entreprise dans company_contacts, puis le meilleur e-mail
+ * reporté sur l'entreprise s'il est générique. `companies.phone` reste
+ * alimenté par le chemin historique (insertion ou patch non destructif).
+ */
+async function recordContactsBatch(
+  db: Db,
+  written: { companyId: string; candidate: NormalizedCompanyCandidate }[],
+  log?: Logger,
+): Promise<void> {
+  const sourceOf = (name: string): ContactSource =>
+    name === 'openstreetmap' ? 'osm' : name === 'csv' ? 'csv' : 'other';
+
+  for (const { companyId, candidate } of written) {
+    const candidates: ContactCandidate[] = [];
+    const source = sourceOf(candidate.raw.sourceName);
+    if (candidate.phone) candidates.push({ type: 'phone', value: candidate.phone, source });
+    if (candidate.email) candidates.push({ type: 'email', value: candidate.email, source });
+    if (candidate.contactFormUrl) candidates.push({ type: 'contact_form', value: candidate.contactFormUrl, source, sourceUrl: candidate.contactFormUrl });
+    for (const [network, url] of Object.entries(candidate.socialLinks ?? {})) {
+      if (['linkedin', 'instagram', 'facebook', 'whatsapp'].includes(network)) {
+        candidates.push({ type: network as ContactCandidate['type'], value: url, source });
+      }
+    }
+    if (candidates.length === 0) continue;
+
+    try {
+      await upsertContacts(db, companyId, candidates);
+      if (candidate.email && isUsableBusinessEmail(candidate.email)) {
+        await db.from('companies').update({ best_email: candidate.email }).eq('id', companyId).is('best_email', null);
+      }
+    } catch (error: unknown) {
+      log?.warn('Contacts non enregistrés', { company_id: companyId, error: error instanceof Error ? error.message : String(error) });
+    }
   }
 }

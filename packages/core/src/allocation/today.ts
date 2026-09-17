@@ -2,6 +2,7 @@ import type { Db } from '../db/client';
 import type { OpportunityType } from '../domain/types';
 import { explainOpportunity, type Explanation } from '../opportunities/explain';
 import { describeIndustry } from '../domain/industries';
+import { isUsableBusinessEmail } from '../normalization/email';
 import { loadWrittenCards } from './written-card';
 import { screenshotUrl } from '../enrichment/screenshot';
 import type { SiteScores } from '../enrichment/audit';
@@ -64,19 +65,16 @@ export interface TodayOpportunity {
   explanation: Explanation;
 }
 
-/** Préfixes d'adresse considérés comme non nominatifs, sans exception. */
-const GENERIC_EMAIL_PREFIXES = new Set([
-  'contact', 'info', 'infos', 'bonjour', 'hello', 'accueil', 'reservation',
-  'reservations', 'commercial', 'boutique', 'atelier', 'cabinet', 'agence',
-  'secretariat', 'commande', 'sav', 'support', 'administration',
-]);
-
+/**
+ * La première adresse exploitable d'une liste : générique ou de rôle, jamais
+ * nominative. La définition vit dans normalization/email.ts — une seule
+ * liste pour tout le produit. Chemin de secours quand best_email n'a pas
+ * encore été calculé pour l'entreprise.
+ */
 export function pickGenericEmail(emails: unknown): string | null {
   if (!Array.isArray(emails)) return null;
   for (const email of emails) {
-    if (typeof email !== 'string') continue;
-    const prefix = email.split('@')[0]?.toLowerCase().replace(/[^a-z]/g, '');
-    if (prefix && GENERIC_EMAIL_PREFIXES.has(prefix)) return email;
+    if (typeof email === 'string' && isUsableBusinessEmail(email)) return email;
   }
   return null;
 }
@@ -98,7 +96,7 @@ export async function getTodayOpportunities(
 ): Promise<TodayOpportunity[]> {
   const { data, error } = await db
     .from('assignments')
-    .select('id, rank, match_score, exclusive_until, assigned_at, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, address, postal_code, contact_form_url, social_links, siren, identity_confidence, google_rating, google_review_count, google_photo_count, google_maps_url, google_checked_at, website_url, domain, creation_date, employee_min)')
+    .select('id, rank, match_score, exclusive_until, assigned_at, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, best_email, address, postal_code, contact_form_url, social_links, siren, identity_confidence, google_rating, google_review_count, google_photo_count, google_maps_url, google_checked_at, website_url, domain, creation_date, employee_min)')
     .eq('user_id', userId)
     .in('status', ['active', 'contacted'])
     .order('rank', { ascending: true });
@@ -189,7 +187,8 @@ export async function getTodayOpportunities(
         industry: describeIndustry(company.industry_label).label,
         industryIcon: describeIndustry(company.industry_label).icon,
         phone: company.phone,
-        email: pickGenericEmail((site as unknown as { emails_found?: unknown })?.emails_found),
+        email: (company as { best_email?: string | null }).best_email
+          ?? pickGenericEmail((site as unknown as { emails_found?: unknown })?.emails_found),
         address: [company.address, company.postal_code, company.city].filter(Boolean).join(', ') || null,
         contactFormUrl: company.contact_form_url,
         websiteUrl: company.website_url,
@@ -200,7 +199,8 @@ export async function getTodayOpportunities(
       tier: tierOf({
         dated: (reason.trigger ?? null) !== null,
         phone: company.phone !== null,
-        email: pickGenericEmail((site as unknown as { emails_found?: unknown })?.emails_found) !== null,
+        email: ((company as { best_email?: string | null }).best_email
+          ?? pickGenericEmail((site as unknown as { emails_found?: unknown })?.emails_found)) !== null,
         contactForm: company.contact_form_url !== null,
         hasWebsite: company.domain !== null,
         siteScore: typeof site?.site_score === 'number' ? site.site_score : null,

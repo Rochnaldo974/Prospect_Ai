@@ -5,6 +5,9 @@ import { normalizeDomainDetailed } from '../normalization';
 import { analyzePage, type PageAnalysis } from './page-analysis';
 import type { TlsInspection } from './fetcher';
 import { inspectTls, WebsiteFetcher, type FetchResult } from './fetcher';
+import { upsertContacts } from '../contacts/ingest';
+import { resolveCompanyContacts } from '../contacts/resolver';
+import type { ContactCandidate } from '../contacts/types';
 
 /**
  * Scan d'un domaine.
@@ -584,6 +587,12 @@ async function scanAndPersist(
           .eq('domain', scan.domain)
           .is('contact_form_url', null);
       }
+
+      // Téléphones, e-mails et formulaire lus sur le site : des contacts
+      // avec leur page d'origine, pour chaque entreprise qui revendique ce
+      // domaine, puis le meilleur canal reporté sur l'entreprise. C'est ici
+      // que le téléphone d'un site cesse de rester au bord de la route.
+      await recordScanContacts(db, scan, log);
       await recordScanEvents(db, scan, row.content_hash, row.check_attempts, row.tech_year);
 
       if (scan.sirens.length > 0) {
@@ -654,4 +663,27 @@ export async function rescanDomain(
 
   await scanAndPersist(db, row, options.fetcher ?? new WebsiteFetcher(), report, options.logger, options.signal);
   return report;
+}
+
+/** Les contacts qu'un scan a lus, rattachés aux entreprises du domaine. */
+async function recordScanContacts(db: Db, scan: DomainScanResult, log?: Logger): Promise<void> {
+  const analysis = scan.analysis;
+  if (!analysis) return;
+  const pageUrl = scan.fetch?.finalUrl ?? `https://${scan.domain}`;
+  const contacts: ContactCandidate[] = [
+    ...analysis.phones.map((value): ContactCandidate => ({ type: 'phone', value, source: 'website', sourceUrl: pageUrl })),
+    ...analysis.emails.map((value): ContactCandidate => ({ type: 'email', value, source: analysis.contactFormUrl ? 'contact_page' : 'website', sourceUrl: analysis.contactFormUrl ?? pageUrl })),
+    ...(analysis.contactFormUrl ? [{ type: 'contact_form', value: analysis.contactFormUrl, source: 'contact_page', sourceUrl: analysis.contactFormUrl } as ContactCandidate] : []),
+  ];
+  if (contacts.length === 0) return;
+
+  const { data: owners } = await db.from('companies').select('id').eq('domain', scan.domain).limit(5);
+  for (const owner of owners ?? []) {
+    try {
+      await upsertContacts(db, owner.id, contacts);
+      await resolveCompanyContacts(db, owner.id);
+    } catch (error: unknown) {
+      log?.warn('Contacts du scan non enregistrés', { domain: scan.domain, company_id: owner.id, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
 }

@@ -4,3 +4,4 @@ export * from './text';
 export * from './phone';
 export * from './address';
 export * from './email';
+export * from './contact-url';

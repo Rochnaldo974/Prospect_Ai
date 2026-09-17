@@ -1,6 +1,7 @@
 import type { Db } from '../db/client';
 import type { Json } from '../db/database.types';
 import type { Logger } from '../logger';
+import { contactReadiness, type Readiness } from '../contacts/readiness';
 import type { OpportunityType } from '../domain/types';
 import { scoreAll, type ScoringSignal, type ScoredOpportunity, type ScoringInput } from './scoring';
 
@@ -56,6 +57,20 @@ export interface OpportunityEngineReport {
   errors: number;
 }
 
+/** Les motifs de rejet, en codes stables (écrits en base) et en mots (rapport). */
+export type RejectionCode = 'NO_CONTACT' | 'LOW_IDENTITY_CONFIDENCE' | 'LOW_SCORE' | 'LOW_CONFIDENCE' | 'COOLDOWN' | 'DUPLICATE' | 'NO_RELEVANT_SERVICE' | 'STALE_SIGNAL';
+
+export const REJECTION_LABELS: Record<RejectionCode, string> = {
+  NO_CONTACT: 'entreprise injoignable',
+  LOW_IDENTITY_CONFIDENCE: 'identité mal établie',
+  LOW_SCORE: 'score sous le seuil',
+  LOW_CONFIDENCE: 'confiance insuffisante',
+  COOLDOWN: 'cooldown actif',
+  DUPLICATE: 'doublon',
+  NO_RELEVANT_SERVICE: 'aucun service correspondant',
+  STALE_SIGNAL: 'signal périmé',
+};
+
 export interface OpportunityEngineOptions {
   limit?: number;
   /** Où commencer dans la liste triée des entreprises signalées : plusieurs jobs se partagent une passe. */
@@ -72,6 +87,10 @@ export interface OpportunityEngineOptions {
 interface CandidateRow {
   id: string;
   has_contact: boolean;
+  has_email: boolean | null;
+  phone: string | null;
+  best_email: string | null;
+  contact_form_url: string | null;
   identity_confidence: number;
   domain: string | null;
   prospecting_allowed: boolean;
@@ -113,7 +132,7 @@ export async function runOpportunityEngine(
   for (let from = start; from < start + maxRows; from += pageSize) {
     let query = db
       .from('companies')
-      .select('id, has_contact, identity_confidence, domain, prospecting_allowed, suppression_global, cooldown_until')
+      .select('id, has_contact, has_email, phone, best_email, contact_form_url, identity_confidence, domain, prospecting_allowed, suppression_global, cooldown_until')
       .eq('prospecting_allowed', true)
       .eq('suppression_global', false)
       .order('id', { ascending: true })
@@ -130,9 +149,22 @@ export async function runOpportunityEngine(
 
   if (rows.length === 0) return report;
 
-  const reject = (reason: string): void => {
+  // Chaque rejet est compté pour le rapport ET écrit en base, par passe :
+  // sans cela, « injoignable » n'est qu'un chiffre qu'on ne peut plus
+  // décomposer le lendemain.
+  const pendingRejections: { company_id: string; candidate_type: OpportunityType; reason: RejectionCode; score: number | null }[] = [];
+  const reject = (reason: RejectionCode, companyId: string, type: OpportunityType, score: number | null): void => {
     report.rejected += 1;
-    report.rejectionReasons[reason] = (report.rejectionReasons[reason] ?? 0) + 1;
+    const label = REJECTION_LABELS[reason];
+    report.rejectionReasons[label] = (report.rejectionReasons[label] ?? 0) + 1;
+    if (!options.dryRun) pendingRejections.push({ company_id: companyId, candidate_type: type, reason, score });
+  };
+  const flushRejections = async (): Promise<void> => {
+    while (pendingRejections.length > 0) {
+      const chunk = pendingRejections.splice(0, 500);
+      const { error } = await db.from('opportunity_rejections').insert(chunk);
+      if (error) { log?.warn('Rejets non enregistrés', { error: error.message }); break; }
+    }
   };
 
   const batchSize = 200;
@@ -224,7 +256,7 @@ export async function runOpportunityEngine(
     }
 
     const toInsert: Record<string, Json>[] = [];
-    const toUpdate: { id: string; scored: ScoredOpportunity; signalIds: string[] }[] = [];
+    const toUpdate: { id: string; scored: ScoredOpportunity; signalIds: string[]; readiness: Readiness }[] = [];
     const toWithdraw: string[] = [];
 
     for (const company of batch) {
@@ -256,14 +288,24 @@ export async function runOpportunityEngine(
         //
         // L'ordre des contrôles va du plus structurel au plus fin : le motif
         // remonté doit désigner la cause première, pas une conséquence.
-        if (gate.requireContact && !company.has_contact) { reject('entreprise injoignable'); continue; }
-        if (company.cooldown_until !== null) { reject('cooldown actif'); continue; }
+        // Le gate de contact : un canal, quel qu'il soit — téléphone,
+        // formulaire, ou depuis ce lot une adresse écrite exploitable. Le
+        // canal est ensuite porté par l'opportunité (phone_ready,
+        // outreach_ready) pour que le stock se compte et se distribue par
+        // usage : appeler pour le gratuit, écrire pour le premium.
+        const readiness = contactReadiness({
+          phone: company.phone ?? null,
+          bestEmail: company.best_email ?? null,
+          contactFormUrl: company.contact_form_url ?? null,
+        });
+        if (gate.requireContact && !readiness.contactable) { reject('NO_CONTACT', company.id, opportunity.type, opportunity.baseScore); continue; }
+        if (company.cooldown_until !== null) { reject('COOLDOWN', company.id, opportunity.type, opportunity.baseScore); continue; }
         if (Number(company.identity_confidence) < gate.minIdentityConfidence) {
-          reject('identité mal établie'); continue;
+          reject('LOW_IDENTITY_CONFIDENCE', company.id, opportunity.type, opportunity.baseScore); continue;
         }
-        if (opportunity.confidenceScore < gate.minConfidence) { reject('confiance insuffisante'); continue; }
+        if (opportunity.confidenceScore < gate.minConfidence) { reject('LOW_CONFIDENCE', company.id, opportunity.type, opportunity.baseScore); continue; }
         const minBase = opportunity.triggerEventId === null ? gate.minDiagnosticBaseScore : gate.minBaseScore;
-        if (opportunity.baseScore < minBase) { reject('score sous le seuil'); continue; }
+        if (opportunity.baseScore < minBase) { reject('LOW_SCORE', company.id, opportunity.type, opportunity.baseScore); continue; }
 
         report.byType[opportunity.type] = (report.byType[opportunity.type] ?? 0) + 1;
 
@@ -276,9 +318,9 @@ export async function runOpportunityEngine(
           // Une opportunité déjà attribuée ne bouge plus : le freelance
           // travaille dessus avec les informations qu'on lui a données.
           if (current.status === 'assigned') continue;
-          toUpdate.push({ id: current.id, scored: opportunity, signalIds });
+          toUpdate.push({ id: current.id, scored: opportunity, signalIds, readiness });
         } else {
-          toInsert.push(buildRow(company.id, opportunity, signalIds, version, gate));
+          toInsert.push(buildRow(company.id, opportunity, signalIds, version, gate, readiness));
         }
       }
 
@@ -337,6 +379,8 @@ export async function runOpportunityEngine(
             signal_ids: entry.signalIds,
             trigger_event_id: entry.scored.triggerEventId,
             algorithm_version: version,
+            phone_ready: entry.readiness.phoneReady,
+            outreach_ready: entry.readiness.outreachReady,
           })
           .eq('id', entry.id);
 
@@ -350,6 +394,8 @@ export async function runOpportunityEngine(
       });
     }
   }
+
+  await flushRejections();
 
   log?.info('Moteur d’opportunités terminé', {
     examined: report.companiesExamined,
@@ -368,8 +414,11 @@ function buildRow(
   signalIds: string[],
   version: string,
   gate: QualityGate,
+  readiness: Readiness,
 ): Record<string, Json> {
   return {
+    phone_ready: readiness.phoneReady,
+    outreach_ready: readiness.outreachReady,
     company_id: companyId,
     opportunity_type: opportunity.type,
     need_score: opportunity.needScore,

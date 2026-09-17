@@ -3,6 +3,9 @@ import type { Logger } from '../logger';
 import { normalizeSiren, normalizePhone, normalizePostalCode } from '../normalization';
 import { normalizeNafCode, parseEmployeeRange, parseSireneDate, isProspectable } from '../sources/csv/sirene-codes';
 import { DEFAULT_USER_AGENT, RateLimitedHttpClient } from '../sources/http/client';
+import { upsertContacts } from '../contacts/ingest';
+import { resolveCompanyContacts } from '../contacts/resolver';
+import type { ContactCandidate } from '../contacts/types';
 
 /**
  * Découverte inverse : du site vers l'entreprise.
@@ -155,7 +158,7 @@ export async function createCompaniesFromDomains(
         const phone = row.phones_found.map((p) => normalizePhone(p)).find((p) => p !== null) ?? null;
         const establishment = identity.siege ?? null;
 
-        const { error: insertError } = await db.from('companies').insert({
+        const { data: created, error: insertError } = await db.from('companies').insert({
           siren,
           siret: establishment?.siret ?? null,
           legal_name: (identity.nom_raison_sociale ?? identity.nom_complet ?? siren).slice(0, 300),
@@ -188,7 +191,7 @@ export async function createCompaniesFromDomains(
             : true,
           segment: 'other',
           last_seen_at: new Date().toISOString(),
-        });
+        }).select('id').single();
 
         if (insertError) {
           // 23505 : créée entre-temps par un autre chemin.
@@ -202,6 +205,22 @@ export async function createCompaniesFromDomains(
         }
 
         report.companiesCreated += 1;
+
+        // Tout ce que le site a donné devient un contact avec sa page d'origine.
+        if (created?.id) {
+          const pageUrl = `https://${row.domain}`;
+          const contacts: ContactCandidate[] = [
+            ...row.phones_found.map((value): ContactCandidate => ({ type: 'phone', value, source: 'website', sourceUrl: pageUrl })),
+            ...(row.emails_found ?? []).map((value): ContactCandidate => ({ type: 'email', value, source: 'website', sourceUrl: pageUrl })),
+            ...(row.contact_form_url ? [{ type: 'contact_form', value: row.contact_form_url, source: 'contact_page', sourceUrl: row.contact_form_url } as ContactCandidate] : []),
+          ];
+          try {
+            if (contacts.length > 0) await upsertContacts(db, created.id, contacts);
+            await resolveCompanyContacts(db, created.id);
+          } catch (contactError: unknown) {
+            log?.warn('Contacts du site non enregistrés', { domain: row.domain, error: contactError instanceof Error ? contactError.message : String(contactError) });
+          }
+        }
         log?.debug('Entreprise créée depuis son site', {
           domain: row.domain, siren, has_phone: phone !== null,
         });

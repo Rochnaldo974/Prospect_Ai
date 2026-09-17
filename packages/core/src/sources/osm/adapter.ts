@@ -258,6 +258,7 @@ export class OsmCompanySource implements CompanySourceAdapter {
       websiteUrl: websiteResult.domain ? `https://${websiteResult.domain}` : null,
 
       phone,
+      email: emailResult.email,
       contactFormUrl: null,
       socialLinks,
 

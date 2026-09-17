@@ -30,7 +30,9 @@
     "ingest:csv": "node --import tsx scripts/ingest-csv.mjs",
     "discover": "node --import tsx scripts/discover.mjs",
     "scan:domains": "node --import tsx scripts/scan-domains.mjs",
-    "import:afnic": "node --import tsx scripts/import-afnic.mjs"
+    "import:afnic": "node --import tsx scripts/import-afnic.mjs",
+    "backfill:contacts": "node --import tsx scripts/backfill-contacts.mjs",
+    "metrics": "node --import tsx scripts/engine-metrics.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

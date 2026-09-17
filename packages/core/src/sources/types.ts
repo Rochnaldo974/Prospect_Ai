@@ -22,6 +22,8 @@ export interface NormalizedCompanyCandidate {
   websiteUrl: string | null;
 
   phone: string | null;
+  /** Adresse publiée par la source, si elle en a une. Optionnel : toutes les sources n'en ont pas. */
+  email?: string | null;
   contactFormUrl: string | null;
   /** Réseaux sociaux, {réseau: url}. Null si la source ne se prononce pas. */
   socialLinks: Record<string, string> | null;

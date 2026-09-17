@@ -17,6 +17,7 @@ import type {
   RawCompany,
 } from '../types';
 import { inferMapping, type ColumnMapping } from './mapping';
+import { normalizeEmail } from '../../normalization/email';
 import { parseCsv, type CsvRow } from './parser';
 import {
   isLocalCommerce,
@@ -199,6 +200,7 @@ export class CsvCompanySource implements CompanySourceAdapter {
       websiteUrl: domainResult.domain ? `https://${domainResult.domain}` : null,
 
       phone,
+      email: normalizeEmail(get('email')),
       contactFormUrl: null,
       // Un fichier plat ne dit rien des réseaux sociaux.
       socialLinks: null,

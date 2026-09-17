@@ -252,6 +252,109 @@ export type Database = {
           },
         ]
       }
+      company_contacts: {
+        Row: {
+          company_id: string
+          confidence: number
+          first_seen_at: string
+          id: number
+          is_generic: boolean
+          is_personal: boolean
+          last_seen_at: string
+          metadata: Json
+          normalized_value: string
+          person_name: string | null
+          prospecting_allowed: boolean
+          role: string | null
+          source: string
+          source_url: string | null
+          type: string
+          value: string
+          verified_at: string | null
+        }
+        Insert: {
+          company_id: string
+          confidence?: number
+          first_seen_at?: string
+          id?: never
+          is_generic?: boolean
+          is_personal?: boolean
+          last_seen_at?: string
+          metadata?: Json
+          normalized_value: string
+          person_name?: string | null
+          prospecting_allowed?: boolean
+          role?: string | null
+          source: string
+          source_url?: string | null
+          type: string
+          value: string
+          verified_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          confidence?: number
+          first_seen_at?: string
+          id?: never
+          is_generic?: boolean
+          is_personal?: boolean
+          last_seen_at?: string
+          metadata?: Json
+          normalized_value?: string
+          person_name?: string | null
+          prospecting_allowed?: boolean
+          role?: string | null
+          source?: string
+          source_url?: string | null
+          type?: string
+          value?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_rejections: {
+        Row: {
+          candidate_type: Database["public"]["Enums"]["opportunity_type"]
+          company_id: string
+          created_at: string
+          id: number
+          reason: string
+          score: number | null
+        }
+        Insert: {
+          candidate_type: Database["public"]["Enums"]["opportunity_type"]
+          company_id: string
+          created_at?: string
+          id?: never
+          reason: string
+          score?: number | null
+        }
+        Update: {
+          candidate_type?: Database["public"]["Enums"]["opportunity_type"]
+          company_id?: string
+          created_at?: string
+          id?: never
+          reason?: string
+          score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_rejections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           active_signal_count: number
@@ -264,6 +367,13 @@ export type Database = {
           commercial_name: string | null
           company_status: Database["public"]["Enums"]["company_status"]
           contact_form_url: string | null
+          best_email: string | null
+          contact_resolution_attempts: number
+          contact_resolution_status: string
+          contactability_score: number
+          has_email: boolean | null
+          last_contact_resolution_at: string | null
+          next_contact_resolution_at: string | null
           cooldown_until: string | null
           country: string
           created_at: string
@@ -322,6 +432,13 @@ export type Database = {
           commercial_name?: string | null
           company_status?: Database["public"]["Enums"]["company_status"]
           contact_form_url?: string | null
+          best_email?: string | null
+          contact_resolution_attempts?: number
+          contact_resolution_status?: string
+          contactability_score?: number
+          has_email?: boolean | null
+          last_contact_resolution_at?: string | null
+          next_contact_resolution_at?: string | null
           cooldown_until?: string | null
           country?: string
           created_at?: string
@@ -380,6 +497,13 @@ export type Database = {
           commercial_name?: string | null
           company_status?: Database["public"]["Enums"]["company_status"]
           contact_form_url?: string | null
+          best_email?: string | null
+          contact_resolution_attempts?: number
+          contact_resolution_status?: string
+          contactability_score?: number
+          has_email?: boolean | null
+          last_contact_resolution_at?: string | null
+          next_contact_resolution_at?: string | null
           cooldown_until?: string | null
           country?: string
           created_at?: string
@@ -1179,6 +1303,8 @@ export type Database = {
           status: Database["public"]["Enums"]["opportunity_status"]
           timing_score: number
           trigger_event_id: string | null
+          phone_ready: boolean
+          outreach_ready: boolean
           updated_at: string
         }
         Insert: {
@@ -1203,6 +1329,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["opportunity_status"]
           timing_score: number
           trigger_event_id?: string | null
+          phone_ready?: boolean
+          outreach_ready?: boolean
           updated_at?: string
         }
         Update: {
@@ -1227,6 +1355,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["opportunity_status"]
           timing_score?: number
           trigger_event_id?: string | null
+          phone_ready?: boolean
+          outreach_ready?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -1824,6 +1954,8 @@ export type Database = {
         Returns: string
       }
       prune_event_keys: { Args: { older_than?: string }; Returns: number }
+      prune_opportunity_rejections: { Args: { older_than?: string }; Returns: number }
+      engine_metrics: { Args: { p_day?: string }; Returns: Json }
       reclaim_stalled_jobs: {
         Args: { stalled_after?: string }
         Returns: number
