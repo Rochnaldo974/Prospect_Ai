@@ -100,6 +100,9 @@ export const INTENT_FAMILIES: Record<string, string> = {
   frozen_site_woke_up: 'website',
   certificate_expired: 'website',
   tender_published: 'tender',
+  association_created: 'company',
+  association_modified: 'company',
+  new_business_premises: 'premises',
 };
 export const INTENT_WINDOW_DAYS = 60;
 export const INTENT_BONUS_PER_FAMILY = 0.12;

@@ -197,6 +197,12 @@ export async function enrichGooglePresence(
     if (updateError) throw new Error(updateError.message);
 
     if (place) report.found += 1; else report.notFound += 1;
+
+    // Un appel payant compté : c'est ce qui donne le coût par dossier livré.
+    const { data: cents } = await db.rpc('engine_setting_int', { p_key: 'google_places_cost_cents', p_default: 3 });
+    await db.from('enrichment_costs').insert({
+      company_id: company.id, provider: 'google_places', cost_cents: cents ?? 3, credits_used: 1, outcome: place ? 'found' : 'not_found',
+    });
   } catch (cause: unknown) {
     report.errors += 1;
     log?.warn('Présence Google non relevée', {

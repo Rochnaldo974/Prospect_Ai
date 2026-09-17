@@ -535,6 +535,96 @@ export type Database = {
         }
         Relationships: []
       }
+      building_permits: {
+        Row: {
+          applicant_naf: string | null
+          applicant_name: string | null
+          applicant_siren: string | null
+          applicant_siret: string | null
+          authorized_at: string
+          commune_code: string
+          company_id: string | null
+          deposited_at: string | null
+          destination: number | null
+          imported_at: string
+          permit_id: string
+          permit_type: string
+          premises_kind: string
+          site_address: string | null
+          site_city: string | null
+          site_postal_code: string | null
+          surfaces: Json
+        }
+        Insert: {
+          applicant_naf?: string | null
+          applicant_name?: string | null
+          applicant_siren?: string | null
+          applicant_siret?: string | null
+          authorized_at: string
+          commune_code: string
+          company_id?: string | null
+          deposited_at?: string | null
+          destination?: number | null
+          imported_at?: string
+          permit_id: string
+          permit_type: string
+          premises_kind: string
+          site_address?: string | null
+          site_city?: string | null
+          site_postal_code?: string | null
+          surfaces?: Json
+        }
+        Update: {
+          applicant_naf?: string | null
+          applicant_name?: string | null
+          applicant_siren?: string | null
+          applicant_siret?: string | null
+          authorized_at?: string
+          commune_code?: string
+          company_id?: string | null
+          deposited_at?: string | null
+          destination?: number | null
+          imported_at?: string
+          permit_id?: string
+          permit_type?: string
+          premises_kind?: string
+          site_address?: string | null
+          site_city?: string | null
+          site_postal_code?: string | null
+          surfaces?: Json
+        }
+        Relationships: []
+      }
+      enrichment_costs: {
+        Row: {
+          company_id: string | null
+          cost_cents: number
+          created_at: string
+          credits_used: number
+          id: number
+          outcome: string
+          provider: string
+        }
+        Insert: {
+          company_id?: string | null
+          cost_cents?: number
+          created_at?: string
+          credits_used?: number
+          id?: never
+          outcome?: string
+          provider: string
+        }
+        Update: {
+          company_id?: string | null
+          cost_cents?: number
+          created_at?: string
+          credits_used?: number
+          id?: never
+          outcome?: string
+          provider?: string
+        }
+        Relationships: []
+      }
       domain_technologies: {
         Row: {
           confidence: number
@@ -680,6 +770,8 @@ export type Database = {
           siret: string | null
           social_links: Json | null
           suppression_global: boolean
+          organization_type: string
+          do_not_contact: boolean
           suppression_reason: string | null
           trigger_signal_count: number
           updated_at: string
@@ -745,6 +837,8 @@ export type Database = {
           siret?: string | null
           social_links?: Json | null
           suppression_global?: boolean
+          organization_type?: string
+          do_not_contact?: boolean
           suppression_reason?: string | null
           trigger_signal_count?: number
           updated_at?: string
@@ -810,6 +904,8 @@ export type Database = {
           siret?: string | null
           social_links?: Json | null
           suppression_global?: boolean
+          organization_type?: string
+          do_not_contact?: boolean
           suppression_reason?: string | null
           trigger_signal_count?: number
           updated_at?: string
@@ -1825,6 +1921,7 @@ export type Database = {
           region: string | null
           services: Database["public"]["Enums"]["opportunity_type"][]
           technologies: string[]
+          exclude_associations: boolean
           updated_at: string
           user_id: string
         }
@@ -1838,6 +1935,7 @@ export type Database = {
           region?: string | null
           services?: Database["public"]["Enums"]["opportunity_type"][]
           technologies?: string[]
+          exclude_associations?: boolean
           updated_at?: string
           user_id: string
         }
@@ -1851,6 +1949,7 @@ export type Database = {
           region?: string | null
           services?: Database["public"]["Enums"]["opportunity_type"][]
           technologies?: string[]
+          exclude_associations?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -1983,6 +2082,18 @@ export type Database = {
       }
     }
     Views: {
+      engine_economics_daily: {
+        Row: {
+          cost_by_provider: Json | null
+          cost_cents: number
+          cost_per_outreach_ready_cents: number | null
+          day: string
+          opportunities_created: number
+          outreach_ready_created: number
+          phone_ready_created: number
+        }
+        Relationships: []
+      }
       source_performance: {
         Row: {
           source: string | null
@@ -2284,6 +2395,7 @@ export type Database = {
       prune_opportunity_rejections: { Args: { older_than?: string }; Returns: number }
       engine_metrics: { Args: { p_day?: string }; Returns: Json }
       prune_domain_changes: { Args: never; Returns: number }
+      prune_engine_noise: { Args: never; Returns: Json }
       match_company_to_sirene_fuzzy: {
         Args: { p_company_id: string; p_min_similarity?: number }
         Returns: { siret: string; siren: string; naf_code: string | null; creation_date: string | null; is_head_office: boolean; similarity: number; candidates: number }[]
@@ -2316,6 +2428,7 @@ export type Database = {
           p_excluded_industries?: string[]
           p_require_phone?: boolean
           p_limit?: number
+          p_exclude_associations?: boolean
         }
         Returns: {
           opportunity_id: string

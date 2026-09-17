@@ -31,7 +31,7 @@ export default function OnboardingPreview() {
             stock={{ website_redesign: 143, website_creation: 38, ecommerce: 21, mobile_application: 6, seo: 17, maintenance: 12, tender_response: 4 }}
           />
 
-          <SectorsForm excluded={['68']} />
+          <SectorsForm excludeAssociations={false} excluded={['68']} />
 
           <FinishForm
             total={181}

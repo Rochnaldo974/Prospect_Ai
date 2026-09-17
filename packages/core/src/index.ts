@@ -18,3 +18,7 @@ export * from './discovery';
 export * from './ops';
 export * from './enrichment/technology-detector';
 export * from './enrichment/performance-audit';
+export * from './sources/joafe/adapter';
+export * from './sources/sitadel/adapter';
+export * from './ingestion/associations';
+export * from './ingestion/permits';

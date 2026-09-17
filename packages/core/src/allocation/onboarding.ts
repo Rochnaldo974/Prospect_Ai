@@ -33,6 +33,8 @@ export interface OnboardingAnswers {
   city: string | null;
   region: string | null;
   excludedIndustries: string[];
+  /** Les associations (JOAFE) : à exclure quand on ne veut vendre qu'aux entreprises. */
+  excludeAssociations: boolean;
 }
 
 export interface OnboardingResult {
@@ -104,6 +106,7 @@ export async function saveStep(
       city: merged.city,
       region: merged.region,
       excluded_industries: merged.excludedIndustries,
+      exclude_associations: merged.excludeAssociations,
     }, { onConflict: 'user_id' });
 
   return error ? { ok: false, problem: error.message } : { ok: true, problem: null };
@@ -135,6 +138,7 @@ export async function completeOnboarding(
       city: answers.city,
       region: answers.region,
       excluded_industries: answers.excludedIndustries,
+      exclude_associations: answers.excludeAssociations,
     }, { onConflict: 'user_id' });
 
   if (prefError) return { ok: false, problem: prefError.message };
@@ -162,7 +166,7 @@ export async function readPreferences(
 ): Promise<OnboardingAnswers> {
   const { data } = await db
     .from('user_preferences')
-    .select('services, technologies, location_mode, city, region, excluded_industries')
+    .select('services, technologies, location_mode, city, region, excluded_industries, exclude_associations')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -173,5 +177,6 @@ export async function readPreferences(
     city: data?.city ?? null,
     region: data?.region ?? null,
     excludedIndustries: (data?.excluded_industries ?? []) as string[],
+    excludeAssociations: data?.exclude_associations ?? false,
   };
 }

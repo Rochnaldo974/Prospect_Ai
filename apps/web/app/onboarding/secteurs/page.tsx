@@ -6,5 +6,5 @@ export default async function SectorsStep() {
   const profile = await requireUser();
   const initial = await readPreferences(getServiceClient(), profile.id);
 
-  return <SectorsForm excluded={initial.excludedIndustries} />;
+  return <SectorsForm excluded={initial.excludedIndustries} excludeAssociations={initial.excludeAssociations} />;
 }

@@ -3,7 +3,7 @@ import { ingestTenders } from '../../ingestion/tenders';
 import type { JobHandler } from '../types';
 
 const payload = z.object({
-  limit: z.number().int().min(1).max(200).default(100),
+  limit: z.number().int().min(1).max(2000).default(500),
 });
 
 /**

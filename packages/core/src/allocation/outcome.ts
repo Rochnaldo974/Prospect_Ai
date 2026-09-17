@@ -197,6 +197,7 @@ export async function recordOptOut(
   await db
     .from('companies')
     .update({
+      do_not_contact: true,
       suppression_global: true,
       suppression_reason: 'Demande de l’entreprise, transmise par un utilisateur',
       prospecting_allowed: false,

@@ -268,6 +268,10 @@ export const TRIGGER_HALF_LIVES: Record<string, number> = {
   // Une adresse déposée reste un motif de contact quelques semaines : passé
   // ce délai, soit le site est monté, soit le projet a été abandonné.
   domain_recently_registered: 30,
+  association_created: 45,
+  association_modified: 30,
+  // Un local se construit sur des mois : le moment dure.
+  new_business_premises: 90,
   default: 30,
 };
 

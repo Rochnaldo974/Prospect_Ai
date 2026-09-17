@@ -271,6 +271,7 @@ async function loadCandidatesFor(
       p_excluded_industries: preferences.excludedIndustries,
       p_require_phone: profile.plan === 'free',
       p_limit: share,
+      p_exclude_associations: preferences.excludeAssociations,
     });
     if (error) throw new Error(`loadCandidatesFor : ${error.message}`);
     return data ?? [];
@@ -572,7 +573,7 @@ async function loadPreferences(
 ): Promise<MatchingPreferences> {
   const { data } = await db
     .from('user_preferences')
-    .select('services, technologies, location_mode, city, region, preferred_industries, excluded_industries')
+    .select('services, technologies, location_mode, city, region, preferred_industries, excluded_industries, exclude_associations')
     .eq('user_id', profile.id)
     .maybeSingle();
 
@@ -587,5 +588,6 @@ async function loadPreferences(
     region: data?.region ?? profile.region,
     preferredIndustries: (data?.preferred_industries ?? []) as string[],
     excludedIndustries: (data?.excluded_industries ?? []) as string[],
+    excludeAssociations: data?.exclude_associations ?? false,
   };
 }

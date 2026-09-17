@@ -42,6 +42,7 @@ export async function saveSectors(_prev: StepState, formData: FormData): Promise
 
   const result = await saveStep(getServiceClient(), profile.id, {
     excludedIndustries: formData.getAll('excluded').map(String).slice(0, 40),
+    excludeAssociations: formData.get('exclude_associations') === 'on',
   });
   if (!result.ok) return { problem: result.problem ?? 'Enregistrement impossible.' };
 

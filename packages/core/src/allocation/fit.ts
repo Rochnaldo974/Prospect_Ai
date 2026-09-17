@@ -32,6 +32,8 @@ export interface MatchingPreferences {
   region: string | null;
   preferredIndustries: string[];
   excludedIndustries: string[];
+  /** Ne jamais proposer d'association (JOAFE). */
+  excludeAssociations: boolean;
 }
 
 export interface OpportunityCandidate {

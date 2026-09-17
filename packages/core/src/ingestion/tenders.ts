@@ -38,7 +38,7 @@ export async function ingestTenders(
 
   const tenders = await fetchWebTenders({
     openOnly: true,
-    limit: options.limit ?? 100,
+    limit: options.limit ?? 500,
     ...(options.signal ? { signal: options.signal } : {}),
   });
   report.fetched = tenders.length;
@@ -69,6 +69,13 @@ export async function ingestTenders(
           procedure: tender.procedure,
           notice_url: tender.noticeUrl,
           platform_url: tender.platformUrl,
+          // Ce que la spec demande de conserver, tel que la source le donne.
+          buyer: tender.buyerName,
+          siret: tender.siret,
+          title: tender.subject,
+          published_at: tender.publishedAt,
+          category: tender.category,
+          matched_keywords: tender.matchedKeywords,
         } as Json,
         // Le besoin est déclaré, pas déduit : c'est le fait le plus important
         // que le produit puisse enregistrer.
@@ -134,6 +141,7 @@ async function upsertBuyer(
       // Un SIRET publié par l'acheteur lui-même au Journal officiel ne laisse
       // aucune place au doute d'identité.
       identity_confidence: 1,
+      organization_type: 'public_body',
     })
     .select('id')
     .maybeSingle();

@@ -13,6 +13,7 @@ import { auditPerformanceHandler, companiesFromDomainsHandler, resolveWebsitesHa
 import { detectSignalsHandler, enrichSireneHandler } from './handlers/signals';
 import { generateOpportunitiesHandler } from './handlers/opportunities';
 import { ingestTendersHandler } from './handlers/tenders';
+import { ingestJoafeHandler, ingestSitadelHandler } from './handlers/organizations';
 import { allocateDailyHandler } from './handlers/allocation';
 import { writeCardsHandler } from './handlers/writing';
 import { planScanningHandler } from './handlers/planning';
@@ -32,6 +33,8 @@ const HANDLERS: JobHandler<never>[] = [
   detectDuplicatesHandler,
   scanDomainsHandler,
   auditPerformanceHandler,
+  ingestJoafeHandler,
+  ingestSitadelHandler,
   resolveWebsitesHandler,
   companiesFromDomainsHandler,
   enrichSireneHandler,
