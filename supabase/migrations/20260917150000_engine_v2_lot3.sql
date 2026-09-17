@@ -55,6 +55,7 @@ create table if not exists public.sirene_units (
 );
 
 create index if not exists sirene_units_name_idx on public.sirene_units (name_key) where active and diffusible and name_key <> '';
+create index if not exists sirene_reference_siren_postal_idx on public.sirene_reference (siren, postal_code) where active and diffusible;
 
 alter table public.sirene_units enable row level security;
 grant all on public.sirene_units to service_role;
@@ -75,13 +76,22 @@ as $$
   with c as (
     select name_key, postal_code from public.companies where id = p_company_id
   ),
-  found as (
+  -- Deux chemins indexés : l'enseigne au même code postal, ou la société
+  -- de ce nom qui a un établissement au même code postal.
+  by_storefront as (
+    select r.siret, r.siren, r.naf_code, r.creation_date, r.is_head_office
+    from public.sirene_reference r, c
+    where r.active and r.diffusible and r.name_key <> '' and r.postal_code = c.postal_code and r.name_key = c.name_key
+  ),
+  by_legal_name as (
     select r.siret, r.siren, r.naf_code, coalesce(r.creation_date, u.creation_date) as creation_date, r.is_head_office
-    from public.sirene_reference r
-    join c on r.postal_code = c.postal_code
-    left join public.sirene_units u on u.siren = r.siren and u.active and u.diffusible
-    where r.active and r.diffusible
-      and ((r.name_key <> '' and r.name_key = c.name_key) or (u.name_key is not null and u.name_key = c.name_key))
+    from public.sirene_units u
+    join c on u.name_key = c.name_key
+    join public.sirene_reference r on r.siren = u.siren and r.postal_code = c.postal_code and r.active and r.diffusible
+    where u.active and u.diffusible and u.name_key <> ''
+  ),
+  found as (
+    select * from by_storefront union select * from by_legal_name
   )
   select f.siret, f.siren, f.naf_code, f.creation_date, f.is_head_office, (select count(*)::integer from found)
   from found f
