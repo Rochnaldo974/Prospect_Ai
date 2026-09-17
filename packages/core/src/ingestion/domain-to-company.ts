@@ -1,4 +1,5 @@
 import type { Db } from '../db/client';
+import { httpClientFor } from '../sources/http/policy';
 import type { Logger } from '../logger';
 import { normalizeSiren, normalizePhone, normalizePostalCode } from '../normalization';
 import { normalizeNafCode, parseEmployeeRange, parseSireneDate, isProspectable } from '../sources/csv/sirene-codes';
@@ -87,12 +88,12 @@ export async function createCompaniesFromDomains(
   };
 
   const log = options.logger;
-  const http = new RateLimitedHttpClient({
+  const http = options.requestsPerSecond !== undefined ? new RateLimitedHttpClient({
     requestsPerSecond: options.requestsPerSecond ?? 5,
     userAgent: DEFAULT_USER_AGENT,
     timeoutMs: 20_000,
     maxRetries: 2,
-  });
+  }) : httpClientFor('sirene_api');
 
   const { data: domains, error } = await db
     .from('domains')

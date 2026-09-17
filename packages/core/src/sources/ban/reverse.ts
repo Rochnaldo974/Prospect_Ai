@@ -1,4 +1,5 @@
 import type { Db } from '../../db/client';
+import { httpClientFor } from '../http/policy';
 import type { Logger } from '../../logger';
 import { normalizePostalCode } from '../../normalization';
 import { DEFAULT_USER_AGENT, RateLimitedHttpClient } from '../http/client';
@@ -52,12 +53,12 @@ export async function fillPostalCodesFromCoordinates(
 ): Promise<ReverseGeocodeReport> {
   const report: ReverseGeocodeReport = { examined: 0, filled: 0, notFound: 0, errors: 0 };
   const log = options.logger;
-  const http = new RateLimitedHttpClient({
+  const http = options.requestsPerSecond !== undefined ? new RateLimitedHttpClient({
     requestsPerSecond: options.requestsPerSecond ?? 10,
     userAgent: DEFAULT_USER_AGENT,
     timeoutMs: 15_000,
     maxRetries: 2,
-  });
+  }) : httpClientFor('ban');
 
   const { data: targets, error } = await db
     .from('companies')

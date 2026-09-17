@@ -1,4 +1,4 @@
-import { DEFAULT_USER_AGENT, RateLimitedHttpClient } from '../http/client';
+import { httpClientFor } from '../http/policy';
 
 /**
  * BOAMP — Bulletin officiel des annonces de marchés publics.
@@ -267,11 +267,7 @@ export interface FetchTendersOptions {
 export async function fetchWebTenders(
   options: FetchTendersOptions = {},
 ): Promise<Tender[]> {
-  const http = new RateLimitedHttpClient({
-    requestsPerSecond: 2,
-    userAgent: DEFAULT_USER_AGENT,
-    timeoutMs: 60_000,
-  });
+  const http = httpClientFor('boamp');
   const openOnly = options.openOnly !== false;
   // Plus de plafond à cent : l'API pagine par cent, on suit les pages
   // jusqu'à la limite demandée ou jusqu'à ce qu'elle n'en rende plus.

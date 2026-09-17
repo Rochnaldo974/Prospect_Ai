@@ -1,4 +1,5 @@
 import type { Db } from '../../db/client';
+import { httpClientFor } from '../http/policy';
 import type { Update } from '../../domain/types';
 import type { Logger } from '../../logger';
 import { companyNameKey, normalizePostalCode, normalizeSiren } from '../../normalization';
@@ -152,12 +153,12 @@ export async function resolveIdentityByName(
 ): Promise<IdentityReport> {
   const report: IdentityReport = { examined: 0, matched: 0, duplicates: 0, ambiguous: 0, notFound: 0, errors: 0 };
   const log = options.logger;
-  const http = new RateLimitedHttpClient({
+  const http = options.requestsPerSecond !== undefined ? new RateLimitedHttpClient({
     requestsPerSecond: options.requestsPerSecond ?? 5,
     userAgent: DEFAULT_USER_AGENT,
     timeoutMs: 20_000,
     maxRetries: 2,
-  });
+  }) : httpClientFor('sirene_api');
 
   const retryBefore = new Date(Date.now() - RETRY_AFTER_DAYS * 86_400_000).toISOString();
 

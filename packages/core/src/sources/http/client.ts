@@ -14,6 +14,10 @@ export interface HttpClientOptions {
   userAgent: string;
   timeoutMs?: number;
   maxRetries?: number;
+  /** Requêtes en vol au plus, toutes URL confondues. */
+  concurrency?: number;
+  /** Recul initial après un 429 ou un 5xx, doublé à chaque relance. */
+  backoffMs?: number;
 }
 
 export class RateLimitedHttpClient {
@@ -21,13 +25,88 @@ export class RateLimitedHttpClient {
   readonly #userAgent: string;
   readonly #timeoutMs: number;
   readonly #maxRetries: number;
+  readonly #concurrency: number;
+  readonly #backoffMs: number;
   #nextSlot = 0;
+  #inFlight = 0;
+  readonly #waiters: (() => void)[] = [];
 
   constructor(options: HttpClientOptions) {
     this.#minIntervalMs = 1000 / options.requestsPerSecond;
     this.#userAgent = options.userAgent;
     this.#timeoutMs = options.timeoutMs ?? 60_000;
     this.#maxRetries = options.maxRetries ?? 3;
+    this.#concurrency = Math.max(1, options.concurrency ?? 2);
+    this.#backoffMs = options.backoffMs ?? 1000;
+  }
+
+  /** La politique effective, lisible par les tests et la console. */
+  get policy(): { requestsPerSecond: number; concurrency: number; timeoutMs: number; maxRetries: number; backoffMs: number } {
+    return { requestsPerSecond: 1000 / this.#minIntervalMs, concurrency: this.#concurrency, timeoutMs: this.#timeoutMs, maxRetries: this.#maxRetries, backoffMs: this.#backoffMs };
+  }
+
+  /** Une place parmi les requêtes en vol. */
+  async #enter(): Promise<void> {
+    if (this.#inFlight < this.#concurrency) { this.#inFlight += 1; return; }
+    await new Promise<void>((resolve) => this.#waiters.push(resolve));
+    this.#inFlight += 1;
+  }
+
+  #leave(): void {
+    this.#inFlight -= 1;
+    const next = this.#waiters.shift();
+    if (next) next();
+  }
+
+  /** Le recul après un échec transitoire : doublé à chaque essai, borné à une minute. */
+  backoffFor(attempt: number, retryAfterSeconds?: number | null): number {
+    if (retryAfterSeconds && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) return retryAfterSeconds * 1000;
+    return Math.min(60_000, this.#backoffMs * 2 ** attempt);
+  }
+
+  /**
+   * Une réponse brute, avec le même débit, le même délai et les mêmes
+   * relances que le JSON. Pour un fichier texte, un HEAD, un flux.
+   */
+  async fetchResponse(url: string, init: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= this.#maxRetries; attempt += 1) {
+      if (signal?.aborted) throw new Error('Requête annulée');
+      await this.#acquireSlot(signal);
+      await this.#enter();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
+      signal?.addEventListener('abort', () => controller.abort(), { once: true });
+      try {
+        const response = await fetch(url, {
+          ...init,
+          signal: controller.signal,
+          headers: { 'User-Agent': this.#userAgent, ...init.headers },
+        });
+        if (response.status === 429 || response.status >= 500) {
+          lastError = new Error(`HTTP ${response.status} sur ${url}`);
+          this.#nextSlot = Date.now() + this.backoffFor(attempt, Number(response.headers.get('retry-after')));
+          continue;
+        }
+        return response;
+      } catch (error: unknown) {
+        lastError = error;
+        if (attempt === this.#maxRetries) break;
+        this.#nextSlot = Date.now() + this.backoffFor(attempt);
+      } finally {
+        clearTimeout(timer);
+        this.#leave();
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(`Échec de la requête vers ${url}`);
+  }
+
+  /** Un texte (liste AFNIC, robots.txt…) ; null pour un 404. */
+  async fetchText(url: string, init: RequestInit = {}, signal?: AbortSignal): Promise<string | null> {
+    const response = await this.fetchResponse(url, init, signal);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`HTTP ${response.status} sur ${url}`);
+    return response.text();
   }
 
   /** Attend son tour dans la file de débit. */
@@ -57,6 +136,7 @@ export class RateLimitedHttpClient {
     for (let attempt = 0; attempt <= this.#maxRetries; attempt += 1) {
       if (signal?.aborted) throw new Error('Requête annulée');
       await this.#acquireSlot(signal);
+      await this.#enter();
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
@@ -75,12 +155,8 @@ export class RateLimitedHttpClient {
 
         // 429 et 5xx sont transitoires : on réessaie en s'écartant davantage.
         if (response.status === 429 || response.status >= 500) {
-          const retryAfter = Number(response.headers.get('retry-after'));
-          const backoff = Number.isFinite(retryAfter) && retryAfter > 0
-            ? retryAfter * 1000
-            : Math.min(60_000, 2 ** attempt * 1000);
           lastError = new Error(`HTTP ${response.status} sur ${url}`);
-          this.#nextSlot = Date.now() + backoff;
+          this.#nextSlot = Date.now() + this.backoffFor(attempt, Number(response.headers.get('retry-after')));
           continue;
         }
 
@@ -95,9 +171,10 @@ export class RateLimitedHttpClient {
         lastError = error;
         if (error instanceof Error && error.message.startsWith('HTTP 4')) throw error;
         if (attempt === this.#maxRetries) break;
-        this.#nextSlot = Date.now() + Math.min(60_000, 2 ** attempt * 1000);
+        this.#nextSlot = Date.now() + this.backoffFor(attempt);
       } finally {
         clearTimeout(timer);
+        this.#leave();
       }
     }
 

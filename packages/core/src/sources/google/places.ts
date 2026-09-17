@@ -1,4 +1,5 @@
 import type { Db } from '../../db/client';
+import { httpClientFor } from '../http/policy';
 import type { Logger } from '../../logger';
 import { companyNameKey, normalizePostalCode } from '../../normalization';
 
@@ -119,12 +120,13 @@ export async function searchPlaces(target: PlaceTarget, options: PlacesOptions =
     body['locationBias'] = { circle: { center: { latitude: target.lat, longitude: target.lon }, radius: 500 } };
   }
 
-  const response = await fetch(ENDPOINT, {
+  // Payant : un délai court, une relance au plus, cinq appels par seconde
+  // au maximum — la politique de la source, pas un fetch nu.
+  const response = await httpClientFor('google_places').fetchResponse(ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey, 'X-Goog-FieldMask': FIELD_MASK },
     body: JSON.stringify(body),
-    ...(options.signal ? { signal: options.signal } : {}),
-  });
+  }, options.signal);
   if (!response.ok) throw new Error(`Google Places : HTTP ${response.status}`);
   const data = (await response.json()) as { places?: ApiPlace[] };
 

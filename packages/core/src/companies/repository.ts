@@ -450,3 +450,22 @@ export async function getOpenAlerts(db: Db, limit = 20): Promise<OpenAlert[]> {
     .is('resolved_at', null).order('created_at', { ascending: false }).limit(limit);
   return data ?? [];
 }
+
+export interface PipelineHealth {
+  pending_domain_resolution: number;
+  pending_contact_resolution: number;
+  pending_scan: number;
+  pending_deep_scan: number;
+  pending_identity: number;
+  never_scanned: number;
+  changes_7d: Record<string, number>;
+  top_technologies: { technology: string; domains: number }[];
+  economics_7d: { day: string; cost_cents: number; cost_by_provider: Record<string, number> | null; opportunities_created: number; phone_ready_created: number; outreach_ready_created: number; cost_per_outreach_ready_cents: number | null }[];
+}
+
+/** L'état du pipeline en un appel : ce qui attend, ce qui a changé, ce que ça coûte. */
+export async function getPipelineHealth(db: Db): Promise<PipelineHealth | null> {
+  const { data, error } = await db.rpc('pipeline_health');
+  if (error || !data) return null;
+  return data as unknown as PipelineHealth;
+}

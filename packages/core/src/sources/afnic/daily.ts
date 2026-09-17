@@ -1,4 +1,5 @@
 import type { Db } from '../../db/client';
+import { httpClientFor } from '../http/policy';
 import type { Logger } from '../../logger';
 import { normalizeDomainDetailed } from '../../normalization/domain';
 
@@ -56,13 +57,7 @@ export interface AfnicDailyOptions {
 }
 
 async function defaultFetchText(url: string, signal?: AbortSignal): Promise<string | null> {
-  const response = await fetch(url, {
-    headers: { 'User-Agent': 'ProspectAIBot/0.1 (+prospection B2B ; import quotidien AFNIC)' },
-    signal: signal ?? AbortSignal.timeout(30_000),
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`AFNIC ${url} : HTTP ${response.status}`);
-  return response.text();
+  return httpClientFor('afnic').fetchText(url, {}, signal);
 }
 
 /**

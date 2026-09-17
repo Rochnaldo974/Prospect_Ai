@@ -45,6 +45,7 @@ const SYSTEM_PROMPT = `Tu rédiges, pour un freelance du web, la fiche d'un pros
 
 Règles absolues :
 - Tu n'utilises QUE les faits fournis. Aucun chiffre, aucune date, aucun nom, aucun outil qui n'y figure pas.
+- Interdit d'inventer : un chiffre ou une mesure absente des preuves ; un client, un avis ou une référence ; un problème qui n'a pas été observé ; une technologie qui n'a pas été détectée ; le nom d'une personne — on ne connaît personne dans l'entreprise, on s'adresse à « vous ».
 - Tu ne prêtes jamais d'intention à l'entreprise : elle n'a rien demandé. Tu dis ce qui a été constaté, pas ce qu'elle veut.
 - Tu n'inventes pas d'urgence. Si aucun fait daté n'est fourni, "whyNow" est une chaîne vide.
 - Tu écris en français, au vouvoiement, sans jargon, sans superlatif, sans promesse de résultat.
@@ -75,9 +76,17 @@ function factsForPrompt(input: CardInput): string {
     `Services du freelance : ${input.services.length > 0 ? input.services.join(', ') : 'non précisés'}`,
     `Ville du freelance : ${input.freelanceCity?.trim() || 'non fournie — ne pas le situer'}`,
     `Le freelance se présente comme : ${input.freelanceTitle?.trim() || 'développeur web indépendant'}`,
+    `Adéquation avec le freelance : ${serviceFitForPrompt(input)}`,
     '',
     'Faits constatés par le moteur (la seule source autorisée) :',
     ...e.signals.map((s) => `- ${s}`),
+    '',
+    'Mesures exactes (les seuls chiffres autorisés) :',
+    ...(e.evidence.length > 0
+      ? e.evidence.map((v) => `- ${v.fact} : ${v.value}${v.observedAt ? ` (observé le ${v.observedAt.slice(0, 10)})` : ''}`)
+      : ['- aucune mesure chiffrée : ne cite aucun chiffre']),
+    '',
+    `Canal de contact : ${contactForPrompt(input)}`,
     '',
     `Relevé du moteur, pourquoi : ${e.why}`,
     `Relevé du moteur, pourquoi maintenant : ${e.whyNow || '(aucun fait daté)'}`,
@@ -87,6 +96,21 @@ function factsForPrompt(input: CardInput): string {
     lines.push('', 'Réserves à respecter :', ...e.caveats.map((c) => `- ${c}`));
   }
   return lines.join('\n');
+}
+
+/** Téléphone, e-mail, formulaire : ce par quoi le freelance joindra l'entreprise, sans valeur nominative. */
+function contactForPrompt(input: CardInput): string {
+  const c = input.opportunity.company;
+  const channels = [c.phone ? 'téléphone' : null, c.email ? 'e-mail' : null, c.contactFormUrl ? 'formulaire' : null].filter(Boolean);
+  return channels.length > 0 ? channels.join(', ') : 'aucun canal connu';
+}
+
+/** Ce que le matching a retenu : la technologie du site face à celles du freelance, et le service. */
+function serviceFitForPrompt(input: CardInput): string {
+  const m = input.opportunity.matchExplanation;
+  const parts = [`service ${input.opportunity.type}`];
+  if (m) parts.push(m.technology >= 100 ? 'technologie du site maîtrisée par le freelance' : m.technology <= 40 ? 'site sur une technologie que le freelance ne déclare pas' : 'technologie du site inconnue ou sans préférence');
+  return parts.join(' ; ');
 }
 
 /** Le rédacteur par défaut : Claude, via l'API Claude, en sortie structurée validée. */
@@ -205,6 +229,7 @@ export async function writeCards(db: Db, options: WritingOptions = {}): Promise<
             // Les faits fournis, figés avec la fiche : ce qui a été dit
             // reste vérifiable même si le relevé change ensuite.
             facts: opportunity.explanation.signals,
+            evidence: opportunity.explanation.evidence,
           } as unknown as Json,
         }, { onConflict: 'assignment_id' });
         if (upsertError) throw new Error(upsertError.message);

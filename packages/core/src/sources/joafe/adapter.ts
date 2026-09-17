@@ -1,4 +1,4 @@
-import { RateLimitedHttpClient, DEFAULT_USER_AGENT } from '../http/client';
+import { httpClientFor } from '../http/policy';
 import { normalizeDomainDetailed, normalizePostalCode } from '../../normalization';
 
 /**
@@ -94,7 +94,7 @@ export interface FetchAssociationOptions {
 
 /** Les créations et modifications, de la plus récente à la plus ancienne, par pages de cent. */
 export async function fetchAssociationNotices(options: FetchAssociationOptions = {}): Promise<AssociationNotice[]> {
-  const http = new RateLimitedHttpClient({ requestsPerSecond: 2, userAgent: DEFAULT_USER_AGENT, timeoutMs: 60_000 });
+  const http = httpClientFor('joafe');
   const limit = Math.min(options.limit ?? 500, 5000);
   const pageSize = 100;
   const since = options.since ?? new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);

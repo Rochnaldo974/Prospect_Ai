@@ -140,10 +140,21 @@ export class WebsiteFetcher {
     this.#respectRobots = options.respectRobots ?? true;
   }
 
-  async #waitForHost(host: string, signal?: AbortSignal): Promise<void> {
+  /**
+   * Le délai avant de revisiter un hôte : le nôtre, ou le crawl-delay que
+   * son robots.txt demande s'il est plus long — borné à dix secondes, un
+   * site qui en demande soixante n'est pas fait pour être visité.
+   */
+  static hostDelayMs(perHostDelayMs: number, crawlDelayMs: number | null): number {
+    if (crawlDelayMs === null || !Number.isFinite(crawlDelayMs)) return perHostDelayMs;
+    return Math.max(perHostDelayMs, Math.min(crawlDelayMs, 10_000));
+  }
+
+  async #waitForHost(host: string, signal?: AbortSignal, crawlDelayMs: number | null = null): Promise<void> {
+    const delay = WebsiteFetcher.hostDelayMs(this.#perHostDelayMs, crawlDelayMs);
     const last = this.#lastVisit.get(host) ?? 0;
-    const wait = last + this.#perHostDelayMs - Date.now();
-    this.#lastVisit.set(host, Math.max(Date.now(), last + this.#perHostDelayMs));
+    const wait = last + delay - Date.now();
+    this.#lastVisit.set(host, Math.max(Date.now(), last + delay));
 
     if (wait > 0) {
       await new Promise<void>((resolve) => {
@@ -217,14 +228,16 @@ export class WebsiteFetcher {
       return { ...base, error: 'URL invalide' };
     }
 
+    let crawlDelayMs: number | null = null;
     if (this.#respectRobots) {
       const rules = await this.#getRobots(parsed.origin, signal);
       if (!isAllowed(rules, parsed.pathname)) {
         return { ...base, skippedReason: 'robots', error: 'Exclu par robots.txt' };
       }
+      crawlDelayMs = rules.crawlDelayMs;
     }
 
-    await this.#waitForHost(parsed.host, signal);
+    await this.#waitForHost(parsed.host, signal, crawlDelayMs);
     if (signal?.aborted) return { ...base, error: 'Annulé' };
 
     const controller = new AbortController();

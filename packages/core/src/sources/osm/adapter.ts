@@ -1,4 +1,5 @@
 import type { Json } from '../../db/database.types';
+import { httpClientFor } from '../http/policy';
 import {
   normalizeAddress,
   normalizeCity,
@@ -101,14 +102,14 @@ export class OsmCompanySource implements CompanySourceAdapter {
     this.#defaultCities = options.cities ?? [];
     this.#defaultBoundingBox = options.boundingBox;
     this.#endpoints = options.endpoints ?? OVERPASS_ENDPOINTS;
-    this.#http = new RateLimitedHttpClient({
+    this.#http = options.requestsPerSecond !== undefined ? new RateLimitedHttpClient({
       // Une requête toutes les 2 secondes : Overpass est une ressource
       // partagée et bénévole, la saturer nous en ferait exclure.
       requestsPerSecond: options.requestsPerSecond ?? 0.5,
       userAgent: options.userAgent ?? DEFAULT_USER_AGENT,
       timeoutMs: 180_000,
       maxRetries: 1,
-    });
+    }) : httpClientFor('osm');
   }
 
   /**

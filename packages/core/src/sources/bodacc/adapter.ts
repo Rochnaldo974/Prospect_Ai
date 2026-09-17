@@ -1,4 +1,5 @@
 import { normalizeSiren } from '../../normalization';
+import { httpClientFor } from '../http/policy';
 import { DEFAULT_USER_AGENT, RateLimitedHttpClient } from '../http/client';
 
 /**
@@ -93,11 +94,11 @@ export class BodaccSource {
   readonly #http: RateLimitedHttpClient;
 
   constructor(options: { userAgent?: string; requestsPerSecond?: number } = {}) {
-    this.#http = new RateLimitedHttpClient({
+    this.#http = options.requestsPerSecond !== undefined ? new RateLimitedHttpClient({
       requestsPerSecond: options.requestsPerSecond ?? 2,
       userAgent: options.userAgent ?? DEFAULT_USER_AGENT,
       timeoutMs: 60_000,
-    });
+    }) : httpClientFor('bodacc');
   }
 
   #buildWhere(params: BodaccFetchParams): string {

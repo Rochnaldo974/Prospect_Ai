@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getAdminStats, getEngineMetrics, getInventory, getOpenAlerts, getQueueHealth, getSourcePerformance, getTypePerformance, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
+import { getAdminStats, getEngineMetrics, getInventory, getOpenAlerts, getPipelineHealth, getQueueHealth, getSourcePerformance, getTypePerformance, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
 import { getAdminDb } from '@/lib/supabase/admin';
 import { Section, StatCard } from '@/components/admin/primitives';
 
@@ -11,8 +11,8 @@ const m = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
 
 export default async function AdminOverviewPage() {
   const db = await getAdminDb();
-  const [stats, inventory, metrics, sources, types, queue, alerts] = await Promise.all([
-    getAdminStats(db), getInventory(db), getEngineMetrics(db), getSourcePerformance(db), getTypePerformance(db), getQueueHealth(db), getOpenAlerts(db),
+  const [stats, inventory, metrics, sources, types, queue, alerts, pipeline] = await Promise.all([
+    getAdminStats(db), getInventory(db), getEngineMetrics(db), getSourcePerformance(db), getTypePerformance(db), getQueueHealth(db), getOpenAlerts(db), getPipelineHealth(db),
   ]);
 
   if (!stats) {
@@ -114,6 +114,22 @@ export default async function AdminOverviewPage() {
           <StatCard label="Jobs en échec" value={n(queue.failed)} tone={queue.failed > 0 ? 'danger' : 'default'} />
         </div>
       </section>
+
+      {pipeline ? (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-muted-foreground">Pipeline</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Sites à résoudre" value={n(pipeline.pending_domain_resolution)} hint="entreprises sans site cherché" />
+            <StatCard label="Contacts à résoudre" value={n(pipeline.pending_contact_resolution)} />
+            <StatCard label="Scans dus" value={n(pipeline.pending_scan)} hint={`${n(pipeline.never_scanned)} jamais scannés`} />
+            <StatCard label="Audits de performance" value={n(pipeline.pending_deep_scan)} hint="en attente" />
+            <StatCard label="Identités à chercher" value={n(pipeline.pending_identity)} hint="sans SIREN, jamais tentées" />
+            <StatCard label="Changements (7 j)" value={n(Object.values(pipeline.changes_7d ?? {}).reduce((a, b) => a + Number(b), 0))} hint={Object.entries(pipeline.changes_7d ?? {}).map(([k, v]) => `${k} ${v}`).join(' · ') || 'aucun'} />
+            <StatCard label="Coût (7 j)" value={`${((pipeline.economics_7d ?? []).reduce((a, e) => a + Number(e.cost_cents), 0) / 100).toFixed(2)} €`} hint={(() => { const e = pipeline.economics_7d ?? []; const out = e.reduce((a, x) => a + Number(x.outreach_ready_created), 0); const cost = e.reduce((a, x) => a + Number(x.cost_cents), 0); return out > 0 ? `${(cost / out).toFixed(1)} c par OUTREACH_READY` : 'aucun OUTREACH_READY sur 7 j'; })()} />
+            <StatCard label="Technologies" value={n(pipeline.top_technologies?.length ?? 0)} hint={(pipeline.top_technologies ?? []).slice(0, 5).map((t) => `${t.technology} ${t.domains}`).join(' · ') || 'aucune'} />
+          </div>
+        </section>
+      ) : null}
 
       <Section title="Performance par source" count={sources.length}>
         <div className="overflow-x-auto">

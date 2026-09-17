@@ -1,4 +1,5 @@
 import type { Db } from '../../db/client';
+import { httpClientFor } from '../http/policy';
 import type { Update } from '../../domain/types';
 import type { Logger } from '../../logger';
 import { normalizeSiren, normalizePostalCode } from '../../normalization';
@@ -87,13 +88,13 @@ export async function enrichFromSirene(
   };
 
   const log = options.logger;
-  const http = new RateLimitedHttpClient({
+  const http = options.requestsPerSecond !== undefined ? new RateLimitedHttpClient({
     // Sous le plafond annoncé : rien ne presse, et le service est public.
     requestsPerSecond: options.requestsPerSecond ?? 5,
     userAgent: DEFAULT_USER_AGENT,
     timeoutMs: 20_000,
     maxRetries: 2,
-  });
+  }) : httpClientFor('sirene_api');
 
   const { data: targets, error } = await db
     .from('companies')

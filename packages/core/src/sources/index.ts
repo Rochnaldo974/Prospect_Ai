@@ -15,3 +15,4 @@ export * from './boamp/adapter';
 export * from './google/places';
 export * from './afnic/daily';
 export * from './sirene/reference';
+export * from './http/policy';

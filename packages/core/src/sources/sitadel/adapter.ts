@@ -1,4 +1,4 @@
-import { RateLimitedHttpClient, DEFAULT_USER_AGENT } from '../http/client';
+import { httpClientFor } from '../http/policy';
 import { normalizePostalCode } from '../../normalization';
 
 /**
@@ -107,7 +107,7 @@ const COLUMNS = ['COMM', 'TYPE_DAU', 'NUM_DAU', 'SIREN_DEM', 'SIRET_DEM', 'DENOM
 
 /** Les permis autorisés depuis une date, les plus récents d'abord, par pages de cent. Seuls ceux avec SIRET sont gardés. */
 export async function fetchRecentPermits(options: FetchPermitsOptions = {}): Promise<BuildingPermit[]> {
-  const http = new RateLimitedHttpClient({ requestsPerSecond: 1, userAgent: DEFAULT_USER_AGENT, timeoutMs: 90_000 });
+  const http = httpClientFor('sitadel');
   const limit = Math.min(options.limit ?? 2000, 20_000);
   const since = options.since ?? new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
   const out: BuildingPermit[] = [];
