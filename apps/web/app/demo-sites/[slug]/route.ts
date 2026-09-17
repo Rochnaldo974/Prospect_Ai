@@ -139,6 +139,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
+  // Des sites inventés pour le banc d'essai : rien à faire sur le domaine public.
+  if (process.env.NODE_ENV === 'production') notFound();
   const { slug } = await params;
   const site = SITES[slug];
   if (!site) notFound();

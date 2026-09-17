@@ -31,16 +31,19 @@ export async function saveIdentity(
     if (logo.size > 512 * 1024) {
       return { problem: 'Le logo dépasse 512 Ko — compressez-le ou choisissez-en un plus léger.' };
     }
-    if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(logo.type)) {
-      return { problem: 'Le logo doit être un PNG, JPG, WebP ou SVG.' };
+    if (!/^image\/(png|jpe?g|webp)$/.test(logo.type)) {
+      return { problem: 'Le logo doit être un PNG, JPG ou WebP.' };
     }
+    // Pas de SVG : un SVG peut embarquer un script, et le logo est servi
+    // depuis un bucket public puis affiché sur la page d'audit, vue par des
+    // tiers. Le type est vérifié sur les premiers octets, pas sur ce que le
+    // navigateur déclare.
+    const kind = await sniffImage(logo);
+    if (!kind) return { problem: 'Le logo doit être un PNG, JPG ou WebP.' };
 
-    // Idempotent : le bucket existe ou se crée, l'erreur « déjà là » est un état.
-    await db.storage.createBucket('logos', { public: true }).catch(() => undefined);
-
-    const extension = logo.type === 'image/svg+xml' ? 'svg' : logo.type.split('/')[1];
+    const extension = kind === 'jpeg' ? 'jpg' : kind;
     const path = `${profile.id}/logo.${extension}`;
-    const { error } = await db.storage.from('logos').upload(path, logo, { upsert: true });
+    const { error } = await db.storage.from('logos').upload(path, logo, { upsert: true, contentType: `image/${kind}` });
     if (error) return { problem: 'Le logo n’a pas pu être enregistré — réessayez.' };
 
     logoUrl = db.storage.from('logos').getPublicUrl(path).data.publicUrl;
@@ -52,11 +55,10 @@ export async function saveIdentity(
     if (cv.size > 2 * 1024 * 1024) {
       return { problem: 'Le CV dépasse 2 Mo — exportez-le en PDF allégé.' };
     }
-    if (cv.type !== 'application/pdf') return { problem: 'Le CV doit être un PDF.' };
+    if (!(await isPdf(cv))) return { problem: 'Le CV doit être un PDF.' };
 
-    await db.storage.createBucket('documents', { public: true }).catch(() => undefined);
     const path = `${profile.id}/cv.pdf`;
-    const { error: cvError } = await db.storage.from('documents').upload(path, cv, { upsert: true });
+    const { error: cvError } = await db.storage.from('documents').upload(path, cv, { upsert: true, contentType: 'application/pdf' });
     if (cvError) return { problem: 'Le CV n’a pas pu être enregistré — réessayez.' };
     cvUrl = db.storage.from('documents').getPublicUrl(path).data.publicUrl;
   }
@@ -77,4 +79,18 @@ export async function saveIdentity(
 
   revalidatePath('/dashboard/signature');
   return { saved: true };
+}
+
+/** Le type réel d'une image, lu sur ses premiers octets. */
+async function sniffImage(file: File): Promise<'png' | 'jpeg' | 'webp' | null> {
+  const head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) return 'png';
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return 'jpeg';
+  if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46 && head[8] === 0x57 && head[9] === 0x45) return 'webp';
+  return null;
+}
+
+async function isPdf(file: File): Promise<boolean> {
+  const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  return String.fromCharCode(...head) === '%PDF-';
 }

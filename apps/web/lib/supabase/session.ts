@@ -4,7 +4,7 @@ import type { Database } from '@prospect/core';
 
 /** Routes accessibles sans session. */
 // /audit : l'audit envoyé au prospect, qui n'a pas de compte et n'en aura pas.
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth', '/confidentialite', '/demo-sites', '/audit'];
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth', '/confidentialite', '/mentions-legales', '/demo-sites', '/audit', '/robots.txt', '/sitemap.xml'];
 
 // Les aperçus de développement ne demandent pas de session : la page fait
 // elle-même son 404 en production, le proxy n'a rien à leur ajouter.

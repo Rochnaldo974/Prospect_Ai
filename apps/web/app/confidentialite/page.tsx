@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { LEGAL } from '@/lib/legal';
 
 export const metadata: Metadata = {
-  title: 'Confidentialité — Prospect AI',
+  title: { absolute: 'Confidentialité — Prospect AI' },
   description:
     'Quelles données Prospect AI traite, d’où elles viennent, ce qui n’est jamais collecté, et comment demander à ne plus être contacté.',
 };
@@ -70,7 +71,7 @@ export default function PrivacyPage() {
           <p>
             Une entreprise qui demande à ne plus être contactée est retirée de toute la
             chaîne : elle n’est plus analysée, plus scorée, plus attribuée. La demande se fait
-            par écrit à l’adresse de contact du service et prend effet sans délai.
+            par écrit{LEGAL.contactEmail ? <> à <a href={`mailto:${LEGAL.contactEmail}`} className="text-[var(--brand)] underline-offset-4 hover:underline">{LEGAL.contactEmail}</a></> : ' à l’adresse de contact du service'} et prend effet sans délai.
           </p>
         </Part>
 
@@ -84,9 +85,11 @@ export default function PrivacyPage() {
         </Part>
 
         <Part title="Éditeur et hébergement">
-          <p className="rounded-lg border border-dashed bg-[var(--mist)] p-4 text-sm">
-            Mentions légales à compléter avant mise en ligne : dénomination sociale, forme
-            juridique, siège, SIREN, directeur de la publication, et identité de l’hébergeur.
+          <p>
+            Le service est édité par {LEGAL.publisher} et hébergé par {LEGAL.host.name} ; les
+            données sont stockées par {LEGAL.data.name} dans la région {LEGAL.data.region}.
+            Le détail est dans les{' '}
+            <Link href="/mentions-legales" className="text-[var(--brand)] underline-offset-4 hover:underline">mentions légales</Link>.
           </p>
         </Part>
       </main>

@@ -45,11 +45,11 @@ export function IdentityForm({
       </label>
 
       <label className="block">
-        <span className="field-label">Logo (PNG, JPG, SVG — 512 Ko max)</span>
+        <span className="field-label">Logo (PNG, JPG, WebP — 512 Ko max)</span>
         <input
           type="file"
           name="logo"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          accept="image/png,image/jpeg,image/webp"
           className="mt-2 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border file:border-solid file:bg-card file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-[var(--mist)]"
         />
       </label>

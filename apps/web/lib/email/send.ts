@@ -35,6 +35,10 @@ export async function sendEmail(message: OutgoingEmail): Promise<void> {
   const host = process.env.SMTP_HOST ?? '127.0.0.1';
   const port = Number(process.env.SMTP_PORT ?? 54325);
   const user = process.env.SMTP_USER;
+  // En production, un expéditeur inventé part à la corbeille et brûle la
+  // réputation du domaine : sans EMAIL_FROM, on n'envoie pas.
+  const from = process.env.EMAIL_FROM ?? (process.env.NODE_ENV === 'production' ? null : 'prospection@prospect-ai.local');
+  if (!from) throw new Error('EMAIL_FROM absente : envoi direct désactivé');
 
   const transport = nodemailer.createTransport({
     host,
@@ -44,7 +48,7 @@ export async function sendEmail(message: OutgoingEmail): Promise<void> {
   });
 
   await transport.sendMail({
-    from: { name: message.fromName, address: process.env.EMAIL_FROM ?? 'prospection@prospect-ai.local' },
+    from: { name: message.fromName, address: from },
     replyTo: message.replyTo,
     to: message.to,
     subject: message.subject,

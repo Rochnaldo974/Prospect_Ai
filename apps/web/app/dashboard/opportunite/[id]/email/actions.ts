@@ -38,6 +38,7 @@ export async function sendProspectingEmail(
   if (!assignmentId || !subject || !body) {
     return { problem: 'L’objet et le message ne peuvent pas être vides.' };
   }
+  if (await overDailyQuota(profile.id)) return { problem: QUOTA_MESSAGE };
 
   const found = await getMyOpportunity(assignmentId);
   if (!found) return { problem: 'Dossier introuvable.' };
@@ -110,10 +111,12 @@ export async function recordExternalSend(
   formData: FormData,
 ): Promise<SendState> {
   const profile = await requireUser();
+  if (profile.plan !== 'premium') return { problem: 'L’envoi d’e-mails est réservé au plan Solo.' };
   const assignmentId = String(formData.get('assignmentId') ?? '');
   const subject = String(formData.get('subject') ?? '').trim().slice(0, 200);
   const body = String(formData.get('body') ?? '').trim().slice(0, 5000);
   if (!assignmentId || !subject || !body) return { problem: 'L’objet et le message ne peuvent pas être vides.' };
+  if (await overDailyQuota(profile.id)) return { problem: QUOTA_MESSAGE };
 
   const found = await getMyOpportunity(assignmentId);
   if (!found) return { problem: 'Dossier introuvable.' };
@@ -127,4 +130,23 @@ export async function recordExternalSend(
   revalidatePath(`/dashboard/opportunite/${assignmentId}`);
   revalidatePath('/dashboard');
   return { sent: true };
+}
+
+/**
+ * Cinq dossiers par jour, et quelques relances : au-delà de trente e-mails
+ * dans la journée, ce n'est plus de la prospection, c'est une boucle. Le
+ * quota protège la réputation d'envoi du freelance autant que la nôtre.
+ */
+const DAILY_EMAIL_QUOTA = 30;
+const QUOTA_MESSAGE = 'Vous avez atteint le nombre d’e-mails pour aujourd’hui. On reprend demain.';
+
+async function overDailyQuota(userId: string): Promise<boolean> {
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  const { count } = await getServiceClient()
+    .from('assignment_emails')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('sent_at', since.toISOString());
+  return (count ?? 0) >= DAILY_EMAIL_QUOTA;
 }

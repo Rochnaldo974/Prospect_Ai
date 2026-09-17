@@ -44,12 +44,15 @@ export async function declareOutcome(formData: FormData): Promise<void> {
 
   const notes = String(formData.get('notes') ?? '').trim();
 
+  // Une attribution expirée ou reprise entre l'affichage et le clic est un
+  // cas normal : la page se rafraîchit et le dossier n'y est plus. Pas une
+  // page d'erreur.
   await recordOutcome(getServiceClient(), {
     assignmentId,
     userId: profile.id,
     outcome,
     notes: notes.length > 0 ? notes.slice(0, 2000) : null,
-  });
+  }).catch(() => undefined);
   revalidatePath('/dashboard');
 }
 
@@ -70,7 +73,7 @@ export async function declareOptOut(formData: FormData): Promise<void> {
     assignmentId,
     userId: profile.id,
     notes: notes.length > 0 ? notes.slice(0, 2000) : null,
-  });
+  }).catch(() => undefined);
   revalidatePath('/dashboard');
 }
 

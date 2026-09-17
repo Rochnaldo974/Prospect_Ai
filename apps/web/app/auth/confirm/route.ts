@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     redirect('/login?error=lien_expire');
   }
 
-  // Empêche une redirection ouverte vers un domaine externe.
-  redirect(next.startsWith('/') ? next : '/dashboard');
+  // Empêche une redirection ouverte vers un domaine externe : « //evil.com »
+  // commence aussi par une barre.
+  redirect(next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard');
 }

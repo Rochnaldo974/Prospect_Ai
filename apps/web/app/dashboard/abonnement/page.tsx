@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { LEGAL } from '@/lib/legal';
 import { requireOnboardedUser } from '@/lib/auth/session';
 import { PlanToggleDev } from './plan-toggle-dev';
 
@@ -56,7 +57,7 @@ export default async function SubscriptionPage() {
         <p className="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground">
           Le paiement en ligne ouvre avec le lancement. En attendant, le plan Solo est activé
           manuellement pour les premiers utilisateurs — écrivez-nous depuis l’adresse de votre
-          compte.
+          compte{LEGAL.contactEmail ? <>, à <a href={`mailto:${LEGAL.contactEmail}`} className="text-[var(--brand)] underline-offset-4 hover:underline">{LEGAL.contactEmail}</a></> : null}.
         </p>
       ) : null}
 

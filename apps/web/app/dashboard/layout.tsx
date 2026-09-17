@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getFollowUps, getServiceClient } from '@prospect/core';
-import { getSessionProfile } from '@/lib/auth/session';
+import { requireUser } from '@/lib/auth/session';
 import { signOut } from '@/app/(auth)/actions';
 import { DashboardNav } from '@/components/dashboard/nav';
 import { Sidebar } from '@/components/dashboard/sidebar';
@@ -14,29 +14,25 @@ import { Sidebar } from '@/components/dashboard/sidebar';
  * le métro. Les nombres à agir (mis de côté, à relancer) voyagent avec.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const profile = await getSessionProfile();
-  let followUpCount = 0;
-  let snoozedCount = 0;
-  if (profile) {
-    const db = getServiceClient();
-    const [followUps, snoozed] = await Promise.all([
-      getFollowUps(db, profile.id),
-      db.from('assignments').select('id', { count: 'exact', head: true })
-        .eq('user_id', profile.id)
-        .in('status', ['active', 'contacted'])
-        .not('snoozed_at', 'is', null),
-    ]);
-    followUpCount = followUps.length;
-    snoozedCount = snoozed.count ?? 0;
-  }
+  const profile = await requireUser();
+  const db = getServiceClient();
+  const [followUps, snoozed] = await Promise.all([
+    getFollowUps(db, profile.id),
+    db.from('assignments').select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .in('status', ['active', 'contacted'])
+      .not('snoozed_at', 'is', null),
+  ]);
+  const followUpCount = followUps.length;
+  const snoozedCount = snoozed.count ?? 0;
 
   return (
     <div className="flex min-h-dvh bg-[var(--mist)]">
       <Sidebar
         followUpCount={followUpCount}
         snoozedCount={snoozedCount}
-        plan={profile?.plan ?? 'free'}
-        isAdmin={profile?.role === 'admin'}
+        plan={profile.plan}
+        isAdmin={profile.role === 'admin'}
         signOutAction={signOut}
       />
 

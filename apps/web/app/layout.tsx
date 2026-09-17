@@ -24,12 +24,23 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
+const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'http://127.0.0.1:3000';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Prospect AI',
     template: '%s · Prospect AI',
   },
-  description: 'Chaque jour, les cinq opportunités commerciales qui valent votre temps.',
+  description: 'Chaque matin, cinq entreprises à prospecter, vérifiées la nuit, réservées pour vous 72 h.',
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    siteName: 'Prospect AI',
+    title: 'Prospect AI — la prospection des freelances du web',
+    description: 'Chaque matin, cinq entreprises à prospecter, vérifiées la nuit, réservées pour vous 72 h.',
+  },
+  twitter: { card: 'summary' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

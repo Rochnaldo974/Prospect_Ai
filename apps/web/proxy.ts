@@ -13,14 +13,15 @@ export function proxy(request: NextRequest) {
   // tape « localhost » est donc ramené au canonique au lieu de découvrir un
   // site déconnecté. Sans objet en production, où cet hôte n'existe pas.
   const host = request.headers.get('host') ?? '';
-  if (host.startsWith('localhost')) {
+  if (process.env.NODE_ENV !== 'production' && host.startsWith('localhost')) {
     // Un renvoi HTML plutôt qu'un 308 : Next réécrit tout Location visant
     // ce qu'il juge être la même origine — et localhost vaut 127.0.0.1 à
     // ses yeux — en chemin relatif, qui reboucle sur le même hôte à
     // l'infini. Vérifié au banc : même un Location posé à la main est
     // réécrit. Le HTML, lui, ne passe par aucune normalisation.
     const { pathname, search } = request.nextUrl;
-    const target = `http://${host.replace('localhost', '127.0.0.1')}${pathname}${search}`;
+    const target = `http://${host.replace('localhost', '127.0.0.1')}${pathname}${search}`
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return new NextResponse(
       `<!doctype html><meta http-equiv="refresh" content="0;url=${target}">` +
         `<title>Redirection…</title><a href="${target}">Continuer sur 127.0.0.1</a>`,

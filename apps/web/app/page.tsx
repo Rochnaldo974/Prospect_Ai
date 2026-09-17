@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { LEGAL } from '@/lib/legal';
 import { getSessionProfile } from '@/lib/auth/session';
 import { MorningShow } from '@/components/landing/morning-show';
 import { EmailShow } from '@/components/landing/email-show';
@@ -11,7 +12,7 @@ import { HeroBackdrop } from '@/components/landing/backdrop';
 import { Glow } from '@/components/landing/glow';
 
 export const metadata: Metadata = {
-  title: 'Prospect AI — l’outil indispensable des freelances du web',
+  title: { absolute: 'Prospect AI — l’outil indispensable des freelances du web' },
   description:
     'Pour les développeurs web et mobile freelances : chaque matin, cinq entreprises françaises dont le site est à refaire ou à créer, avec ce qui cloche et le numéro pour en parler.',
 };
@@ -437,11 +438,14 @@ function Pricing() {
         'Toute la France, tous les secteurs',
       ],
       featured: true,
+      soon: false,
     },
     {
       name: 'Atelier',
+      tag: 'Bientôt',
       audience: 'Pour un studio de deux à cinq personnes.',
       price: '89',
+      soon: true,
       features: [
         '12 entreprises par jour, réparties entre les membres',
         'Exclusivité à l’échelle du studio',
@@ -512,16 +516,22 @@ function Pricing() {
                   ))}
                 </ul>
 
-                <Link
-                  href="/signup"
-                  className={`mt-9 rounded-full px-6 py-3.5 text-center text-sm font-medium transition-transform duration-200 hover:-translate-y-px ${
-                    plan.featured
-                      ? 'bg-[var(--brand)] text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] hover:shadow-[0_14px_34px_-10px_rgba(44,75,255,.6)]'
-                      : 'border hover:bg-[var(--white)]'
-                  }`}
-                >
-                  Essayer gratuitement
-                </Link>
+                {plan.soon ? (
+                  <span className="mt-9 rounded-full border border-dashed px-6 py-3.5 text-center text-sm text-muted-foreground">
+                    Ouvre après le lancement
+                  </span>
+                ) : (
+                  <Link
+                    href="/signup"
+                    className={`mt-9 rounded-full px-6 py-3.5 text-center text-sm font-medium transition-transform duration-200 hover:-translate-y-px ${
+                      plan.featured
+                        ? 'bg-[var(--brand)] text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] hover:shadow-[0_14px_34px_-10px_rgba(44,75,255,.6)]'
+                        : 'border hover:bg-[var(--white)]'
+                    }`}
+                  >
+                    Essayer gratuitement
+                  </Link>
+                )}
               </article>
             </Reveal>
           ))}
@@ -632,9 +642,17 @@ function SiteFooter() {
         </span>
 
         <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
+          <Link href="/mentions-legales" className="transition-colors hover:text-foreground">
+            Mentions légales
+          </Link>
           <Link href="/confidentialite" className="transition-colors hover:text-foreground">
             Confidentialité
           </Link>
+          {LEGAL.contactEmail ? (
+            <a href={`mailto:${LEGAL.contactEmail}`} className="transition-colors hover:text-foreground">
+              Contact
+            </a>
+          ) : null}
           <Link href="/login" className="transition-colors hover:text-foreground">
             Connexion
           </Link>
