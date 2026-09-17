@@ -40,6 +40,8 @@ export interface SignalEngineReport {
 
 export interface SignalEngineOptions {
   limit?: number;
+  /** Où commencer dans la file des entreprises à réévaluer : plusieurs jobs se partagent une passe. */
+  offset?: number;
   /** Réévaluer ces entreprises-là, et elles seules — la vérification avant livraison. */
   companyIds?: string[];
   /** N'examiner que ce qui a bougé depuis cette date. */
@@ -118,7 +120,7 @@ export async function runSignalEngine(
   while (!options.companyIds && ids.length < wanted) {
     const { data: targets, error } = await db.rpc('companies_needing_signals', {
       p_limit: Math.min(pageSize, wanted - ids.length),
-      p_offset: ids.length,
+      p_offset: (options.offset ?? 0) + ids.length,
       ...(options.since ? { p_since: options.since.toISOString() } : {}),
     });
 

@@ -58,6 +58,8 @@ export interface OpportunityEngineReport {
 
 export interface OpportunityEngineOptions {
   limit?: number;
+  /** Où commencer dans la liste triée des entreprises signalées : plusieurs jobs se partagent une passe. */
+  offset?: number;
   /** Réévaluer ces entreprises-là, et elles seules — la vérification avant livraison. */
   companyIds?: string[];
   gate?: Partial<QualityGate>;
@@ -105,16 +107,17 @@ export async function runOpportunityEngine(
   // chaque passage — et le stock plafonnait sans qu'aucune erreur ne le dise.
   const pageSize = 1000;
   const maxRows = options.limit ?? 20_000;
+  const start = options.offset ?? 0;
   const rows: CandidateRow[] = [];
 
-  for (let from = 0; from < maxRows; from += pageSize) {
+  for (let from = start; from < start + maxRows; from += pageSize) {
     let query = db
       .from('companies')
       .select('id, has_contact, identity_confidence, domain, prospecting_allowed, suppression_global, cooldown_until')
       .eq('prospecting_allowed', true)
       .eq('suppression_global', false)
       .order('id', { ascending: true })
-      .range(from, Math.min(from + pageSize, maxRows) - 1);
+      .range(from, Math.min(from + pageSize, start + maxRows) - 1);
     query = options.companyIds
       ? query.in('id', options.companyIds)
       : query.or('trigger_signal_count.gt.0,active_signal_count.gt.0');

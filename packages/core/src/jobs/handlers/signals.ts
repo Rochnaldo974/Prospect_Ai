@@ -9,6 +9,8 @@ const signalsPayload = z.object({
   limit: z.number().int().min(1).max(20_000).default(2000),
   /** N'examiner que ce qui a bougé depuis N heures. */
   sinceHours: z.number().int().min(1).max(720).optional(),
+  /** Tranche d'une passe découpée en plusieurs jobs. */
+  offset: z.number().int().min(0).optional(),
 });
 
 /**
@@ -28,6 +30,7 @@ export const detectSignalsHandler: JobHandler<z.infer<typeof signalsPayload>> = 
   async run(payload, { db, logger, signal }) {
     const report = await runSignalEngine(db, {
       limit: payload.limit,
+      ...(payload.offset !== undefined ? { offset: payload.offset } : {}),
       logger,
       ...(payload.sinceHours
         ? { since: new Date(Date.now() - payload.sinceHours * 3_600_000) }

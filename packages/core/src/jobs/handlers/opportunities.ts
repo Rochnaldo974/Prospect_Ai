@@ -3,6 +3,8 @@ import { runOpportunityEngine } from '../../opportunities/engine';
 import type { JobHandler } from '../types';
 
 const payload = z.object({
+  /** Tranche d'une passe découpée en plusieurs jobs. */
+  offset: z.number().int().min(0).optional(),
   limit: z.number().int().min(1).max(20_000).default(5000),
   /** Abaisser le seuil pour mesurer ce qu'un gate plus permissif produirait. */
   minBaseScore: z.number().min(0).max(100).optional(),
@@ -30,6 +32,7 @@ export const generateOpportunitiesHandler: JobHandler<z.infer<typeof payload>> =
   async run(input, { db, logger, signal }) {
     const report = await runOpportunityEngine(db, {
       limit: input.limit,
+      ...(input.offset !== undefined ? { offset: input.offset } : {}),
       dryRun: input.dryRun,
       logger,
       ...(input.minBaseScore !== undefined ? { gate: { minBaseScore: input.minBaseScore } } : {}),

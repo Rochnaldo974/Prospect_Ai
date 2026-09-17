@@ -26,7 +26,10 @@ export interface Logger {
 
 function serializeError(value: unknown): unknown {
   if (value instanceof Error) {
-    return { name: value.name, message: value.message, stack: value.stack };
+    const cause = value.cause instanceof Error
+      ? { name: value.cause.name, message: value.cause.message, code: (value.cause as { code?: string }).code }
+      : value.cause;
+    return { name: value.name, message: value.message, stack: value.stack, ...(cause ? { cause } : {}) };
   }
   return value;
 }
