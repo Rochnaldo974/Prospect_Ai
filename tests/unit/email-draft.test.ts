@@ -23,6 +23,7 @@ const base = {
     angle: 'Proposer un audit court centré sur la remise en ligne du site.',
     signals: ['Le site ne répond pas (erreur HTTP 503)'],
     caveats: [],
+    evidence: [],
   },
 };
 

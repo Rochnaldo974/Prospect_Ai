@@ -41,6 +41,8 @@ export interface DomainSnapshot {
   first_seen_at: string;
   seo_facts?: unknown;
   commerce_facts?: unknown;
+  performance_facts?: unknown;
+  performance_audit?: unknown;
 }
 
 export interface ContextEvent {

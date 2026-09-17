@@ -9,7 +9,7 @@ import {
   refreshFilterOptionsHandler,
 } from './handlers/maintenance';
 import { detectDuplicatesHandler, discoverOsmHandler, syncBodaccHandler } from './handlers/sources';
-import { companiesFromDomainsHandler, resolveWebsitesHandler, scanDomainsHandler } from './handlers/websites';
+import { auditPerformanceHandler, companiesFromDomainsHandler, resolveWebsitesHandler, scanDomainsHandler } from './handlers/websites';
 import { detectSignalsHandler, enrichSireneHandler } from './handlers/signals';
 import { generateOpportunitiesHandler } from './handlers/opportunities';
 import { ingestTendersHandler } from './handlers/tenders';
@@ -31,6 +31,7 @@ const HANDLERS: JobHandler<never>[] = [
   syncBodaccHandler,
   detectDuplicatesHandler,
   scanDomainsHandler,
+  auditPerformanceHandler,
   resolveWebsitesHandler,
   companiesFromDomainsHandler,
   enrichSireneHandler,

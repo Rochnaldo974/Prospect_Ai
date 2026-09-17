@@ -58,8 +58,20 @@ export interface ExplanationInput {
     /** Ce que ses clients en disent sur Google, quand on l'a relevé. */
     googleRating?: number | null;
     googleReviews?: number | null;
+    /** Quand le site a été observé pour la dernière fois. */
+    observedAt?: string | null;
+    performance?: { ttfbMs?: number | null; htmlBytes?: number | null; renderBlockingScripts?: number; scriptCount?: number } | null;
+    performanceAudit?: { totalBytes?: number; jsBytes?: number; largestImageBytes?: number; largestImageUrl?: string | null } | null;
   };
   confidenceScore: number;
+}
+
+/** Une preuve : le fait, sa valeur, où et quand on l'a vu. */
+export interface Evidence {
+  fact: string;
+  value: string;
+  observedAt: string | null;
+  sourceUrl: string | null;
 }
 
 export interface Explanation {
@@ -73,6 +85,8 @@ export interface Explanation {
   signals: string[];
   /** Ce qu'on ne sait pas, dit explicitement. */
   caveats: string[];
+  /** Les faits bruts derrière chaque phrase : valeur, date, adresse. Jamais inventés. */
+  evidence: Evidence[];
   /** Titre rédigé, quand une fiche a été écrite pour ce dossier. */
   headline?: string;
   /** Première phrase à prononcer au téléphone, quand une fiche a été écrite. */
@@ -604,6 +618,45 @@ export function explainOpportunity(input: ExplanationInput): Explanation {
     angle: ANGLES[input.opportunityType](input.facts, signalKeys),
     signals,
     caveats,
+    evidence: buildEvidence(input, signalKeys),
     headline: buildHeadline(input, signalKeys),
   };
+}
+
+const kb = (bytes: number): string => bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1).replace('.', ',')} Mo` : `${Math.round(bytes / 1000)} Ko`;
+
+/**
+ * Les preuves, une par fait mesuré qui compte dans le dossier. Chaque ligne
+ * se vérifie en ouvrant l'adresse indiquée ; la date est celle du scan.
+ */
+export function buildEvidence(input: ExplanationInput, keys: Iterable<string>): Evidence[] {
+  const signalKeys = new Set(keys);
+  const f = input.facts;
+  const url = f.domain ? `https://${f.domain}/` : null;
+  const at = f.observedAt ?? null;
+  const out: Evidence[] = [];
+  const add = (fact: string, value: string) => out.push({ fact, value, observedAt: at, sourceUrl: url });
+
+  if (signalKeys.has('slow_ttfb') && f.performance?.ttfbMs != null) add('Temps avant la première réponse du serveur', `${(f.performance.ttfbMs / 1000).toFixed(1).replace('.', ',')} s`);
+  if (signalKeys.has('slow_website') && f.ttfbMs != null) add('Temps de réponse du serveur', `${(f.ttfbMs / 1000).toFixed(1).replace('.', ',')} s`);
+  if (signalKeys.has('render_blocking_scripts') && f.performance?.renderBlockingScripts != null) add('Scripts qui bloquent l’affichage', String(f.performance.renderBlockingScripts));
+  if (signalKeys.has('heavy_scripts') && f.performance?.scriptCount != null) add('Scripts chargés par la page d’accueil', String(f.performance.scriptCount));
+  if (signalKeys.has('heavy_page') && (f.performanceAudit?.totalBytes || f.performance?.htmlBytes)) add('Poids de la page d’accueil', kb(f.performanceAudit?.totalBytes || f.performance?.htmlBytes || 0));
+  if (signalKeys.has('large_images') && f.performanceAudit?.largestImageBytes) out.push({ fact: 'Image la plus lourde', value: kb(f.performanceAudit.largestImageBytes), observedAt: at, sourceUrl: f.performanceAudit.largestImageUrl ?? url });
+  if ((signalKeys.has('not_responsive')) ) add('Adaptation au mobile', 'aucune règle d’affichage mobile détectée');
+  if (signalKeys.has('no_ssl') || signalKeys.has('invalid_certificate') || signalKeys.has('certificate_expired')) {
+    add('Certificat de sécurité', f.tlsReason ? `${f.tlsReason}${f.tlsValidTo ? ` (valide jusqu’au ${f.tlsValidTo.slice(0, 10)})` : ''}` : f.hasSsl === false ? 'site servi sans HTTPS' : 'invalide');
+  }
+  if ((signalKeys.has('outdated_stack') || signalKeys.has('dated_platform')) && f.datedComponents?.length) {
+    const oldest = [...f.datedComponents].sort((a, b) => a.year - b.year)[0]!;
+    add('Composant le plus ancien', `${oldest.name} ${oldest.version} (${oldest.year})`);
+  }
+  if (signalKeys.has('stale_content') && f.copyrightYear) add('Année affichée en bas de page', String(f.copyrightYear));
+  if (f.cms && (signalKeys.has('dated_platform') || signalKeys.has('obsolete_ecommerce_stack'))) add('Plateforme du site', f.cms);
+  if ((signalKeys.has('website_broken') || signalKeys.has('website_found_down') || signalKeys.has('website_went_down')) && f.httpStatus != null) add('Réponse du serveur', `code ${f.httpStatus}`);
+  if (signalKeys.has('website_placeholder')) add('Contenu du site', 'page d’attente ou domaine parké');
+  if (signalKeys.has('domain_recently_registered') && f.domainRegisteredAt) add('Dépôt du nom de domaine', f.domainRegisteredAt.slice(0, 10));
+  if (signalKeys.has('company_recently_created') && f.creationDate) add('Création de l’entreprise', f.creationDate.slice(0, 10));
+  if (signalKeys.has('catalog_without_cart')) add('Vente en ligne', 'catalogue avec prix, sans panier ni paiement');
+  return out;
 }

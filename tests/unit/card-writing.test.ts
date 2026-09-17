@@ -21,6 +21,7 @@ const opportunity = (): TodayOpportunity => ({
     angle: 'Proposer une refonte.',
     signals: ['Site figé à 2011 d\'après sa mention de copyright — 15 ans sans mise à jour visible', 'Le site ne s’adapte pas aux écrans de téléphone'],
     caveats: [],
+    evidence: [],
   },
 });
 

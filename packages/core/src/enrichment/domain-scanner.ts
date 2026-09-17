@@ -1,4 +1,6 @@
 import type { Db } from '../db/client';
+import { detectTechnologies, type DetectedTechnology } from './technology-detector';
+import { isPerformanceSuspect, readPerformanceFacts, type PerformanceFacts } from './performance-audit';
 import type { Json } from '../db/database.types';
 import type { Logger } from '../logger';
 import { normalizeDomainDetailed } from '../normalization';
@@ -20,6 +22,10 @@ import type { ContactCandidate } from '../contacts/types';
 
 export interface DomainScanResult {
   domain: string;
+  /** Technologies avec version quand la page la révèle. */
+  technologies: DetectedTechnology[];
+  /** Faits de performance mesurés sans télécharger les ressources. */
+  performance: PerformanceFacts | null;
   status: 'reachable' | 'placeholder' | 'broken' | 'unreachable' | 'blocked' | 'excluded';
   analysis: PageAnalysis | null;
   fetch: FetchResult;
@@ -154,7 +160,7 @@ export async function scanDomain(
     return {
       domain, status: 'excluded', analysis: null, fetch: result,
       legalPageUrl: null, sirens: [], contentChanged: false, tls: null,
-      responsive: null,
+      responsive: null, technologies: [], performance: null,
     };
   }
 
@@ -172,6 +178,7 @@ export async function scanDomain(
     return {
       domain, status, analysis: null, fetch: result, tls,
       legalPageUrl: null, sirens: [], contentChanged: false, responsive: null,
+      technologies: [], performance: null,
     };
   }
 
@@ -233,6 +240,8 @@ export async function scanDomain(
     legalPageUrl,
     sirens: [...sirens],
     contentChanged: previousHash !== null && previousHash !== analysis.contentHash,
+    technologies: detectTechnologies(result.html, { technologies: analysis.technologies, datedComponents: analysis.datedComponents }),
+    performance: readPerformanceFacts(result.html, { ttfbMs: result.ttfbMs, bytes: result.bytes }),
   };
 }
 
@@ -261,7 +270,7 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
 
   let query = db
     .from('domains')
-    .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at')
+    .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at, status, cms, title, tech_hash, ecommerce_detected, phones_found, emails_found, performance_audit_status, last_performance_audit_at')
     .neq('status', 'excluded')
     // Le parc national compte 4,59 millions de domaines : l'ordre de passage
     // décide de ce qu'on trouve les premiers jours. La priorité est calculée
@@ -367,7 +376,7 @@ async function persistScan(
   db: Db,
   scan: DomainScanResult,
   previousFailures: number,
-  history: { unchangedStreak?: number; registeredAt?: string | null; previousHash?: string | null } = {},
+  history: { unchangedStreak?: number; registeredAt?: string | null; previousHash?: string | null; performanceAuditStatus?: string; lastPerformanceAuditAt?: string | null } = {},
 ): Promise<void> {
   const analysis = scan.analysis;
   // La série d'« inchangé » : repart à zéro dès que le contenu bouge ou que le site tombe.
@@ -381,9 +390,20 @@ async function persistScan(
   // premier appel. Le compteur repart à zéro dès que le site répond.
   const down = scan.status === 'broken' || scan.status === 'unreachable';
 
+  // Présélection : un site suspect est mis en attente d'audit approfondi,
+  // sauf s'il en a reçu un depuis moins de trente jours. Un site qui ne
+  // l'est plus sort de la file.
+  const auditAge = history.lastPerformanceAuditAt ? (Date.now() - new Date(history.lastPerformanceAuditAt).getTime()) / 86_400_000 : Infinity;
+  const suspect = scan.performance !== null && scan.status === 'reachable' && isPerformanceSuspect(scan.performance);
+  const auditStatus = suspect
+    ? (auditAge > 30 ? 'pending' : undefined)
+    : (history.performanceAuditStatus === 'pending' ? 'none' : undefined);
+
   const { error } = await db
     .from('domains')
     .update({
+      performance_facts: (scan.performance ?? null) as unknown as Json,
+      ...(auditStatus ? { performance_audit_status: auditStatus } : {}),
       status: scan.status,
       http_status: scan.fetch.status,
       final_url: scan.fetch.finalUrl,
@@ -453,6 +473,7 @@ async function recordScanEvents(
   previousHash: string | null,
   previousFailures: number,
   previousTechYear: number | null,
+  changes: DomainChange[] = [],
 ): Promise<void> {
   // Le domaine peut être revendiqué par plusieurs établissements : l'événement
   // concerne chacun d'eux.
@@ -471,6 +492,19 @@ async function recordScanEvents(
     payload: Record<string, Json>;
     key: string;
   }[] = [];
+
+  // Un site revenu en ligne après une chute : la chute était réelle, et
+  // l'hébergement n'est pas fiable. Distinct des branches exclusives qui
+  // suivent — il s'ajoute à ce que le scan constate par ailleurs.
+  if (changes.some((c) => c.kind === 'site_came_back_online')) {
+    events.push({
+      type: 'website_came_back_online',
+      importance: 55,
+      confidence: 0.9,
+      payload: { domain: scan.domain, status: scan.status },
+      key: `website_came_back_online:${scan.domain}:${now.slice(0, 10)}`,
+    });
+  }
 
   if (scan.status === 'broken' || scan.status === 'unreachable') {
     // Seulement si le site répondait auparavant : un domaine jamais joignable
@@ -576,6 +610,72 @@ interface DueRow {
   domain: string; content_hash: string | null;
   check_attempts: number; tech_year: number | null;
   unchanged_streak?: number; registered_at?: string | null;
+  status?: string; cms?: string | null; title?: string | null; tech_hash?: string | null;
+  ecommerce_detected?: boolean; phones_found?: string[]; emails_found?: string[];
+  performance_audit_status?: string; last_performance_audit_at?: string | null;
+}
+
+/** Ce qui a changé entre le dernier scan et celui-ci. */
+export type DomainChangeKind = 'site_appeared' | 'site_disappeared' | 'site_came_back_online' | 'technology_changed' | 'new_ecommerce' | 'contact_changed' | 'major_redesign';
+export interface DomainChange { kind: DomainChangeKind; before: Record<string, Json>; after: Record<string, Json> }
+
+const LIVE = new Set(['reachable', 'placeholder']);
+const DOWN = new Set(['broken', 'unreachable']);
+const sameSet = (a: string[] = [], b: string[] = []) => a.length === b.length && a.every((v) => b.includes(v));
+
+/**
+ * Compare l'état précédent au scan. Pur : rien n'est écrit ici.
+ *
+ * Un changement de quelques caractères n'est pas une refonte : la refonte
+ * majeure exige que le contenu ait changé ET que le titre, le CMS ou la
+ * pile technique aient changé avec lui.
+ */
+export function detectChanges(previous: DueRow, scan: DomainScanResult): DomainChange[] {
+  const out: DomainChange[] = [];
+  const prevStatus = previous.status ?? null;
+  const a = scan.analysis;
+  if (prevStatus !== null && !LIVE.has(prevStatus) && LIVE.has(scan.status)) {
+    out.push({ kind: DOWN.has(prevStatus) ? 'site_came_back_online' : 'site_appeared', before: { status: prevStatus }, after: { status: scan.status } });
+  }
+  if (prevStatus !== null && LIVE.has(prevStatus) && DOWN.has(scan.status)) {
+    out.push({ kind: 'site_disappeared', before: { status: prevStatus }, after: { status: scan.status, http_status: scan.fetch.status } });
+  }
+  if (!a) return out;
+  const prevCms = previous.cms ?? null;
+  if (prevStatus !== null && LIVE.has(prevStatus) && prevCms !== null && a.cms !== null && prevCms !== a.cms) {
+    out.push({ kind: 'technology_changed', before: { cms: prevCms }, after: { cms: a.cms } });
+  }
+  if (previous.ecommerce_detected === false && a.ecommerceDetected) {
+    out.push({ kind: 'new_ecommerce', before: { ecommerce: false }, after: { ecommerce: true, platform: a.commerce?.platform ?? null } });
+  }
+  if (prevStatus !== null && LIVE.has(prevStatus) && (!sameSet(previous.phones_found, a.phones) || !sameSet(previous.emails_found, a.emails))) {
+    out.push({ kind: 'contact_changed', before: { phones: previous.phones_found ?? [], emails: previous.emails_found ?? [] }, after: { phones: a.phones, emails: a.emails } });
+  }
+  const techHash = a.technologies.slice().sort().join('|');
+  if (scan.contentChanged && prevStatus !== null && LIVE.has(prevStatus)
+      && ((previous.title ?? null) !== (a.title ?? null) || prevCms !== a.cms || (previous.tech_hash ?? null) !== techHash)) {
+    out.push({ kind: 'major_redesign', before: { title: previous.title ?? null, cms: prevCms, tech_hash: previous.tech_hash ?? null }, after: { title: a.title, cms: a.cms, tech_hash: techHash } });
+  }
+  return out;
+}
+
+async function recordDomainChanges(db: Db, previous: DueRow, scan: DomainScanResult, log: Logger | undefined): Promise<DomainChange[]> {
+  const changes = detectChanges(previous, scan);
+  if (changes.length === 0) return changes;
+  const { error } = await db.from('domain_changes').insert(changes.map((c) => ({ domain: scan.domain, kind: c.kind, before: c.before as Json, after: c.after as Json })));
+  if (error) log?.warn('Changements de site non enregistrés', { domain: scan.domain, error: error.message });
+  return changes;
+}
+
+/** Les technologies vues, avec leur version : première fois insérée, revue mise à jour. */
+async function recordTechnologies(db: Db, scan: DomainScanResult, log: Logger | undefined): Promise<void> {
+  if (scan.technologies.length === 0) return;
+  const now = new Date().toISOString();
+  const { error } = await db.from('domain_technologies').upsert(
+    scan.technologies.map((t) => ({ domain: scan.domain, technology: t.technology, version: t.version, confidence: t.confidence, source: t.source, last_seen_at: now })),
+    { onConflict: 'domain,technology' },
+  );
+  if (error) log?.warn('Technologies non enregistrées', { domain: scan.domain, error: error.message });
 }
 
 /** Scanne un domaine et enregistre tout ce qui en découle : faits, événements, rattachements. */
@@ -605,7 +705,13 @@ async function scanAndPersist(
         report.unchanged += 1;
       }
 
-      await persistScan(db, scan, row.check_attempts, { unchangedStreak: row.unchanged_streak ?? 0, registeredAt: row.registered_at ?? null, previousHash: row.content_hash });
+      await persistScan(db, scan, row.check_attempts, {
+        unchangedStreak: row.unchanged_streak ?? 0, registeredAt: row.registered_at ?? null, previousHash: row.content_hash,
+        ...(row.performance_audit_status ? { performanceAuditStatus: row.performance_audit_status } : {}),
+        lastPerformanceAuditAt: row.last_performance_audit_at ?? null,
+      });
+      await recordTechnologies(db, scan, log);
+      const changes = await recordDomainChanges(db, row, scan, log);
 
       // Un formulaire trouvé est un moyen de contact : il ouvre la porte de
       // qualité pour l'entreprise qui revendique ce site et n'en avait pas.
@@ -622,7 +728,7 @@ async function scanAndPersist(
       // domaine, puis le meilleur canal reporté sur l'entreprise. C'est ici
       // que le téléphone d'un site cesse de rester au bord de la route.
       await recordScanContacts(db, scan, log);
-      await recordScanEvents(db, scan, row.content_hash, row.check_attempts, row.tech_year);
+      await recordScanEvents(db, scan, row.content_hash, row.check_attempts, row.tech_year, changes);
 
       if (scan.sirens.length > 0) {
         report.sirensFound += 1;
@@ -684,7 +790,7 @@ export async function rescanDomain(
   };
   const { data: row, error } = await db
     .from('domains')
-    .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at')
+    .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at, status, cms, title, tech_hash, ecommerce_detected, phones_found, emails_found, performance_audit_status, last_performance_audit_at')
     .eq('domain', domain)
     .maybeSingle();
   if (error) throw new Error(`rescanDomain : ${error.message}`);

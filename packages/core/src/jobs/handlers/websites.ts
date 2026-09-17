@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createCompaniesFromDomains } from '../../ingestion/domain-to-company';
 import { scanDueDomains } from '../../enrichment/domain-scanner';
+import { auditPerformance } from '../../enrichment/performance-audit';
 import { resolveWebsites } from '../../enrichment/website-resolver';
 import { WebsiteFetcher } from '../../enrichment/fetcher';
 import type { JobHandler } from '../types';
@@ -132,5 +133,27 @@ export const companiesFromDomainsHandler: JobHandler<z.infer<typeof reversePaylo
         not_found_in_registry: report.notFoundInRegistry,
       },
     };
+  },
+};
+
+const auditPayload = z.object({
+  limit: z.number().int().min(1).max(1000).optional(),
+});
+
+/** L'audit de performance approfondi, sur les sites présélectionnés par le scan. */
+export const auditPerformanceHandler: JobHandler<z.infer<typeof auditPayload>> = {
+  type: 'audit_performance',
+  schema: auditPayload,
+  defaultPriority: 70,
+  maxAttempts: 2,
+
+  async run(payload, { db, logger, signal }) {
+    let limit = payload.limit;
+    if (limit === undefined) {
+      const { data } = await db.rpc('engine_setting_int', { p_key: 'performance_audits_per_night', p_default: 200 });
+      limit = data ?? 200;
+    }
+    const report = await auditPerformance(db, { limit, logger, ...(signal ? { signal } : {}) });
+    return { processed: report.examined, succeeded: report.audited, failed: report.failed, metadata: { ...report } };
   },
 };

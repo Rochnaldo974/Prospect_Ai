@@ -119,6 +119,8 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
       major: ['outdated_stack', 'dated_platform', 'website_found_down', 'stale_content', 'slow_website', 'website_placeholder'],
     },
     needWeights: {
+      heavy_page: 20,
+      large_images: 15,
       website_broken: 55,
       website_found_down: 50,
       // Le site existe et fonctionne : c'est la porte d'entrée qui est fermée.
@@ -200,7 +202,23 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     label: 'Maintenance / optimisation',
     requiresWebsite: true,
     minNeed: 45,
+    // Sans fait daté, une maintenance se justifie par un diagnostic dense :
+    // un défaut critique mesuré, ou deux majeurs, et trois constats. C'est
+    // la sous-famille performance — des octets et des millisecondes qu'un
+    // freelance montre en ouvrant la page.
+    diagnosticMinFacts: 3,
+    diagnosticMinNeed: 60,
+    diagnosticSeverity: {
+      critical: ['invalid_certificate', 'no_ssl', 'slow_ttfb', 'heavy_page', 'unstable_website'],
+      major: ['heavy_scripts', 'large_images', 'render_blocking_scripts', 'not_responsive', 'slow_website', 'no_contact_form'],
+    },
     needWeights: {
+      slow_ttfb: 40,
+      heavy_page: 40,
+      heavy_scripts: 30,
+      large_images: 30,
+      render_blocking_scripts: 25,
+      unstable_website: 45,
       slow_website: 45,
       not_responsive: 40,
       // Remettre un certificat en état est une intervention courte et
@@ -268,4 +286,26 @@ export const RISK_PENALTIES: Record<string, number> = {
 
 export function ruleFor(type: OpportunityType): OpportunityRule | undefined {
   return OPPORTUNITY_RULES.find((r) => r.type === type);
+}
+
+/**
+ * La famille d'un constat : ce que le freelance vend derrière. Sert à
+ * qualifier une opportunité par ce qui la porte le plus — une maintenance
+ * « performance » n'est pas une maintenance « sécurité ».
+ */
+export const SIGNAL_FAMILIES: Record<string, string> = {
+  slow_ttfb: 'performance', heavy_page: 'performance', heavy_scripts: 'performance', large_images: 'performance',
+  render_blocking_scripts: 'performance', slow_website: 'performance',
+  invalid_certificate: 'security', certificate_expired: 'security', no_ssl: 'security',
+  unstable_website: 'hosting', website_went_down: 'hosting', website_found_down: 'hosting', website_broken: 'hosting',
+  not_responsive: 'design', outdated_stack: 'design', dated_platform: 'design', stale_content: 'content',
+  missing_title: 'seo', missing_meta_description: 'seo', missing_h1: 'seo', no_structured_data: 'seo', no_canonical: 'seo',
+  images_without_alt: 'seo', thin_content: 'seo',
+  catalog_without_cart: 'commerce', retail_without_ecommerce: 'commerce', obsolete_ecommerce_stack: 'commerce',
+  social_without_website: 'presence', no_website_proven: 'presence', website_placeholder: 'presence',
+  no_contact_form: 'contact',
+};
+
+export function familyOf(signal: string): string {
+  return SIGNAL_FAMILIES[signal] ?? 'other';
 }

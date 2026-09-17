@@ -1,6 +1,6 @@
 import type { Json } from '../db/database.types';
 import type { OpportunityType } from '../domain/types';
-import { OPPORTUNITY_RULES, RISK_PENALTIES, TRIGGER_HALF_LIVES, type OpportunityRule } from './rules';
+import { OPPORTUNITY_RULES, RISK_PENALTIES, TRIGGER_HALF_LIVES, type OpportunityRule, familyOf } from './rules';
 
 /**
  * Scoring d'une opportunité.
@@ -288,6 +288,8 @@ export function scoreOpportunity(
       // Trace explicite : une opportunité livrée sans fait daté doit pouvoir
       // être reconnue comme telle en base, sans avoir à le déduire.
       diagnostic_only: best === null,
+      // La sous-famille : ce que porte le constat le plus lourd.
+      family: contributions.length > 0 ? familyOf([...contributions].sort((a, b) => b.points - a.points)[0]!.signal) : null,
       // Plusieurs faits datés récents, de familles différentes : l'intention
       // est plus forte que chacun d'eux. Tracé pour être lu tel quel.
       intent: intent as unknown as Json,

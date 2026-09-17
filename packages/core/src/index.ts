@@ -16,3 +16,5 @@ export * from './allocation';
 export * from './contacts';
 export * from './discovery';
 export * from './ops';
+export * from './enrichment/technology-detector';
+export * from './enrichment/performance-audit';

@@ -6,6 +6,8 @@ import { isUsableBusinessEmail } from '../normalization/email';
 import { loadWrittenCards } from './written-card';
 import { screenshotUrl } from '../enrichment/screenshot';
 import type { SiteScores } from '../enrichment/audit';
+import type { MatchExplanation } from './fit';
+import type { ExplanationInput } from '../opportunities/explain';
 import { tierOf, type Tier } from './tier';
 
 /**
@@ -25,6 +27,8 @@ export interface TodayOpportunity {
   rank: number;
   type: OpportunityType;
   matchScore: number;
+  /** Pourquoi ce dossier pour cette personne : la décomposition du rang. */
+  matchExplanation: MatchExplanation | null;
   exclusiveUntil: string;
   /** Quand le dossier est arrivé : ce qui sépare « aujourd'hui » des jours précédents. */
   assignedAt: string;
@@ -96,7 +100,7 @@ export async function getTodayOpportunities(
 ): Promise<TodayOpportunity[]> {
   const { data, error } = await db
     .from('assignments')
-    .select('id, rank, match_score, exclusive_until, assigned_at, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, best_email, address, postal_code, contact_form_url, social_links, siren, identity_confidence, google_rating, google_review_count, google_photo_count, google_maps_url, google_checked_at, website_url, domain, creation_date, employee_min)')
+    .select('id, rank, match_score, match_data, exclusive_until, assigned_at, viewed_at, contacted_at, snoozed_at, company_id, opportunities!inner(id, opportunity_type, confidence_score, reason_data), companies!inner(legal_name, commercial_name, city, industry_label, phone, best_email, address, postal_code, contact_form_url, social_links, siren, identity_confidence, google_rating, google_review_count, google_photo_count, google_maps_url, google_checked_at, website_url, domain, creation_date, employee_min)')
     .eq('user_id', userId)
     .in('status', ['active', 'contacted'])
     .order('rank', { ascending: true });
@@ -116,12 +120,13 @@ export async function getTodayOpportunities(
     tls_reason: string | null; tls_valid_to: string | null;
     tech_year: number | null; dated_components: unknown; screenshot_path?: string | null;
     site_score?: number | null; site_scores?: unknown; audited_at?: string | null;
+    last_checked_at?: string | null; performance_facts?: unknown; performance_audit?: unknown;
   }>();
 
   for (let i = 0; i < domains.length; i += 100) {
     const { data: rows } = await db
       .from('domains')
-      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components, emails_found, screenshot_path, site_score, site_scores, audited_at')
+      .select('domain, status, cms, copyright_year, ttfb_ms, has_ssl, http_status, ecommerce_detected, registered_at, tls_reason, tls_valid_to, tech_year, dated_components, emails_found, screenshot_path, site_score, site_scores, audited_at, last_checked_at, performance_facts, performance_audit')
       .in('domain', domains.slice(i, i + 100));
     for (const row of rows ?? []) facts.set(row.domain, row);
   }
@@ -176,6 +181,7 @@ export async function getTodayOpportunities(
       rank: row.rank,
       type: opportunity.opportunity_type as OpportunityType,
       matchScore: Number(row.match_score),
+      matchExplanation: ((row as unknown as { match_data?: unknown }).match_data as MatchExplanation | null) ?? null,
       exclusiveUntil: row.exclusive_until,
       assignedAt: (row as unknown as { assigned_at: string }).assigned_at,
       viewedAt: row.viewed_at,
@@ -238,6 +244,9 @@ export async function getTodayOpportunities(
           socialLinks: (company as { social_links?: Record<string, string> | null }).social_links ?? null,
           domainRegisteredAt: site?.registered_at ?? null,
           websiteStatus: site?.status ?? null,
+          observedAt: site?.last_checked_at ?? null,
+          performance: (site?.performance_facts as ExplanationInput['facts']['performance']) ?? null,
+          performanceAudit: (site?.performance_audit as ExplanationInput['facts']['performanceAudit']) ?? null,
           tlsReason: site?.tls_reason ?? null,
           tlsValidTo: site?.tls_valid_to ?? null,
           techYear: site?.tech_year ?? null,

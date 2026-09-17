@@ -1,11 +1,13 @@
 import { MODIFIER_DETECTORS } from './modifiers';
 import { TRIGGER_DETECTORS } from './triggers';
 import { SEO_COMMERCE_DETECTORS } from './seo-commerce';
+import { PERFORMANCE_DETECTORS } from './performance';
 import type { SignalDetector } from '../types';
 
 export * from './triggers';
 export * from './modifiers';
 export * from './seo-commerce';
+export * from './performance';
 
 /**
  * Tous les détecteurs, déclencheurs d'abord.
@@ -13,7 +15,7 @@ export * from './seo-commerce';
  * L'ordre n'a pas d'incidence sur le résultat, mais il rend les journaux et
  * la console lisibles : ce qui date vient avant ce qui décrit.
  */
-export const ALL_DETECTORS: SignalDetector[] = [...TRIGGER_DETECTORS, ...MODIFIER_DETECTORS, ...SEO_COMMERCE_DETECTORS];
+export const ALL_DETECTORS: SignalDetector[] = [...TRIGGER_DETECTORS, ...MODIFIER_DETECTORS, ...SEO_COMMERCE_DETECTORS, ...PERFORMANCE_DETECTORS];
 
 const byId = new Map(ALL_DETECTORS.map((d) => [d.id, d]));
 if (byId.size !== ALL_DETECTORS.length) {

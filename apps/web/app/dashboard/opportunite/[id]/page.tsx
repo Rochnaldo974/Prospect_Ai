@@ -166,6 +166,31 @@ export default async function OpportunityPage({
             <h2 className="field-label" style={{ color: 'var(--brand)' }}>Par quoi commencer</h2>
             <p className="mt-2 text-sm leading-relaxed text-[var(--brand)]">{explanation.angle}</p>
           </section>
+
+          {/* Les faits bruts : une valeur, une date, une adresse. Ce que le
+              freelance peut ouvrir devant son interlocuteur. */}
+          {explanation.evidence.length > 0 ? (
+            <section>
+              <h2 className="field-label">Mesuré sur le site</h2>
+              <dl className="mt-3 divide-y rounded-xl border text-sm">
+                {explanation.evidence.map((e) => (
+                  <div key={`${e.fact}-${e.value}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5">
+                    <dt className="text-muted-foreground">{e.fact}</dt>
+                    <dd className="font-medium tabular-nums">
+                      {e.sourceUrl ? (
+                        <a href={e.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">{e.value}</a>
+                      ) : e.value}
+                      {e.observedAt ? (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">le {new Date(e.observedAt).toLocaleDateString('fr-FR')}</span>
+                      ) : null}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
+
+          {opportunity.matchExplanation ? <WhyForYou explanation={opportunity.matchExplanation} /> : null}
         </div>
 
         <div className="space-y-6">
@@ -409,6 +434,42 @@ function SiteAudit({ audit }: { audit: NonNullable<DailyOpportunity['audit']> })
       {measured ? (
         <p className="mt-2 text-[11px] text-muted-foreground">Mesuré par le moteur le {measured}, en ouvrant le site comme un visiteur.</p>
       ) : null}
+    </section>
+  );
+}
+
+/**
+ * Pourquoi ce dossier pour cette personne : la décomposition du rang, telle
+ * que le moteur l'a calculée le matin de l'attribution. Cinq composantes sur
+ * cent, et leur poids.
+ */
+function WhyForYou({ explanation }: { explanation: NonNullable<DailyOpportunity['matchExplanation']> }) {
+  const rows: { label: string; value: number; weight: number }[] = [
+    { label: 'Proximité', value: explanation.geo, weight: explanation.weights.geo },
+    { label: 'Technologie', value: explanation.technology, weight: explanation.weights.technology },
+    { label: 'Secteur', value: explanation.industry, weight: explanation.weights.industry },
+    { label: 'Fraîcheur', value: explanation.freshness, weight: explanation.weights.freshness },
+    { label: 'Solidité du dossier', value: explanation.quality, weight: explanation.weights.quality },
+  ];
+  return (
+    <section className="rounded-2xl border bg-card p-5">
+      <h2 className="field-label">Pourquoi pour vous</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Qualité du dossier {Math.round(explanation.base)} × 0,7 + adéquation {Math.round(explanation.fit)} × 0,3 = {Math.round(explanation.match)}.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {rows.map((row) => (
+          <li key={row.label} className="text-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <span>{row.label} <span className="text-xs text-muted-foreground">× {row.weight.toFixed(2).replace('.', ',')}</span></span>
+              <span className="tabular-nums font-medium">{Math.round(row.value)}</span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-[var(--brand)]" style={{ width: `${Math.max(2, Math.min(100, row.value))}%` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

@@ -148,6 +148,7 @@ function fixtures(): DailyOpportunity[] {
       assignmentId: 'fix-1',
       type: 'website_redesign',
       matchScore: 87,
+      matchExplanation: null,
       hoursLeft: 61,
       contactedAt: '2026-01-01T00:00:00Z',
       company: {
@@ -171,6 +172,7 @@ function fixtures(): DailyOpportunity[] {
         angle: 'Proposer un audit court centré sur la remise en ligne.',
         signals: ['Le site ne répond pas — erreur 503', 'Certificat expiré depuis le 25 octobre'],
         caveats: ['Nous ignorons depuis quand le site est en panne.'],
+        evidence: [],
       },
     },
     {
@@ -178,6 +180,7 @@ function fixtures(): DailyOpportunity[] {
       assignmentId: 'fix-2',
       type: 'website_redesign',
       matchScore: 74,
+      matchExplanation: null,
       hoursLeft: 8,
       contactedAt: null,
       company: {
@@ -201,6 +204,7 @@ function fixtures(): DailyOpportunity[] {
         angle: 'Ouvrir sur le contraste entre l’atelier et sa vitrine en ligne.',
         signals: ['jQuery 1.7.2, publié en 2011', 'Aucune adaptation mobile détectée'],
         caveats: [],
+        evidence: [],
       },
     },
     {
@@ -208,6 +212,7 @@ function fixtures(): DailyOpportunity[] {
       assignmentId: 'fix-3',
       type: 'website_creation',
       matchScore: 66,
+      matchExplanation: null,
       hoursLeft: 61,
       contactedAt: null,
       company: {
@@ -231,6 +236,7 @@ function fixtures(): DailyOpportunity[] {
         angle: 'Proposer une page simple avec horaires, carte et réservation.',
         signals: ['Aucun site trouvé', 'Immatriculée en juin 2026'],
         caveats: ['Le budget d’une jeune entreprise est inconnu.'],
+        evidence: [],
       },
     },
   ];
