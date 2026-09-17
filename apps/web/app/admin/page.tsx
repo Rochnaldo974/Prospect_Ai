@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getAdminStats, getEngineMetrics, getInventory, getOpenAlerts, getPipelineHealth, getQueueHealth, getSourcePerformance, getTypePerformance, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
+import { getAdminStats, getEngineMetrics, getInventory, getOpenAlerts, getPipelineHealth, getQueueHealth, getSourcePerformance, getSuccessMetrics, getTypePerformance, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
 import { getAdminDb } from '@/lib/supabase/admin';
 import { Section, StatCard } from '@/components/admin/primitives';
 
@@ -11,8 +11,8 @@ const m = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
 
 export default async function AdminOverviewPage() {
   const db = await getAdminDb();
-  const [stats, inventory, metrics, sources, types, queue, alerts, pipeline] = await Promise.all([
-    getAdminStats(db), getInventory(db), getEngineMetrics(db), getSourcePerformance(db), getTypePerformance(db), getQueueHealth(db), getOpenAlerts(db), getPipelineHealth(db),
+  const [stats, inventory, metrics, sources, types, queue, alerts, pipeline, success] = await Promise.all([
+    getAdminStats(db), getInventory(db), getEngineMetrics(db), getSourcePerformance(db), getTypePerformance(db), getQueueHealth(db), getOpenAlerts(db), getPipelineHealth(db), getSuccessMetrics(db),
   ]);
 
   if (!stats) {
@@ -114,6 +114,25 @@ export default async function AdminOverviewPage() {
           <StatCard label="Jobs en échec" value={n(queue.failed)} tone={queue.failed > 0 ? 'danger' : 'default'} />
         </div>
       </section>
+
+      {success ? (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-muted-foreground">Critères de succès</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Entreprises" value={n(success.companies.total)} />
+            <StatCard label="Avec téléphone" value={n(success.companies.with_phone)} hint={`${success.companies.phone_pct ?? 0} %`} />
+            <StatCard label="Avec e-mail" value={n(success.companies.with_email)} hint={`${success.companies.email_pct ?? 0} %`} />
+            <StatCard label="Téléphone et e-mail" value={n(success.companies.with_phone_and_email)} hint={`${success.companies.both_pct ?? 0} %`} />
+            <StatCard label="Produites en 24 h" value={n(success.last_24h.qualified)} hint={`${n(success.last_24h.phone_ready)} PHONE_READY · ${n(success.last_24h.outreach_ready)} OUTREACH_READY`} />
+            <StatCard label="Offre / jour" value={n(Math.round(success.supply_demand.daily_supply_phone_ready))} hint={`${n(Math.round(success.supply_demand.daily_supply_outreach_ready))} OUTREACH_READY · moyenne 7 j`} />
+            <StatCard label="Demande / jour" value={success.supply_demand.daily_demand.toFixed(1)} hint={`${n(success.supply_demand.free_users)} gratuits · ${n(success.supply_demand.premium_users)} premium`} />
+            <StatCard label="Offre ÷ demande" value={success.supply_demand.supply_demand_ratio === null ? '—' : success.supply_demand.supply_demand_ratio.toFixed(1)} hint="objectif ≥ 3" tone={success.supply_demand.supply_demand_ratio !== null && success.supply_demand.supply_demand_ratio < 3 ? 'danger' : 'default'} />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Par service : {Object.entries(success.supply_demand.by_service).map(([k, v]) => `${OPPORTUNITY_TYPE_LABELS[k as keyof typeof OPPORTUNITY_TYPE_LABELS] ?? k} ${v.ratio === null ? '—' : v.ratio}`).join(' · ') || 'aucun compte paramétré'}
+          </p>
+        </section>
+      ) : null}
 
       {pipeline ? (
         <section>

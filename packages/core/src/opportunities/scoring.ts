@@ -42,6 +42,10 @@ export interface ScoringInput {
    */
   websiteStatus: 'reachable' | 'placeholder' | 'broken' | 'unreachable' | 'blocked' | 'excluded' | null;
   now?: number;
+  /** Types coupés par drapeau : jamais évalués. */
+  disabledTypes?: readonly OpportunityType[];
+  /** Signaux coupés par drapeau : retirés avant l'évaluation. */
+  disabledSignals?: readonly string[];
 }
 
 export interface NeedContribution {
@@ -317,8 +321,14 @@ export function scoreOpportunity(
  * e-commerce, par exemple. C'est l'allocation qui choisira laquelle proposer.
  */
 export function scoreAll(input: ScoringInput): ScoredOpportunity[] {
+  const disabledTypes = new Set<string>(input.disabledTypes ?? []);
+  const disabledSignals = new Set(input.disabledSignals ?? []);
+  const effective: ScoringInput = disabledSignals.size > 0
+    ? { ...input, signals: input.signals.filter((s) => !disabledSignals.has(s.signalType)) }
+    : input;
   return OPPORTUNITY_RULES
-    .map((rule) => scoreOpportunity(rule, input))
-    .filter((o): o is ScoredOpportunity => o !== null)
+    .filter((rule) => !disabledTypes.has(rule.type))
+    .map((rule) => scoreOpportunity(rule, effective))
+    .filter((scored): scored is ScoredOpportunity => scored !== null)
     .sort((a, b) => b.baseScore - a.baseScore);
 }

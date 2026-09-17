@@ -138,7 +138,7 @@ describe('enrichissement : le payant en dernier recours', () => {
   });
   it('la chaîne s’arrête dès que plus rien ne manque, et ne compte que le payant utilisé', async () => {
     const costs: unknown[] = [];
-    const db = { from: () => ({ insert: async (row: unknown) => { costs.push(row); return { error: null }; } }) } as never;
+    const db = { rpc: async () => ({ data: true, error: null }), from: () => ({ insert: async (row: unknown) => { costs.push(row); return { error: null }; } }) } as never;
     const free: ContactEnrichmentProvider = { id: 'free', paid: false, costCents: 0, resolve: async () => ({ provider: 'free', costCents: 0, creditsUsed: 0, found: [], resolved: { contacts: [], bestPhone: '+33100000000', bestEmail: null, contactForm: null, contactabilityScore: 50, readiness: {} as never } }) };
     const paid: ContactEnrichmentProvider = { id: 'paid', paid: true, costCents: 40, resolve: async () => ({ provider: 'paid', costCents: 40, creditsUsed: 1, found: [], resolved: { contacts: [], bestPhone: '+33100000000', bestEmail: 'a@b.fr', contactForm: null, contactabilityScore: 90, readiness: {} as never } }) };
     const closed = await runEnrichmentChain(db, { companyId: 'c', domain: null, missing: ['phone', 'email'], opportunityQualified: true, opportunityScore: 50, userDemand: true }, { providers: [free, paid] });

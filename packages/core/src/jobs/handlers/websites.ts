@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { createCompaniesFromDomains } from '../../ingestion/domain-to-company';
 import { scanDueDomains } from '../../enrichment/domain-scanner';
 import { auditPerformance } from '../../enrichment/performance-audit';
+import { isEnabled, SKIPPED_BY_FLAG } from '../../ops/flags';
 import { resolveWebsites } from '../../enrichment/website-resolver';
 import { WebsiteFetcher } from '../../enrichment/fetcher';
 import type { JobHandler } from '../types';
@@ -148,6 +149,7 @@ export const auditPerformanceHandler: JobHandler<z.infer<typeof auditPayload>> =
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
+    if (!(await isEnabled(db, 'enable_performance_audit'))) return SKIPPED_BY_FLAG('enable_performance_audit');
     let limit = payload.limit;
     if (limit === undefined) {
       const { data } = await db.rpc('engine_setting_int', { p_key: 'performance_audits_per_night', p_default: 200 });

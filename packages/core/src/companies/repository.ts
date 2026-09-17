@@ -469,3 +469,30 @@ export async function getPipelineHealth(db: Db): Promise<PipelineHealth | null> 
   if (error || !data) return null;
   return data as unknown as PipelineHealth;
 }
+
+export interface SuccessMetrics {
+  companies: { total: number; with_phone: number; with_email: number; with_phone_and_email: number; phone_pct: number | null; email_pct: number | null; both_pct: number | null };
+  stock: { qualified: number; phone_ready: number; outreach_ready: number };
+  last_24h: { qualified: number; phone_ready: number; outreach_ready: number };
+  by_type: Record<string, number>;
+  by_source: Record<string, number>;
+  supply_demand: {
+    daily_supply_phone_ready: number; daily_supply_outreach_ready: number; free_users: number; premium_users: number;
+    daily_demand: number; supply_demand_ratio: number | null;
+    by_service: Record<string, { stock: number; daily_demand: number; ratio: number | null }>;
+  };
+}
+
+/** Les critères de succès de la spec et l'offre face à la demande, en un appel. */
+export async function getSuccessMetrics(db: Db): Promise<SuccessMetrics | null> {
+  const { data, error } = await db.rpc('success_metrics');
+  if (error || !data) return null;
+  return data as unknown as SuccessMetrics;
+}
+
+/** Le modèle logique d'une entreprise : tout ce que les tables en savent, en un document. */
+export async function getCompanyGraph(db: Db, companyId: string): Promise<Record<string, unknown> | null> {
+  const { data, error } = await db.rpc('company_graph', { p_company_id: companyId });
+  if (error || !data) return null;
+  return data as Record<string, unknown>;
+}

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ingestAssociations } from '../../ingestion/associations';
 import { ingestPermits } from '../../ingestion/permits';
 import type { JobHandler } from '../types';
+import { isEnabled, SKIPPED_BY_FLAG } from '../../ops/flags';
 
 const joafePayload = z.object({
   limit: z.number().int().min(1).max(5000).default(500),
@@ -16,6 +17,7 @@ export const ingestJoafeHandler: JobHandler<z.infer<typeof joafePayload>> = {
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
+    if (!(await isEnabled(db, 'enable_joafe'))) return SKIPPED_BY_FLAG('enable_joafe');
     const report = await ingestAssociations(db, { limit: payload.limit, ...(payload.since ? { since: payload.since } : {}), logger, ...(signal ? { signal } : {}) });
     return { processed: report.fetched, succeeded: report.eventsCreated, failed: report.errors, metadata: { ...report } };
   },
@@ -34,6 +36,7 @@ export const ingestSitadelHandler: JobHandler<z.infer<typeof sitadelPayload>> = 
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
+    if (!(await isEnabled(db, 'enable_sitadel'))) return SKIPPED_BY_FLAG('enable_sitadel');
     const report = await ingestPermits(db, { limit: payload.limit, ...(payload.since ? { since: payload.since } : {}), logger, ...(signal ? { signal } : {}) });
     return { processed: report.fetched, succeeded: report.eventsCreated, failed: report.errors, metadata: { ...report } };
   },

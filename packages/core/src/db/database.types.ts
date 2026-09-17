@@ -2397,6 +2397,9 @@ export type Database = {
       prune_domain_changes: { Args: never; Returns: number }
       prune_engine_noise: { Args: never; Returns: Json }
       pipeline_health: { Args: never; Returns: Json }
+      success_metrics: { Args: never; Returns: Json }
+      company_graph: { Args: { p_company_id: string }; Returns: Json }
+      engine_flag: { Args: { p_key: string; p_default: boolean }; Returns: boolean }
       match_company_to_sirene_fuzzy: {
         Args: { p_company_id: string; p_min_similarity?: number }
         Returns: { siret: string; siren: string; naf_code: string | null; creation_date: string | null; is_head_office: boolean; similarity: number; candidates: number }[]

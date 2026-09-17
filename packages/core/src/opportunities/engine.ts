@@ -4,6 +4,10 @@ import type { Logger } from '../logger';
 import { contactReadiness, type Readiness } from '../contacts/readiness';
 import type { OpportunityType } from '../domain/types';
 import { scoreAll, type ScoringSignal, type ScoredOpportunity, type ScoringInput } from './scoring';
+import { isEnabled } from '../ops/flags';
+
+/** Les signaux de la famille performance : coupés d'un bloc par leur drapeau. */
+export const PERFORMANCE_SIGNALS = ['slow_ttfb', 'heavy_page', 'heavy_scripts', 'large_images', 'render_blocking_scripts', 'unstable_website'];
 
 /**
  * Moteur d'opportunités.
@@ -187,6 +191,15 @@ export async function runOpportunityEngine(
       for (const d of domains ?? []) domainStatus.set(d.domain, d.status);
     }
 
+    // Les drapeaux, lus une fois par lot : une règle coupée ne produit plus,
+    // les signaux d'une famille coupée ne pèsent plus.
+    const [seoOn, perfOn, ecomOn] = await Promise.all([
+      isEnabled(db, 'enable_seo_opportunities'), isEnabled(db, 'enable_performance_opportunities'), isEnabled(db, 'enable_ecommerce_v2'),
+    ]);
+    const flagged = {
+      disabledTypes: [...(seoOn ? [] : ['seo' as const]), ...(ecomOn ? [] : ['ecommerce' as const])],
+      disabledSignals: perfOn ? [] : PERFORMANCE_SIGNALS,
+    };
     const [signalsResult, existingResult, consumedResult] = await Promise.all([
       db
         .from('signals')
@@ -277,6 +290,7 @@ export async function runOpportunityEngine(
 
       const scoredTypes = new Set<OpportunityType>();
       const scored = scoreAll({
+        ...flagged,
         signals,
         identityConfidence: Number(company.identity_confidence),
         // Un domaine jamais scanné n'est pas un site constaté : on ne lui

@@ -5,6 +5,7 @@ import { importAfnicDaily } from '../../sources/afnic/daily';
 import { resolveBodaccContacts } from '../../ingestion/bodacc-contacts';
 import { resolveIdentityLocally } from '../../ingestion/identity-local';
 import { checkHealth } from '../../ops/health';
+import { isEnabled, SKIPPED_BY_FLAG } from '../../ops/flags';
 
 const planPayload = z.object({ perNight: z.number().int().min(1).max(200).optional() });
 
@@ -15,6 +16,7 @@ export const planDiscoveryHandler: JobHandler<z.infer<typeof planPayload>> = {
   defaultPriority: 72,
 
   async run(payload, { db, logger }) {
+    if (!(await isEnabled(db, 'enable_osm_scheduler'))) return SKIPPED_BY_FLAG('enable_osm_scheduler');
     const report = await planDiscovery(db, { ...(payload.perNight ? { perNight: payload.perNight } : {}), logger });
     return { processed: report.due, succeeded: report.planned, failed: 0, metadata: { areas: report.areas } };
   },
@@ -31,6 +33,7 @@ export const importAfnicDailyHandler: JobHandler<z.infer<typeof afnicPayload>> =
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
+    if (!(await isEnabled(db, 'enable_afnic_daily'))) return SKIPPED_BY_FLAG('enable_afnic_daily');
     const report = await importAfnicDaily(db, { lookbackDays: payload.lookbackDays, logger, signal });
     return {
       processed: report.read,
@@ -55,6 +58,7 @@ export const resolveBodaccContactsHandler: JobHandler<z.infer<typeof bodaccPaylo
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
+    if (!(await isEnabled(db, 'enable_bodacc_contact_resolution'))) return SKIPPED_BY_FLAG('enable_bodacc_contact_resolution');
     const report = await resolveBodaccContacts(db, { limit: payload.limit, minScore: payload.minScore, dryRun: payload.dryRun, logger, signal });
     return {
       processed: report.examined,

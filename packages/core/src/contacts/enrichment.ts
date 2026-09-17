@@ -3,6 +3,7 @@ import type { Logger } from '../logger';
 import type { ContactCandidate } from './types';
 import { resolveCompanyContacts, type ResolvedContacts } from './resolver';
 import { rescanDomain } from '../enrichment/domain-scanner';
+import { isEnabled } from '../ops/flags';
 
 /**
  * L'enrichissement des contacts, du gratuit vers le payant.
@@ -143,6 +144,7 @@ export async function runEnrichmentChain(
   for (const provider of providers) {
     if (missing.length === 0) break;
     if (provider.paid) {
+      if (!(await isEnabled(db, 'enable_commercial_enrichment'))) { report.steps.push({ provider: provider.id, costCents: 0, skipped: 'flag_off', stillMissing: missing }); continue; }
       const allowed = shouldUseCommercialProvider({
         qualified: context.opportunityQualified ?? false,
         score: context.opportunityScore ?? null,
