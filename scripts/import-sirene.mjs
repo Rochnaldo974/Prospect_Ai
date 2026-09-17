@@ -3,7 +3,11 @@
  *
  *   unzip -p StockEtablissement.zip | pnpm import:sirene [--limit n] [--prod]
  *   unzip -p StockUniteLegale.zip | pnpm import:sirene --units [--limit n] [--prod]
- *   pnpm import:sirene fichier.csv [--limit n] [--prod]
+ *   pnpm import:sirene fichier.csv [--limit n] [--prod] [--batch 250]
+ *
+ * Sur la base hébergée, des lots plus petits (250) passent sous le délai
+ * d'exécution de l'API ; l'import est idempotent, on peut le rejouer pour
+ * combler les lots refusés.
  *
  * Ne garde que les établissements actifs, diffusibles, des métiers ciblés.
  * Sans licence à négocier : licence ouverte, fichier mensuel.
@@ -34,6 +38,7 @@ const lines = createInterface({ input, crlfDelay: Infinity });
 const t0 = Date.now();
 const report = await (args.includes('--units') ? importSireneUnits : importSireneReference)(getServiceClient(), lines, {
   logger,
+  batchSize: Number(value('batch', args.includes('--prod') ? 250 : 1000)),
   ...(value('limit', null) ? { limit: Number(value('limit', null)) } : {}),
 });
 console.log(`SIRENE : ${report.read} lignes lues, ${report.selected} retenues, ${report.written} écrites, ${report.errors} erreurs, en ${((Date.now() - t0) / 60000).toFixed(1)} min`);
