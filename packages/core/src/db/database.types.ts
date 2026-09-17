@@ -533,6 +533,36 @@ export type Database = {
         }
         Relationships: []
       }
+      engine_alerts: {
+        Row: {
+          created_at: string
+          details: Json
+          id: number
+          kind: string
+          message: string
+          resolved_at: string | null
+          severity: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: never
+          kind: string
+          message: string
+          resolved_at?: string | null
+          severity: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: never
+          kind?: string
+          message?: string
+          resolved_at?: string | null
+          severity?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           active_signal_count: number
@@ -1216,6 +1246,8 @@ export type Database = {
           tls_valid: boolean | null
           tls_valid_to: string | null
           unchanged_streak: number
+          seo_facts: Json | null
+          commerce_facts: Json | null
           ttfb_ms: number | null
           updated_at: string
         }
@@ -1267,6 +1299,8 @@ export type Database = {
           tls_valid?: boolean | null
           tls_valid_to?: string | null
           unchanged_streak?: number
+          seo_facts?: Json | null
+          commerce_facts?: Json | null
           ttfb_ms?: number | null
           updated_at?: string
         }
@@ -1318,6 +1352,8 @@ export type Database = {
           tls_valid?: boolean | null
           tls_valid_to?: string | null
           unchanged_streak?: number
+          seo_facts?: Json | null
+          commerce_facts?: Json | null
           ttfb_ms?: number | null
           updated_at?: string
         }
@@ -1485,6 +1521,7 @@ export type Database = {
           timing_score: number
           trigger_event_id: string | null
           phone_ready: boolean
+          fingerprint: string | null
           outreach_ready: boolean
           updated_at: string
         }
@@ -1511,6 +1548,7 @@ export type Database = {
           timing_score: number
           trigger_event_id?: string | null
           phone_ready?: boolean
+          fingerprint?: string | null
           outreach_ready?: boolean
           updated_at?: string
         }
@@ -1537,6 +1575,7 @@ export type Database = {
           timing_score?: number
           trigger_event_id?: string | null
           phone_ready?: boolean
+          fingerprint?: string | null
           outreach_ready?: boolean
           updated_at?: string
         }
@@ -2170,6 +2209,10 @@ export type Database = {
       prune_event_keys: { Args: { older_than?: string }; Returns: number }
       prune_opportunity_rejections: { Args: { older_than?: string }; Returns: number }
       engine_metrics: { Args: { p_day?: string }; Returns: Json }
+      match_company_to_sirene_fuzzy: {
+        Args: { p_company_id: string; p_min_similarity?: number }
+        Returns: { siret: string; siren: string; naf_code: string | null; creation_date: string | null; is_head_office: boolean; similarity: number; candidates: number }[]
+      }
       match_company_to_sirene: {
         Args: { p_company_id: string }
         Returns: { siret: string; siren: string; naf_code: string | null; creation_date: string | null; is_head_office: boolean; candidates: number }[]

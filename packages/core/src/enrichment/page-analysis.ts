@@ -47,6 +47,77 @@ export interface PageAnalysis {
   placeholder: boolean;
   /** Hash du texte visible, pour détecter un changement réel de contenu. */
   contentHash: string;
+  /** Ce qu'un moteur de recherche lit : présent ou absent, jamais une note. */
+  seo: SeoFacts;
+  /** Ce qu'un client verrait s'il voulait acheter. */
+  commerce: CommerceFacts;
+}
+
+export interface SeoFacts {
+  hasTitle: boolean;
+  titleLength: number;
+  hasMetaDescription: boolean;
+  h1Count: number;
+  hasCanonical: boolean;
+  hasJsonLd: boolean;
+  hasLang: boolean;
+  imagesTotal: number;
+  imagesWithoutAlt: number;
+  wordCount: number;
+}
+
+export interface CommerceFacts {
+  /** Plateforme reconnue : shopify, woocommerce, prestashop, magento, wix-stores… */
+  platform: string | null;
+  /** Une liste de produits avec des prix : un catalogue, même sans vente. */
+  catalog: boolean;
+  cart: boolean;
+  checkout: boolean;
+}
+
+const PRICE_PATTERN = /\d{1,4}(?:[.,]\d{2})?\s?(?:€|euros?\b)/gi;
+const CATALOG_PATTERN = /nos produits|catalogue|boutique|produit|collection|tarifs?|prix/i;
+const CHECKOUT_PATTERN = /checkout|paiement s[ée]curis[ée]|commander|payer|stripe|paypal|payplug/i;
+const COMMERCE_PLATFORMS: [RegExp, string][] = [
+  [/cdn\.shopify\.com|shopify/i, 'shopify'],
+  [/woocommerce/i, 'woocommerce'],
+  [/prestashop/i, 'prestashop'],
+  [/magento|mage\//i, 'magento'],
+  [/wix-stores|wixstores/i, 'wix-stores'],
+  [/bigcommerce/i, 'bigcommerce'],
+  [/wizishop/i, 'wizishop'],
+];
+
+/** Ce qu'un moteur de recherche lit dans la page, compté et non noté. */
+export function readSeoFacts(source: string, text: string, title: string | null, metaDescription: string | null): SeoFacts {
+  const images = source.match(/<img\b[^>]*>/gi) ?? [];
+  const withoutAlt = images.filter((tag) => !/\salt\s*=\s*["'][^"']+["']/i.test(tag)).length;
+  return {
+    hasTitle: (title ?? '').trim().length > 0,
+    titleLength: (title ?? '').trim().length,
+    hasMetaDescription: (metaDescription ?? '').trim().length > 0,
+    h1Count: (source.match(/<h1\b/gi) ?? []).length,
+    hasCanonical: /<link[^>]+rel=["']canonical["']/i.test(source),
+    hasJsonLd: /<script[^>]+type=["']application\/ld\+json["']/i.test(source),
+    hasLang: /<html[^>]+\blang\s*=/i.test(source),
+    imagesTotal: images.length,
+    imagesWithoutAlt: withoutAlt,
+    wordCount: text.split(/\s+/).filter((w) => w.length > 1).length,
+  };
+}
+
+/** Ce qu'un client verrait s'il voulait acheter : plateforme, catalogue, panier, paiement. */
+export function readCommerceFacts(source: string, text: string): CommerceFacts {
+  const platform = COMMERCE_PLATFORMS.find(([re]) => re.test(source))?.[1] ?? null;
+  const prices = (text.match(PRICE_PATTERN) ?? []).length;
+  const cart = ECOMMERCE_PATTERNS.test(source);
+  return {
+    platform,
+    // Un catalogue : plusieurs prix affichés et un vocabulaire de produits.
+    catalog: prices >= 3 && CATALOG_PATTERN.test(text),
+    cart,
+    checkout: cart && CHECKOUT_PATTERN.test(source),
+  };
 }
 
 /** Hash stable et rapide, suffisant pour comparer deux versions d'une page. */
@@ -260,6 +331,8 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
         : null,
     placeholder: text.length < 2500 && PLACEHOLDER_PATTERNS.some((p) => p.test(text)),
     contentHash: hashText(text),
+    seo: readSeoFacts(source, text, title, metaDescription),
+    commerce: readCommerceFacts(source, text),
   };
 }
 

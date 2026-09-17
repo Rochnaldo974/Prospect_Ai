@@ -17,7 +17,7 @@ import { allocateDailyHandler } from './handlers/allocation';
 import { writeCardsHandler } from './handlers/writing';
 import { planScanningHandler } from './handlers/planning';
 import { backfillContactsHandler, pruneRejectionsHandler } from './handlers/contacts';
-import { importAfnicDailyHandler, planDiscoveryHandler, resolveBodaccContactsHandler, resolveIdentityLocalHandler } from './handlers/discovery';
+import { importAfnicDailyHandler, planDiscoveryHandler, resolveBodaccContactsHandler, resolveIdentityLocalHandler, checkHealthHandler } from './handlers/discovery';
 
 const HANDLERS: JobHandler<never>[] = [
   expireOpportunitiesHandler,
@@ -46,6 +46,7 @@ const HANDLERS: JobHandler<never>[] = [
   importAfnicDailyHandler,
   resolveBodaccContactsHandler,
   resolveIdentityLocalHandler,
+  checkHealthHandler,
 ] as JobHandler<never>[];
 
 const byType = new Map<string, JobHandler<never>>(HANDLERS.map((h) => [h.type, h]));

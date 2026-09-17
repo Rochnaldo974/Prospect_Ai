@@ -187,7 +187,7 @@ export async function runOpportunityEngine(
       for (const d of domains ?? []) domainStatus.set(d.domain, d.status);
     }
 
-    const [signalsResult, existingResult] = await Promise.all([
+    const [signalsResult, existingResult, consumedResult] = await Promise.all([
       db
         .from('signals')
         .select('id, company_id, signal_type, kind, category, strength, confidence, trigger_event_id, detected_at')
@@ -198,7 +198,17 @@ export async function runOpportunityEngine(
         .select('id, company_id, opportunity_type, base_score, status')
         .in('company_id', ids)
         .in('status', ['available', 'assigned']),
+      // Les empreintes consommées récemment : la même anomalie ne redevient
+      // pas une nouveauté le lendemain de son expiration.
+      db
+        .from('opportunities')
+        .select('company_id, fingerprint')
+        .in('company_id', ids)
+        .not('status', 'in', '(available,assigned)')
+        .not('fingerprint', 'is', null)
+        .gte('updated_at', new Date(Date.now() - 90 * 86_400_000).toISOString()),
     ]);
+    const recentFingerprints = new Set((consumedResult.data ?? []).map((r) => `${r.company_id}|${r.fingerprint}`));
 
     if (signalsResult.error) throw new Error(signalsResult.error.message);
     if (existingResult.error) throw new Error(existingResult.error.message);
@@ -256,7 +266,7 @@ export async function runOpportunityEngine(
     }
 
     const toInsert: Record<string, Json>[] = [];
-    const toUpdate: { id: string; scored: ScoredOpportunity; signalIds: string[]; readiness: Readiness }[] = [];
+    const toUpdate: { id: string; scored: ScoredOpportunity; signalIds: string[]; readiness: Readiness; fingerprint: string }[] = [];
     const toWithdraw: string[] = [];
 
     for (const company of batch) {
@@ -307,6 +317,11 @@ export async function runOpportunityEngine(
         const minBase = opportunity.triggerEventId === null ? gate.minDiagnosticBaseScore : gate.minBaseScore;
         if (opportunity.baseScore < minBase) { reject('LOW_SCORE', company.id, opportunity.type, opportunity.baseScore); continue; }
 
+        const fingerprint = opportunityFingerprint(company.id, opportunity);
+        if (!existing.has(opportunity.type) && recentFingerprints.has(`${company.id}|${fingerprint}`)) {
+          reject('STALE_SIGNAL', company.id, opportunity.type, opportunity.baseScore); continue;
+        }
+
         report.byType[opportunity.type] = (report.byType[opportunity.type] ?? 0) + 1;
 
         const signalIds = opportunity.signalTypes
@@ -318,9 +333,9 @@ export async function runOpportunityEngine(
           // Une opportunité déjà attribuée ne bouge plus : le freelance
           // travaille dessus avec les informations qu'on lui a données.
           if (current.status === 'assigned') continue;
-          toUpdate.push({ id: current.id, scored: opportunity, signalIds, readiness });
+          toUpdate.push({ id: current.id, scored: opportunity, signalIds, readiness, fingerprint });
         } else {
-          toInsert.push(buildRow(company.id, opportunity, signalIds, version, gate, readiness));
+          toInsert.push({ ...buildRow(company.id, opportunity, signalIds, version, gate, readiness), fingerprint });
         }
       }
 
@@ -381,6 +396,7 @@ export async function runOpportunityEngine(
             algorithm_version: version,
             phone_ready: entry.readiness.phoneReady,
             outreach_ready: entry.readiness.outreachReady,
+            fingerprint: entry.fingerprint,
           })
           .eq('id', entry.id);
 
@@ -432,4 +448,26 @@ function buildRow(
     algorithm_version: version,
     expires_at: new Date(Date.now() + gate.opportunityTtlDays * 86_400_000).toISOString(),
   };
+}
+
+/**
+ * L'empreinte d'une opportunité : l'entreprise, le type, l'événement
+ * d'ancrage (ou « diagnostic »), les constats qui pèsent, et une fenêtre de
+ * temps — le mois de l'événement pour un fait daté, le trimestre pour un
+ * diagnostic. Mêmes faits, même empreinte ; nouvel événement, nouvelle
+ * empreinte.
+ */
+export function opportunityFingerprint(companyId: string, opportunity: ScoredOpportunity): string {
+  const breakdown = (opportunity.reason['need_breakdown'] as { signal: string; points: number }[] | undefined) ?? [];
+  const major = breakdown.filter((c) => c.points >= 20).map((c) => c.signal).sort().join(',');
+  const anchor = opportunity.triggerEventId ?? 'diagnostic';
+  const occurred = opportunity.reason['trigger_occurred_at'] as string | null | undefined;
+  const at = occurred ? new Date(occurred) : new Date();
+  const bucket = opportunity.triggerEventId
+    ? `${at.getUTCFullYear()}-${String(at.getUTCMonth() + 1).padStart(2, '0')}`
+    : `${at.getUTCFullYear()}-Q${Math.floor(at.getUTCMonth() / 3) + 1}`;
+  const raw = `${companyId}|${opportunity.type}|${anchor}|${major}|${bucket}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < raw.length; i += 1) h = Math.imul(h ^ raw.charCodeAt(i), 0x01000193);
+  return `${(h >>> 0).toString(36)}-${bucket}`;
 }

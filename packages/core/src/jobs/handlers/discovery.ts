@@ -4,6 +4,7 @@ import { planDiscovery } from '../../discovery/planner';
 import { importAfnicDaily } from '../../sources/afnic/daily';
 import { resolveBodaccContacts } from '../../ingestion/bodacc-contacts';
 import { resolveIdentityLocally } from '../../ingestion/identity-local';
+import { checkHealth } from '../../ops/health';
 
 const planPayload = z.object({ perNight: z.number().int().min(1).max(200).optional() });
 
@@ -84,5 +85,19 @@ export const resolveIdentityLocalHandler: JobHandler<z.infer<typeof identityPayl
       failed: report.errors,
       metadata: { ambiguous: report.ambiguous, unmatched: report.unmatched, dry_run: payload.dryRun },
     };
+  },
+};
+
+const healthPayload = z.object({});
+
+/** La santé du moteur, chaque heure : ce qui aurait dû tourner et n'a pas tourné. */
+export const checkHealthHandler: JobHandler<z.infer<typeof healthPayload>> = {
+  type: 'check_health',
+  schema: healthPayload,
+  defaultPriority: 30,
+
+  async run(_payload, { db, logger }) {
+    const { alerts, written } = await checkHealth(db, { logger });
+    return { processed: alerts.length, succeeded: written, failed: 0, metadata: { alerts: alerts.map((a) => a.kind) } };
   },
 };

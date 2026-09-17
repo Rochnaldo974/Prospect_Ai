@@ -441,3 +441,12 @@ export async function getQueueHealth(db: Db): Promise<{ pending: number; running
     oldestPendingAt: oldest.data?.created_at ?? null,
   };
 }
+
+export interface OpenAlert { id: number; kind: string; severity: string; message: string; created_at: string }
+
+/** Les alertes du moteur non résolues, les plus récentes d'abord. */
+export async function getOpenAlerts(db: Db, limit = 20): Promise<OpenAlert[]> {
+  const { data } = await db.from('engine_alerts').select('id, kind, severity, message, created_at')
+    .is('resolved_at', null).order('created_at', { ascending: false }).limit(limit);
+  return data ?? [];
+}

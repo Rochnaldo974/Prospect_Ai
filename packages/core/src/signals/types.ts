@@ -39,6 +39,8 @@ export interface DomainSnapshot {
   sirens_found: string[];
   last_checked_at: string | null;
   first_seen_at: string;
+  seo_facts?: unknown;
+  commerce_facts?: unknown;
 }
 
 export interface ContextEvent {

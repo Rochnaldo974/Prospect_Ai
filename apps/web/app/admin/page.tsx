@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getAdminStats, getEngineMetrics, getInventory, getQueueHealth, getSourcePerformance, getTypePerformance, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
+import { getAdminStats, getEngineMetrics, getInventory, getOpenAlerts, getQueueHealth, getSourcePerformance, getTypePerformance, OPPORTUNITY_TYPE_LABELS } from '@prospect/core';
 import { getAdminDb } from '@/lib/supabase/admin';
 import { Section, StatCard } from '@/components/admin/primitives';
 
@@ -11,8 +11,8 @@ const m = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
 
 export default async function AdminOverviewPage() {
   const db = await getAdminDb();
-  const [stats, inventory, metrics, sources, types, queue] = await Promise.all([
-    getAdminStats(db), getInventory(db), getEngineMetrics(db), getSourcePerformance(db), getTypePerformance(db), getQueueHealth(db),
+  const [stats, inventory, metrics, sources, types, queue, alerts] = await Promise.all([
+    getAdminStats(db), getInventory(db), getEngineMetrics(db), getSourcePerformance(db), getTypePerformance(db), getQueueHealth(db), getOpenAlerts(db),
   ]);
 
   if (!stats) {
@@ -30,6 +30,21 @@ export default async function AdminOverviewPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Vue d&apos;ensemble</h1>
         <p className="text-sm text-muted-foreground">État du moteur en un écran.</p>
       </div>
+
+      {alerts.length > 0 ? (
+        <section className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+          <h2 className="mb-2 text-sm font-medium">Alertes ouvertes</h2>
+          <ul className="space-y-1 text-sm">
+            {alerts.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-baseline gap-2">
+                <span className={a.severity === 'critical' ? 'font-medium text-destructive' : 'font-medium'}>{a.severity === 'critical' ? 'Critique' : a.severity === 'warning' ? 'Attention' : 'Info'}</span>
+                <span>{a.message}</span>
+                <span className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString('fr-FR')}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section>
         <h2 className="mb-2 text-sm font-medium text-muted-foreground">Collecte</h2>

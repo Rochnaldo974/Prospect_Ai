@@ -15,3 +15,4 @@ export * from './opportunities';
 export * from './allocation';
 export * from './contacts';
 export * from './discovery';
+export * from './ops';

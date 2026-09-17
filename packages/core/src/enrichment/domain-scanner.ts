@@ -418,6 +418,8 @@ async function persistScan(
       check_error: scan.fetch.error,
       check_attempts: down ? previousFailures + 1 : 0,
       unchanged_streak: streak,
+      seo_facts: (analysis?.seo ?? null) as unknown as Json,
+      commerce_facts: (analysis?.commerce ?? null) as unknown as Json,
       tls_valid: scan.tls?.valid ?? null,
       tls_reason: scan.tls?.reason ?? null,
       tls_valid_to: scan.tls?.validTo?.slice(0, 10) ?? null,

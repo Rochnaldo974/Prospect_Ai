@@ -150,12 +150,48 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
     type: 'ecommerce',
     label: 'E-commerce',
     requiresWebsite: true,
-    minNeed: 45,
+    minNeed: 50,
+    // Sans fait daté : un catalogue affiché sans panier, un commerce de
+    // détail sans vente en ligne, ou une boutique sur une plateforme datée.
+    // Jamais un restaurant ou un service sur la seule foi de son NAF.
+    diagnosticMinFacts: 2,
+    diagnosticMinNeed: 55,
+    diagnosticRequires: ['catalog_without_cart', 'retail_without_ecommerce', 'obsolete_ecommerce_stack'],
     needWeights: {
-      retail_without_ecommerce: 60,
+      catalog_without_cart: 55,
+      retail_without_ecommerce: 45,
+      obsolete_ecommerce_stack: 50,
       dated_platform: 20,
-      active_business: 15,
+      not_responsive: 20,
+      active_business: 10,
       bodacc_cession: 15,
+    },
+    blockedBy: ['shared_domain'],
+  },
+  {
+    type: 'seo',
+    label: 'SEO / visibilité',
+    requiresWebsite: true,
+    minNeed: 45,
+    // Pas de lead SEO pour une description absente : au moins deux
+    // manques indépendants, dont un qui compte, et un besoin net.
+    diagnosticMinFacts: 2,
+    diagnosticMinNeed: 55,
+    diagnosticSeverity: {
+      critical: ['missing_title', 'not_responsive', 'thin_content'],
+      major: ['missing_meta_description', 'missing_h1', 'no_structured_data', 'images_without_alt', 'slow_website', 'no_ssl'],
+    },
+    needWeights: {
+      missing_title: 40,
+      missing_meta_description: 25,
+      missing_h1: 25,
+      no_structured_data: 15,
+      images_without_alt: 15,
+      thin_content: 25,
+      not_responsive: 25,
+      slow_website: 20,
+      no_ssl: 15,
+      no_canonical: 5,
     },
     blockedBy: ['shared_domain'],
   },
