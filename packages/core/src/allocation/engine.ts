@@ -1,9 +1,10 @@
 import type { Db } from '../db/client';
 import type { Logger } from '../logger';
 import type { OpportunityType } from '../domain/types';
+import type { Json } from '../db/database.types';
 import {
-  isEligible, matchScore,
-  type OpportunityCandidate, type MatchingPreferences,
+  isEligible, explainMatch,
+  type OpportunityCandidate, type MatchingPreferences, type MatchExplanation,
 } from './fit';
 import { defaultVerifier, type OpportunityVerifier } from './verify';
 
@@ -43,6 +44,8 @@ export interface AllocationReport {
   rejectedByVerification: number;
   /** Dossiers échangés pour qu'un lot compte au moins une adresse e-mail. */
   swappedForEmail: number;
+  /** Dossiers sautés une première fois pour garder le lot varié. */
+  passedOverForDiversity: number;
   errors: number;
 }
 
@@ -76,6 +79,60 @@ interface CandidateRow extends OpportunityCandidate {
 /** Combien de dossiers d'un même thème dans un lot : au-delà, la journée se répète. */
 const MAX_PER_THEME = 2;
 
+/** Les plafonds de variété d'un lot : thème, type d'opportunité, secteur. */
+export interface DiversityCaps { perTheme: number; perType: number; perIndustry: number }
+
+/** Le secteur au sens du lot : les deux premiers chiffres du NAF, « 56 » pour toute la restauration. */
+export const industryFamily = (code: string | null): string => (code ?? '??').slice(0, 2);
+
+/**
+ * Un dossier de plus tient-il dans le lot sans le rendre répétitif ?
+ *
+ * Trois compteurs, trois plafonds. On descend le classement en refusant ce
+ * qui dépasse ; si le stock ne permet pas la variété, l'appelant complète
+ * ensuite sans la contrainte plutôt que de livrer moins.
+ */
+export function withinCaps(
+  candidate: { theme: string; opportunityType: string; industryCode: string | null },
+  counts: { theme: Map<string, number>; type: Map<string, number>; industry: Map<string, number> },
+  caps: DiversityCaps,
+): boolean {
+  // Un secteur inconnu n'est pas « le même secteur » : deux entreprises sans
+  // code NAF n'ont rien en commun qu'on puisse répéter.
+  const industryOk = candidate.industryCode === null
+    || (counts.industry.get(industryFamily(candidate.industryCode)) ?? 0) < caps.perIndustry;
+  return (counts.theme.get(candidate.theme) ?? 0) < caps.perTheme
+    && (counts.type.get(candidate.opportunityType) ?? 0) < caps.perType
+    && industryOk;
+}
+
+/** Les plafonds, puis le double, puis plus de plafond. */
+export const RELAXATION_STEPS = [1, 2, Number.POSITIVE_INFINITY] as const;
+
+export function relaxCaps(caps: DiversityCaps, factor: number): DiversityCaps {
+  return { perTheme: caps.perTheme * factor, perType: caps.perType * factor, perIndustry: caps.perIndustry * factor };
+}
+
+function uncountIn(
+  candidate: { theme: string; opportunityType: string; industryCode: string | null },
+  counts: { theme: Map<string, number>; type: Map<string, number>; industry: Map<string, number> },
+): void {
+  counts.theme.set(candidate.theme, Math.max(0, (counts.theme.get(candidate.theme) ?? 0) - 1));
+  counts.type.set(candidate.opportunityType, Math.max(0, (counts.type.get(candidate.opportunityType) ?? 0) - 1));
+  const family = industryFamily(candidate.industryCode);
+  counts.industry.set(family, Math.max(0, (counts.industry.get(family) ?? 0) - 1));
+}
+
+function countIn(
+  candidate: { theme: string; opportunityType: string; industryCode: string | null },
+  counts: { theme: Map<string, number>; type: Map<string, number>; industry: Map<string, number> },
+): void {
+  counts.theme.set(candidate.theme, (counts.theme.get(candidate.theme) ?? 0) + 1);
+  counts.type.set(candidate.opportunityType, (counts.type.get(candidate.opportunityType) ?? 0) + 1);
+  const family = industryFamily(candidate.industryCode);
+  counts.industry.set(family, (counts.industry.get(family) ?? 0) + 1);
+}
+
 /**
  * Combien de dossiers avec e-mail un lot doit compter, quand le stock le
  * permet : deux sur cinq, un sur moins. L'outil vend l'e-mail personnalisé ;
@@ -96,7 +153,7 @@ export async function runAllocation(
   const report: AllocationReport = {
     usersExamined: 0, usersServed: 0, usersAlreadyServed: 0,
     assignmentsCreated: 0, controlsPlaced: 0, usersUnderserved: 0,
-    rejectedByGuards: 0, rejectedByVerification: 0, swappedForEmail: 0, errors: 0,
+    rejectedByGuards: 0, rejectedByVerification: 0, swappedForEmail: 0, passedOverForDiversity: 0, errors: 0,
   };
 
   const log = options.logger;
@@ -176,26 +233,52 @@ export async function runAllocation(
  * revient est trié par score ; Node applique l'adéquation fine et la
  * vérification. Le plafond se règle en base (allocation_candidates_per_user).
  */
+interface RankedEntry { candidate: CandidateRow; score: number; explanation: MatchExplanation }
+
+async function loadDiversityCaps(db: Db): Promise<DiversityCaps> {
+  const [{ data: perType }, { data: perIndustry }] = await Promise.all([
+    db.rpc('engine_setting_int', { p_key: 'allocation_max_per_type', p_default: 3 }),
+    db.rpc('engine_setting_int', { p_key: 'allocation_max_per_industry', p_default: 2 }),
+  ]);
+  return { perTheme: MAX_PER_THEME, perType: perType ?? 3, perIndustry: perIndustry ?? 2 };
+}
+
 async function loadCandidatesFor(
   db: Db,
   profile: { id: string; plan: 'free' | 'premium' },
   preferences: MatchingPreferences,
 ): Promise<CandidateRow[]> {
   const { data: perUser } = await db.rpc('engine_setting_int', { p_key: 'allocation_candidates_per_user', p_default: 300 });
-  const { data, error } = await db.rpc('select_allocation_candidates', {
-    p_user_id: profile.id,
-    p_services: preferences.services as OpportunityType[],
-    p_location_mode: preferences.locationMode,
-    p_city: preferences.city,
-    p_region: preferences.region,
-    p_excluded_industries: preferences.excludedIndustries,
-    p_require_phone: profile.plan === 'free',
-    p_limit: perUser ?? 300,
-  });
-  if (error) throw new Error(`loadCandidatesFor : ${error.message}`);
+  const total = perUser ?? 300;
 
-  return (data ?? []).map((row) => {
-    const reason = row.reason_data as { trigger?: string | null; need_breakdown?: { signal: string; points: number }[] } | null;
+  // Un appel par service coché, à part égale : trié par score global, le
+  // stock d'un seul type — les refontes, toujours mieux notées — remplirait
+  // les trois cents places et les créations n'arriveraient jamais jusqu'au
+  // lot. Sans service coché, un seul appel, tous types confondus.
+  const services: (OpportunityType[])[] = preferences.services.length > 1
+    ? preferences.services.map((s) => [s as OpportunityType])
+    : [preferences.services as OpportunityType[]];
+  const share = Math.max(20, Math.ceil(total / services.length));
+
+  const rows: Awaited<ReturnType<typeof selectFor>> = [];
+  const selectFor = async (list: OpportunityType[]) => {
+    const { data, error } = await db.rpc('select_allocation_candidates', {
+      p_user_id: profile.id,
+      p_services: list,
+      p_location_mode: preferences.locationMode,
+      p_city: preferences.city,
+      p_region: preferences.region,
+      p_excluded_industries: preferences.excludedIndustries,
+      p_require_phone: profile.plan === 'free',
+      p_limit: share,
+    });
+    if (error) throw new Error(`loadCandidatesFor : ${error.message}`);
+    return data ?? [];
+  };
+  for (const list of services) rows.push(...(await selectFor(list)));
+
+  return rows.map((row) => {
+    const reason = row.reason_data as { trigger?: string | null; trigger_occurred_at?: string | null; need_breakdown?: { signal: string; points: number }[] } | null;
     const strongest = [...(reason?.need_breakdown ?? [])].sort((a, b) => b.points - a.points)[0]?.signal;
     return {
       opportunityId: row.opportunity_id,
@@ -209,6 +292,10 @@ async function loadCandidatesFor(
       city: row.city,
       region: row.region,
       industryCode: row.industry_code,
+      cms: row.cms,
+      triggerType: reason?.trigger ?? null,
+      triggerOccurredAt: reason?.trigger_occurred_at ?? null,
+      createdAt: row.created_at,
     };
   });
 }
@@ -286,14 +373,18 @@ async function allocateFor(
 
   const limit = profile.plan === 'free' ? 1 : profile.daily_opportunity_limit;
   const ranked = eligible
-    .map((c) => ({ candidate: c, score: matchScore(c, preferences) }))
+    .map((c) => {
+      const explanation = explainMatch(c, preferences);
+      return { candidate: c, score: explanation.match, explanation };
+    })
     .sort((a, b) => b.score - a.score);
+  const caps = await loadDiversityCaps(db);
 
   // Chaque dossier est vérifié avant d'être retenu : on descend le
   // classement jusqu'à en avoir assez qui tiennent. Un dossier écarté ici
   // n'est pas perdu pour le produit — le moteur l'a retiré du stock, et il
   // reviendra si les faits reviennent.
-  const holds = async (entry: { candidate: CandidateRow; score: number }): Promise<boolean> => {
+  const holds = async (entry: RankedEntry): Promise<boolean> => {
     if (verify === null) return true;
     const cached = verdicts.get(entry.candidate.opportunityId);
     if (cached !== undefined) return cached;
@@ -320,24 +411,29 @@ async function allocateFor(
   // le classement en limitant chaque thème ; si le stock ne permet pas la
   // variété, on complète ensuite sans la contrainte plutôt que de livrer
   // moins.
-  const chosen: { candidate: CandidateRow; score: number }[] = [];
-  const perTheme = new Map<string, number>();
-  const passedOver: { candidate: CandidateRow; score: number }[] = [];
-  let cursor = 0;
-  while (chosen.length < limit && cursor < ranked.length) {
-    const entry = ranked[cursor]!;
-    cursor += 1;
-    const count = perTheme.get(entry.candidate.theme) ?? 0;
-    if (count >= MAX_PER_THEME) { passedOver.push(entry); continue; }
-    if (await holds(entry)) {
-      chosen.push(entry);
-      perTheme.set(entry.candidate.theme, count + 1);
+  // Trois passes, de la plus exigeante à la plus souple : les plafonds tels
+  // quels, puis doublés, puis levés. Un stock étroit — un seul service coché,
+  // tous les dossiers dans la restauration — remplit quand même le lot, mais
+  // la variété est cherchée d'abord, pas abandonnée au premier refus.
+  const chosen: RankedEntry[] = [];
+  const counts = { theme: new Map<string, number>(), type: new Map<string, number>(), industry: new Map<string, number>() };
+  const inBatchIds = new Set<string>();
+  for (const factor of RELAXATION_STEPS) {
+    const step = relaxCaps(caps, factor);
+    for (const entry of ranked) {
+      if (chosen.length >= limit) break;
+      if (inBatchIds.has(entry.candidate.opportunityId)) continue;
+      if (verdicts.get(entry.candidate.opportunityId) === false) continue;
+      if (!withinCaps(entry.candidate, counts, step)) { if (factor === 1) report.passedOverForDiversity += 1; continue; }
+      if (await holds(entry)) {
+        chosen.push(entry);
+        inBatchIds.add(entry.candidate.opportunityId);
+        countIn(entry.candidate, counts);
+      }
     }
-  }
-  for (const entry of passedOver) {
     if (chosen.length >= limit) break;
-    if (await holds(entry)) chosen.push(entry);
   }
+
 
   // Le tirage de contrôle remplace une place, il n'en ajoute pas : le
   // freelance reçoit toujours le même nombre d'opportunités, dont une qui ne
@@ -346,7 +442,7 @@ async function allocateFor(
   // comme les autres : le hasard ne dispense pas de la vérité.
   let controlIndex: number | null = null;
   if (chosen.length === limit && limit >= CONTROL_RATE) {
-    const pool = ranked.slice(cursor);
+    const pool = ranked.filter((e) => !inBatchIds.has(e.candidate.opportunityId) && verdicts.get(e.candidate.opportunityId) !== false);
     for (let attempt = 0; attempt < 3 && pool.length > 0; attempt += 1) {
       const at = Math.floor(random() * pool.length);
       const drawn = pool.splice(at, 1)[0]!;
@@ -371,6 +467,9 @@ async function allocateFor(
     const spare = ranked.filter((entry) => entry.candidate.hasEmail
       && !inBatch.has(entry.candidate.opportunityId)
       && verdicts.get(entry.candidate.opportunityId) !== false);
+    // L'échange respecte la variété, plafonds doublés : gagner une adresse
+    // ne doit pas rendre au lot le quatrième restaurant qu'on venait d'écarter.
+    const swapCaps = relaxCaps(caps, 2);
     for (const entry of spare) {
       if (emailed >= floor) break;
       let seat = -1;
@@ -378,8 +477,11 @@ async function allocateFor(
         if (i !== controlIndex && !chosen[i]!.candidate.hasEmail) { seat = i; break; }
       }
       if (seat < 0) break;
-      if (!(await holds(entry))) continue;
+      const leaving = chosen[seat]!.candidate;
+      uncountIn(leaving, counts);
+      if (!withinCaps(entry.candidate, counts, swapCaps) || !(await holds(entry))) { countIn(leaving, counts); continue; }
       chosen[seat] = entry;
+      countIn(entry.candidate, counts);
       emailed += 1;
       report.swappedForEmail += 1;
     }
@@ -427,6 +529,7 @@ async function allocateFor(
       p_match_score: entry.score,
       p_is_control: index === controlIndex,
       p_exclusive_until: exclusiveUntil,
+      p_match_data: entry.explanation as unknown as Json,
     });
 
     if (insertError) {
@@ -469,12 +572,13 @@ async function loadPreferences(
 ): Promise<MatchingPreferences> {
   const { data } = await db
     .from('user_preferences')
-    .select('services, location_mode, city, region, preferred_industries, excluded_industries')
+    .select('services, technologies, location_mode, city, region, preferred_industries, excluded_industries')
     .eq('user_id', profile.id)
     .maybeSingle();
 
   return {
     services: (data?.services ?? []) as string[],
+    technologies: (data?.technologies ?? []) as string[],
     // Sans préférence enregistrée, on ne restreint rien : mieux vaut proposer
     // large que ne rien proposer à un freelance qui n'a pas fini son
     // paramétrage.

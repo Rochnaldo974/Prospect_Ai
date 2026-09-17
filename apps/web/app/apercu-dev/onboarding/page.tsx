@@ -27,6 +27,7 @@ export default function OnboardingPreview() {
 
           <ServicesForm
             selected={['website_redesign', 'website_creation']}
+            technologies={['wordpress']}
             stock={{ website_redesign: 143, website_creation: 38, ecommerce: 21, mobile_application: 6, seo: 17, maintenance: 12, tender_response: 4 }}
           />
 

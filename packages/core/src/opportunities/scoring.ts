@@ -78,6 +78,55 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
  */
 const NO_TRIGGER_PENALTY = 0.8;
 
+/**
+ * L'intention croisée.
+ *
+ * Un fait isolé peut être faible ; plusieurs faits datés récents, venus de
+ * sources différentes — l'entreprise vient d'être créée, son domaine vient
+ * d'être déposé, son site est une page d'attente — se renforcent. On compte
+ * les familles distinctes présentes dans la fenêtre, pas les signaux : deux
+ * avis BODACC ne font pas deux preuves.
+ */
+export const INTENT_FAMILIES: Record<string, string> = {
+  company_recently_created: 'company',
+  bodacc_creation: 'company',
+  bodacc_immatriculation: 'company',
+  bodacc_cession: 'company',
+  bodacc_modification: 'company',
+  domain_recently_registered: 'domain',
+  website_went_down: 'website',
+  website_found_down: 'website',
+  website_changed: 'website',
+  frozen_site_woke_up: 'website',
+  certificate_expired: 'website',
+  tender_published: 'tender',
+};
+export const INTENT_WINDOW_DAYS = 60;
+export const INTENT_BONUS_PER_FAMILY = 0.12;
+export const INTENT_MAX_MULTIPLIER = 1.24;
+
+export interface IntentAssessment {
+  families: string[];
+  signals: string[];
+  multiplier: number;
+}
+
+export function intentOf(triggers: ScoringSignal[], now = Date.now()): IntentAssessment {
+  const families = new Map<string, string>();
+  for (const t of triggers) {
+    if (!t.occurredAt) continue;
+    const ageDays = (now - new Date(t.occurredAt).getTime()) / 86_400_000;
+    if (!Number.isFinite(ageDays) || ageDays < 0 || ageDays > INTENT_WINDOW_DAYS) continue;
+    const family = INTENT_FAMILIES[t.signalType];
+    if (family && !families.has(family)) families.set(family, t.signalType);
+  }
+  const count = families.size;
+  const multiplier = count >= 2
+    ? Math.min(INTENT_MAX_MULTIPLIER, 1 + INTENT_BONUS_PER_FAMILY * (count - 1))
+    : 1;
+  return { families: [...families.keys()], signals: [...families.values()], multiplier: Number(multiplier.toFixed(2)) };
+}
+
 /** Décroissance exponentielle depuis le fait déclencheur. */
 export function freshnessOf(triggerType: string, occurredAt: string | null, now = Date.now()): number {
   if (!occurredAt) return 0.3;
@@ -193,6 +242,7 @@ export function scoreOpportunity(
   }
 
   const timingScore = best !== null ? clamp(best.strength * 100, 0, 100) : 0;
+  const intent = intentOf(triggers, now);
   // Rien ne date le constat : il ne peut être ni frais ni périmé. Un site de
   // 2011 ne devient pas moins vieux en attendant.
   const freshnessFactor = best !== null
@@ -215,7 +265,7 @@ export function scoreOpportunity(
   // seuil de livraison, quelle que soit la qualité du diagnostic. Le besoin
   // porte donc seul la note, et une pénalité explicite exprime ce qui manque.
   const weighted = best !== null
-    ? needScore * 0.55 + timingScore * 0.45
+    ? (needScore * 0.55 + timingScore * 0.45) * intent.multiplier
     : needScore * NO_TRIGGER_PENALTY;
 
   const confidenceFactor = 0.4 + 0.6 * confidenceScore;
@@ -238,13 +288,16 @@ export function scoreOpportunity(
       // Trace explicite : une opportunité livrée sans fait daté doit pouvoir
       // être reconnue comme telle en base, sans avoir à le déduire.
       diagnostic_only: best === null,
+      // Plusieurs faits datés récents, de familles différentes : l'intention
+      // est plus forte que chacun d'eux. Tracé pour être lu tel quel.
+      intent: intent as unknown as Json,
       need_breakdown: contributions as unknown as Json,
       risks: riskSignals.map((r) => ({
         signal: r.signalType,
         penalty: RISK_PENALTIES[r.signalType] ?? 0,
       })) as unknown as Json,
       formula: best !== null
-        ? '(besoin × 0,55 + timing × 0,45) × fraîcheur × (0,40 + 0,60 × confiance)'
+        ? '(besoin × 0,55 + timing × 0,45) × intention × fraîcheur × (0,40 + 0,60 × confiance)'
         : 'besoin × 0,80 × (0,40 + 0,60 × confiance) — sans fait daté',
       weighted: Number(weighted.toFixed(2)),
       confidence_factor: Number(confidenceFactor.toFixed(3)),

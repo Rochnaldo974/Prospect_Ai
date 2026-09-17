@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
-  completeOnboarding, getServiceClient, saveStep, OPPORTUNITY_TYPE_LABELS,
+  completeOnboarding, getServiceClient, saveStep, OPPORTUNITY_TYPE_LABELS, TECHNOLOGY_CHOICES,
 } from '@prospect/core';
 import type { OpportunityType } from '@prospect/core';
 import { requireUser } from '@/lib/auth/session';
@@ -27,8 +27,11 @@ export async function saveServices(_prev: StepState, formData: FormData): Promis
   const services = formData.getAll('services')
     .map(String)
     .filter((value): value is OpportunityType => value in OPPORTUNITY_TYPE_LABELS);
+  const technologies = formData.getAll('technologies')
+    .map(String)
+    .filter((value): value is (typeof TECHNOLOGY_CHOICES)[number] => (TECHNOLOGY_CHOICES as readonly string[]).includes(value));
 
-  const result = await saveStep(getServiceClient(), profile.id, { services });
+  const result = await saveStep(getServiceClient(), profile.id, { services, technologies });
   if (!result.ok) return { problem: result.problem ?? 'Enregistrement impossible.' };
 
   redirect('/onboarding/secteurs');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { OPPORTUNITY_TYPE_LABELS, describeAvailability } from '@prospect/core';
+import { OPPORTUNITY_TYPE_LABELS, TECHNOLOGY_CHOICES, TECHNOLOGY_LABELS, describeAvailability } from '@prospect/core';
 import type { OpportunityType } from '@prospect/core';
 import { saveServices, type StepState } from '../actions';
 import { Choice, Step } from '@/components/onboarding-shell';
@@ -22,9 +22,11 @@ const SERVICES = [
 
 export function ServicesForm({
   selected,
+  technologies,
   stock,
 }: {
   selected: OpportunityType[];
+  technologies: string[];
   stock: Partial<Record<OpportunityType, number>>;
 }) {
   const [state, action, pending] = useActionState<StepState, FormData>(saveServices, {});
@@ -58,6 +60,26 @@ export function ServicesForm({
               />
             </div>
           ))}
+        </div>
+
+        {/* Les technologies ne filtrent rien : elles font passer devant les
+            sites qui tournent déjà sur ce que le freelance maîtrise. */}
+        <div className="mt-6">
+          <p className="text-sm font-medium">Sur quelles technologies êtes-vous à l&apos;aise ?</p>
+          <p className="mb-2.5 text-xs leading-relaxed text-muted-foreground">
+            Facultatif. Les sites qui tournent déjà dessus vous seront proposés en priorité, sans écarter les autres.
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {TECHNOLOGY_CHOICES.map((technology) => (
+              <Choice
+                key={technology}
+                name="technologies"
+                value={technology}
+                defaultChecked={technologies.includes(technology)}
+                title={TECHNOLOGY_LABELS[technology] ?? technology}
+              />
+            ))}
+          </div>
         </div>
 
         <p className="mt-4 text-xs leading-relaxed text-muted-foreground">

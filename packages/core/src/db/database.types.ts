@@ -119,6 +119,7 @@ export type Database = {
           id: string
           is_control: boolean
           match_score: number
+          match_data: Json | null
           notes: string | null
           opportunity_id: string
           outcome: Database["public"]["Enums"]["assignment_outcome"] | null
@@ -157,6 +158,7 @@ export type Database = {
           id?: string
           is_control?: boolean
           match_score?: number
+          match_data?: Json | null
           notes?: string | null
           opportunity_id?: string
           outcome?: Database["public"]["Enums"]["assignment_outcome"] | null
@@ -1753,6 +1755,7 @@ export type Database = {
           preferred_industries: string[]
           region: string | null
           services: Database["public"]["Enums"]["opportunity_type"][]
+          technologies: string[]
           updated_at: string
           user_id: string
         }
@@ -1765,6 +1768,7 @@ export type Database = {
           preferred_industries?: string[]
           region?: string | null
           services?: Database["public"]["Enums"]["opportunity_type"][]
+          technologies?: string[]
           updated_at?: string
           user_id: string
         }
@@ -1777,6 +1781,7 @@ export type Database = {
           preferred_industries?: string[]
           region?: string | null
           services?: Database["public"]["Enums"]["opportunity_type"][]
+          technologies?: string[]
           updated_at?: string
           user_id?: string
         }
@@ -2225,6 +2230,7 @@ export type Database = {
           p_batch_id: string | null
           p_rank: number
           p_match_score: number
+          p_match_data?: Json | null
           p_is_control: boolean
           p_exclusive_until: string
         }
@@ -2254,6 +2260,8 @@ export type Database = {
           region: string | null
           industry_code: string | null
           best_email: string | null
+          cms: string | null
+          created_at: string
         }[]
       }
       reclaim_stalled_jobs: {

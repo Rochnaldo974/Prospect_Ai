@@ -22,6 +22,8 @@ import type { OpportunityType } from '../domain/types';
 
 export interface OnboardingAnswers {
   services: OpportunityType[];
+  /** Clés normalisées (wordpress, shopify…) : une affinité, jamais un filtre. */
+  technologies: string[];
   /**
    * Conservé dans le modèle mais plus demandé : le moteur en a besoin, et un
    * studio local pourrait vouloir le restreindre un jour. La valeur par défaut
@@ -97,6 +99,7 @@ export async function saveStep(
     .upsert({
       user_id: userId,
       services: merged.services,
+      technologies: merged.technologies,
       location_mode: merged.locationMode,
       city: merged.city,
       region: merged.region,
@@ -126,6 +129,7 @@ export async function completeOnboarding(
     .upsert({
       user_id: userId,
       services: answers.services,
+      technologies: answers.technologies,
       // Le périmètre n'est plus demandé : la cible travaille à distance.
       location_mode: 'france_remote',
       city: answers.city,
@@ -158,12 +162,13 @@ export async function readPreferences(
 ): Promise<OnboardingAnswers> {
   const { data } = await db
     .from('user_preferences')
-    .select('services, location_mode, city, region, excluded_industries')
+    .select('services, technologies, location_mode, city, region, excluded_industries')
     .eq('user_id', userId)
     .maybeSingle();
 
   return {
     services: (data?.services ?? []) as OpportunityType[],
+    technologies: (data?.technologies ?? []) as string[],
     locationMode: (data?.location_mode ?? 'france') as OnboardingAnswers['locationMode'],
     city: data?.city ?? null,
     region: data?.region ?? null,

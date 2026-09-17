@@ -21,11 +21,16 @@ const candidate = (over: Partial<OpportunityCandidate> = {}): OpportunityCandida
   city: 'Angers',
   region: 'Pays de la Loire',
   industryCode: '56.10A',
+  cms: null,
+  triggerType: null,
+  triggerOccurredAt: null,
+  createdAt: null,
   ...over,
 });
 
 const prefs = (over: Partial<MatchingPreferences> = {}): MatchingPreferences => ({
   services: [],
+  technologies: [],
   locationMode: 'france',
   city: 'Angers',
   region: 'Pays de la Loire',

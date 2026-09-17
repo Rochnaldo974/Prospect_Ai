@@ -14,6 +14,7 @@ export default async function ServicesStep() {
   return (
     <ServicesForm
       selected={initial.services}
+      technologies={initial.technologies}
       stock={Object.fromEntries(stock.map((s) => [s.type, s.available]))}
     />
   );

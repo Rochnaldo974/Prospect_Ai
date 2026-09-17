@@ -210,6 +210,12 @@ export const OPPORTUNITY_RULES: OpportunityRule[] = [
       no_ssl: 35,
       no_contact_form: 30,
       stale_content: 20,
+      // Un site tombé ou cassé récemment est le premier motif d'une
+      // maintenance : il porte le besoin autant que le moment. Sa demi-vie
+      // courte le fait passer derrière dès qu'il vieillit.
+      website_went_down: 50,
+      website_found_down: 40,
+      website_broken: 50,
     },
     blockedBy: ['shared_domain'],
   },

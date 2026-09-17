@@ -39,6 +39,21 @@ export type OpportunityVerifier = (target: VerificationTarget) => Promise<boolea
 export interface VerifyOptions {
   logger?: Logger;
   signal?: AbortSignal;
+  /** Âge maximal d'un scan pour être réutilisé sans revisiter le site. Défaut : réglage `verify_scan_max_age_hours`. */
+  maxScanAgeHours?: number;
+}
+
+/**
+ * Faut-il revisiter le site ?
+ *
+ * Le scan nocturne suffit s'il est assez récent : le revisiter quelques
+ * heures plus tard ne dit rien de plus et triple la charge (scan de nuit,
+ * scan d'attribution, capture). Passé le seuil, ou sans scan, on revisite.
+ */
+export function shouldRescan(lastCheckedAt: string | null, maxAgeHours: number, now = Date.now()): boolean {
+  if (!lastCheckedAt) return true;
+  const age = (now - new Date(lastCheckedAt).getTime()) / 3_600_000;
+  return !Number.isFinite(age) || age < 0 || age > maxAgeHours;
 }
 
 export async function verifyOpportunity(
@@ -57,10 +72,20 @@ export async function verifyOpportunity(
   if (!company) return false;
 
   if (company.domain) {
-    await rescanDomain(db, company.domain, {
-      ...(log ? { logger: log } : {}),
-      ...(options.signal ? { signal: options.signal } : {}),
-    });
+    let maxAge = options.maxScanAgeHours;
+    if (maxAge === undefined) {
+      const { data } = await db.rpc('engine_setting_int', { p_key: 'verify_scan_max_age_hours', p_default: 36 });
+      maxAge = data ?? 36;
+    }
+    const { data: scanned } = await db.from('domains').select('last_checked_at').eq('domain', company.domain).maybeSingle();
+    if (shouldRescan(scanned?.last_checked_at ?? null, maxAge)) {
+      await rescanDomain(db, company.domain, {
+        ...(log ? { logger: log } : {}),
+        ...(options.signal ? { signal: options.signal } : {}),
+      });
+    } else {
+      log?.debug?.('Scan récent réutilisé à la vérification', { domain: company.domain, last_checked_at: scanned?.last_checked_at });
+    }
   }
 
   await runSignalEngine(db, {

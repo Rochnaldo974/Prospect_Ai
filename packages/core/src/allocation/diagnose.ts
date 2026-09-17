@@ -74,6 +74,8 @@ export async function diagnoseEmptyDay(
       city: company.city,
       region: company.region,
       industryCode: company.industry_code,
+      // L'éligibilité ne regarde ni la technologie ni la date.
+      cms: null, triggerType: null, triggerOccurredAt: null, createdAt: null,
     }, preferences as MatchingPreferences);
   });
 
