@@ -6,7 +6,7 @@ import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { shareAudit } from '@/app/dashboard/actions';
 import { requireUser } from '@/lib/auth/session';
 import { siteOrigin } from '@/lib/site-url';
-import { DossierActions } from '@/components/dashboard/dossier-actions';
+import { DossierActions, Icon, PILL_OUTLINE, PILL_PRIMARY } from '@/components/dashboard/dossier-actions';
 import { SitePreview } from '@/components/dashboard/site-preview';
 import type { DailyOpportunity } from '@/lib/opportunities/mine';
 import { Chip, formatHoursLeft } from '@/components/dashboard/ui';
@@ -232,52 +232,42 @@ export default async function OpportunityPage({
             </dl>
           </section>
 
-      {/* ── Envoyer : l'audit d'une page, au nom du freelance ── */}
+          {/* ── L'audit : une page à votre nom, qui part par e-mail ──
+              Le lien seul ne sert à rien : ce qui compte, c'est le message
+              qui l'accompagne. Le geste principal est donc « l'envoyer par
+              e-mail », qui ouvre le brouillon « Offrir un audit » avec le
+              lien déjà dedans. Sans adresse, on prépare le lien pour le
+              formulaire de contact. */}
           <section className="panel rounded-xl border bg-card px-5 py-4">
-        <div className="flex flex-col gap-3">
-          <div className="min-w-0">
-            <h2 className="field-label">Audit à envoyer</h2>
-            <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
-              Une page à votre nom : la capture, la note, les constats et votre proposition. Le prospect l’ouvre sans compte ;
-              vous saurez quand.
+            <h2 className="field-label">Audit à votre nom</h2>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+              Une page que le commerçant ouvre sans compte : la capture de son site, la note, les constats et votre proposition. Vous savez quand il l’a ouverte.
             </p>
-            {auditUrl ? (
-              <p className="mt-3 break-all font-mono text-[13px]">
-                <a href={auditUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline-offset-4 hover:underline">{auditUrl}</a>
+            {share ? (
+              <p className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="tabular rounded-full border px-3 py-1.5 font-mono text-[11px]" style={{ color: share.openCount > 0 ? 'var(--brand)' : 'var(--ink-2)' }}>
+                  {share.openCount === 0
+                    ? 'pas encore ouvert'
+                    : `ouvert ${share.openCount} fois${share.lastOpenedAt ? `, dernière le ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(new Date(share.lastOpenedAt))}` : ''}`}
+                </span>
+                {auditUrl ? <a href={auditUrl} target="_blank" rel="noopener noreferrer" className="text-[13px] text-muted-foreground underline-offset-4 hover:underline">Voir la page →</a> : null}
               </p>
             ) : null}
-          </div>
-          {share ? (
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <span
-                className="tabular rounded-full border px-3 py-1.5 font-mono text-xs"
-                style={{ color: share.openCount > 0 ? 'var(--brand)' : 'var(--ink-2)' }}
-              >
-                {share.openCount === 0
-                  ? 'pas encore ouvert'
-                  : `ouvert ${share.openCount} fois${share.lastOpenedAt ? `, dernière le ${new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(new Date(share.lastOpenedAt))}` : ''}`}
-              </span>
-              {company.email ? (
-                <Link href={`/dashboard/opportunite/${opportunity.assignmentId}/email`} className="text-sm text-[var(--brand)] underline-offset-4 hover:underline">
-                  L’envoyer par e-mail →
-                </Link>
-              ) : null}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {plan !== 'premium' ? (
+                <Link href="/dashboard/abonnement" className={PILL_OUTLINE}>Réservé au plan Solo</Link>
+              ) : company.email ? (
+                <Link href={`/dashboard/opportunite/${opportunity.assignmentId}/email?intent=audit`} className={PILL_PRIMARY}><Icon name="mail" />L’envoyer par e-mail</Link>
+              ) : share && auditUrl ? (
+                <span className="text-[13px] leading-relaxed text-muted-foreground">Pas d’adresse relevée : collez ce lien dans le formulaire de contact.<br /><a href={auditUrl} target="_blank" rel="noopener noreferrer" className="break-all font-mono text-[12px] text-[var(--brand)] underline-offset-4 hover:underline">{auditUrl}</a></span>
+              ) : (
+                <form action={shareAudit}>
+                  <input type="hidden" name="assignmentId" value={opportunity.assignmentId} />
+                  <button type="submit" className={PILL_OUTLINE}>Préparer le lien pour le formulaire</button>
+                </form>
+              )}
             </div>
-          ) : plan === 'premium' ? (
-            <form action={shareAudit}>
-              <input type="hidden" name="assignmentId" value={opportunity.assignmentId} />
-              <button type="submit" className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-5 py-3 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5">
-                Préparer l’audit
-              </button>
-            </form>
-          ) : (
-            <Link href="/dashboard/abonnement" className="rounded-full border px-5 py-3 text-sm text-muted-foreground">
-              Réservé au plan Solo
-            </Link>
-          )}
-        </div>
-      </section>
-
+          </section>
         </div>
       </div>
 

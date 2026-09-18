@@ -25,21 +25,24 @@ export function EmailSendForm({
   drafts,
   identity,
   smtpReady,
+  initialIntent = 'call',
 }: {
   assignmentId: string;
   to: string;
   drafts: Record<EmailIntent, { subject: string; body: string }>;
   identity: EmailIdentity;
   smtpReady: boolean;
+  /** L'intention ouverte à l'arrivée : « audit » quand on vient du dossier pour l'envoyer. */
+  initialIntent?: EmailIntent | undefined;
 }) {
   const [state, action, pending] = useActionState<SendState, FormData>(sendProspectingEmail, {});
   const [external, confirmExternal, confirming] = useActionState<SendState, FormData>(recordExternalSend, {});
 
   // L'intention pilote le texte. Changer d'intention remplace le brouillon
   // entier — assumé et annoncé : mieux vaut un texte cohérent qu'un collage.
-  const [intent, setIntent] = useState<EmailIntent>('call');
-  const [subject, setSubject] = useState(drafts.call.subject);
-  const [body, setBody] = useState(drafts.call.body);
+  const [intent, setIntent] = useState<EmailIntent>(initialIntent);
+  const [subject, setSubject] = useState(drafts[initialIntent].subject);
+  const [body, setBody] = useState(drafts[initialIntent].body);
   const [attachCv, setAttachCv] = useState(false);
   const [gmail, setGmail] = useState<'idle' | 'opened'>('idle');
 

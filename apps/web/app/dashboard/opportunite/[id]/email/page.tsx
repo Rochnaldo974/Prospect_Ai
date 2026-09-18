@@ -24,10 +24,14 @@ export const metadata: Metadata = { title: 'E-mail personnalisé' };
  */
 export default async function EmailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ intent?: string }>;
 }) {
   const { id } = await params;
+  const { intent } = await searchParams;
+  const initialIntent: EmailIntent = EMAIL_INTENTS.some((i) => i.id === intent) ? (intent as EmailIntent) : 'call';
   const found = await getMyOpportunity(id);
   if (!found) notFound();
 
@@ -95,6 +99,7 @@ export default async function EmailPage({
           sentBefore={await lastSend(opportunity.assignmentId)}
           firstName={firstName}
           smtpReady={Boolean(process.env['SMTP_HOST'])}
+          initialIntent={initialIntent}
         />
       </div>
     </main>
@@ -113,7 +118,7 @@ async function lastSend(assignmentId: string): Promise<string | null> {
 }
 
 function EmailPageBody({
-  plan, identityOk, email, contactFormUrl, assignmentId, drafts, identity, sentBefore, firstName, smtpReady,
+  plan, identityOk, email, contactFormUrl, assignmentId, drafts, identity, sentBefore, firstName, smtpReady, initialIntent,
 }: {
   plan: 'free' | 'premium';
   identityOk: boolean;
@@ -126,6 +131,7 @@ function EmailPageBody({
   firstName: string;
   /** Un serveur d'envoi est configuré : le bouton « Envoyer » direct existe. */
   smtpReady: boolean;
+  initialIntent: EmailIntent;
 }) {
   if (plan !== 'premium') {
     return (
@@ -200,6 +206,7 @@ function EmailPageBody({
         drafts={drafts}
         identity={identity}
         smtpReady={smtpReady}
+        initialIntent={initialIntent}
       />
     </>
   );
