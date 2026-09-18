@@ -6,7 +6,7 @@ import { requireUser } from '@/lib/auth/session';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { getIdentity } from '@/lib/email/identity';
 import { siteOrigin } from '@/lib/site-url';
-import { Panel, Workspace } from '@/components/dashboard/ui';
+import { BackLink, Panel, Workspace } from '@/components/dashboard/ui';
 import { AuditEditForm } from './form';
 
 export const metadata: Metadata = { title: 'Modifier l’audit' };
@@ -28,7 +28,7 @@ export default async function EditAuditPage({ params }: { params: Promise<{ id: 
   if (plan !== 'premium') {
     return (
       <main className="px-5 py-6 sm:px-6 xl:px-8">
-        <Link href={`/dashboard/opportunite/${id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground">← Retour au dossier</Link>
+        <BackLink href={`/dashboard/opportunite/${id}`}>Retour au dossier</BackLink>
         <Panel className="mt-6" title="L’audit est réservé au plan Solo">
           <p className="text-sm text-muted-foreground">Une page et un PDF à votre nom, à envoyer au commerçant.</p>
           <Link href="/dashboard/abonnement" className="mt-4 inline-flex h-10 items-center rounded-full bg-[var(--brand)] px-5 text-[13.5px] font-medium text-white">Voir le plan Solo</Link>
@@ -53,7 +53,7 @@ export default async function EditAuditPage({ params }: { params: Promise<{ id: 
 
   return (
     <main className="px-5 py-6 sm:px-6 xl:px-8">
-      <Link href={`/dashboard/opportunite/${id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground">← Retour au dossier</Link>
+      <BackLink href={`/dashboard/opportunite/${id}`}>Retour au dossier</BackLink>
       <header className="mt-4">
         <p className="eyebrow">Audit à votre nom</p>
         <h1 className="mt-1.5 text-[26px] font-semibold leading-tight tracking-[-0.03em]">Relire l’audit de {opportunity.company.name}</h1>

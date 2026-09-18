@@ -8,7 +8,7 @@ import { siteOrigin } from '@/lib/site-url';
 import { DossierActions, Icon, PILL_OUTLINE, PILL_PRIMARY } from '@/components/dashboard/dossier-actions';
 import { SitePreview } from '@/components/dashboard/site-preview';
 import type { DailyOpportunity } from '@/lib/opportunities/mine';
-import { Chip, formatHoursLeft } from '@/components/dashboard/ui';
+import { BackLink, Chip, formatHoursLeft } from '@/components/dashboard/ui';
 
 export const metadata: Metadata = { title: 'Dossier' };
 
@@ -44,12 +44,7 @@ export default async function OpportunityPage({
 
   return (
     <main className="px-5 py-6 sm:px-6 xl:px-8">
-      <Link
-        href={snoozed ? '/dashboard/plus-tard' : '/dashboard'}
-        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        ← {snoozed ? 'Plus tard' : 'Aujourd’hui'}
-      </Link>
+      <BackLink href={snoozed ? '/dashboard/plus-tard' : '/dashboard'}>{snoozed ? 'Plus tard' : 'Aujourd’hui'}</BackLink>
 
       {/* ── L'en-tête : qui, et pourquoi ça compte ── */}
       <header className="mt-4 flex flex-wrap items-start justify-between gap-x-8 gap-y-4">

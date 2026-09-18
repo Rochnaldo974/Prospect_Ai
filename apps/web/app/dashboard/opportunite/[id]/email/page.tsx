@@ -7,6 +7,7 @@ import { requireUser } from '@/lib/auth/session';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { getIdentity, identityReady } from '@/lib/email/identity';
 import { EmailSendForm } from './composer';
+import { BackLink } from '@/components/dashboard/ui';
 
 export const metadata: Metadata = { title: 'E-mail personnalisé' };
 
@@ -60,9 +61,7 @@ export default async function EmailPage({
 
   return (
     <main className="mx-auto max-w-[1400px] px-6 py-8 xl:px-12 2xl:px-16">
-      <Link href={back} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-        ← Retour au dossier
-      </Link>
+      <BackLink href={back}>Retour au dossier</BackLink>
 
       <header className="mt-6">
         <h1 className="text-3xl font-semibold tracking-[-0.035em]">

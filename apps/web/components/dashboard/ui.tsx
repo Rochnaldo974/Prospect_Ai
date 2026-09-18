@@ -239,3 +239,22 @@ export function formatHoursLeft(hoursLeft: number): string {
   if (hoursLeft <= 0) return 'expiré';
   return hoursLeft >= 24 ? `${Math.floor(hoursLeft / 24)} j ${hoursLeft % 24} h` : `${hoursLeft} h`;
 }
+
+/**
+ * Le retour : une pilule basse avec la flèche, qui dit où elle ramène.
+ * Même famille que les boutons d'action, en plus discret — c'est un
+ * chemin, pas un geste.
+ */
+export function BackLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="group inline-flex h-9 items-center gap-2 rounded-full border border-[var(--line)] bg-card pl-3 pr-4 text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:border-foreground/25 hover:bg-[var(--mist)] hover:text-foreground"
+    >
+      <svg aria-hidden viewBox="0 0 24 24" className="size-4 transition-transform duration-150 group-hover:-translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 12H5M11 6l-6 6 6 6" />
+      </svg>
+      {children}
+    </Link>
+  );
+}
