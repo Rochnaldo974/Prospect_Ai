@@ -22,7 +22,7 @@ export function IdentityForm({
   const [state, action, pending] = useActionState<IdentityState, FormData>(saveIdentity, {});
 
   return (
-    <form action={action} className="space-y-5 rounded-2xl border bg-card p-6">
+    <form action={action} className="panel space-y-5 rounded-xl border bg-card p-6">
       <Field label="Votre nom" name="from_name" value={identity.fromName || defaultName} placeholder="Eliott Roche" required />
       <Field label="Votre métier" name="title" value={identity.title} placeholder="Développeur web indépendant" />
       <Field label="Votre structure (facultatif)" name="company" value={identity.company} placeholder="Studio Roche" />

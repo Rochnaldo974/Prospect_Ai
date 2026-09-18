@@ -57,7 +57,7 @@ export function HistoryList({
 
   return (
     <>
-      <section className="mt-8 rounded-2xl border bg-card px-5 py-4 sm:px-6">
+      <section className="panel rounded-xl border bg-card px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
           <label className="relative min-w-56 flex-1">
             <span aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">⌕</span>
@@ -149,14 +149,14 @@ export function HistoryList({
       </section>
 
       {visible.length === 0 ? (
-        <div className="mt-4 rounded-2xl border bg-card px-6 py-12 text-center">
+        <div className="mt-4 rounded-xl border border-dashed bg-card px-6 py-12 text-center">
           <p className="font-medium">Aucun dossier ne correspond</p>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Élargissez la période ou retirez un filtre.
           </p>
         </div>
       ) : (
-        <div className="mt-4 divide-y overflow-hidden rounded-2xl border bg-card">
+        <div className="panel mt-4 divide-y overflow-hidden rounded-xl border bg-card">
           {visible.map((entry) => {
             const [label, positive] = OUTCOME_LABELS[entry.outcome] ?? [entry.outcome, false];
             return (

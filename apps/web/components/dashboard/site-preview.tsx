@@ -22,7 +22,7 @@ export function SitePreview({ url, screenshotUrl }: { url: string; screenshotUrl
   const [loaded, setLoaded] = useState(false);
 
   return (
-    <figure className="overflow-hidden rounded-2xl border bg-card">
+    <figure className="panel overflow-hidden rounded-xl border bg-card">
       <figcaption className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b bg-[var(--mist)]/60 px-5 py-3">
         <span className="flex items-center gap-2.5">
           <span aria-hidden className="flex gap-1.5">

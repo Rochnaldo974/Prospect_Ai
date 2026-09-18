@@ -33,6 +33,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         snoozedCount={snoozedCount}
         plan={profile.plan}
         isAdmin={profile.role === 'admin'}
+        userName={profile.full_name ?? ''}
+        userEmail={profile.email ?? ''}
         signOutAction={signOut}
       />
 

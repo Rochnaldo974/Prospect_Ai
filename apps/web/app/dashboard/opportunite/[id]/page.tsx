@@ -9,6 +9,7 @@ import { siteOrigin } from '@/lib/site-url';
 import { OutcomeForm } from '@/components/outcome-form';
 import { SitePreview } from '@/components/dashboard/site-preview';
 import type { DailyOpportunity } from '@/lib/opportunities/mine';
+import { Chip, formatHoursLeft } from '@/components/dashboard/ui';
 
 export const metadata: Metadata = { title: 'Dossier' };
 
@@ -43,7 +44,7 @@ export default async function OpportunityPage({
   const auditUrl = share ? `${await siteOrigin()}/audit/${share.id}` : null;
 
   return (
-    <main className="mx-auto max-w-[1400px] px-6 py-8 xl:px-12 2xl:px-16">
+    <main className="px-5 py-6 sm:px-6 xl:px-8">
       <Link
         href={snoozed ? '/dashboard/plus-tard' : '/dashboard'}
         className="text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -52,9 +53,9 @@ export default async function OpportunityPage({
       </Link>
 
       {/* ── L'en-tête : qui, et pourquoi ça compte ── */}
-      <header className="mt-6 flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+      <header className="mt-4 flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
         <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-[-0.035em]">{company.name}</h1>
+          <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em]">{company.name}</h1>
           <p className="mt-1.5 text-muted-foreground">
             {[company.industry, company.city].filter(Boolean).join(' · ') || 'Localisation inconnue'}
             {company.google?.rating != null && company.google.reviewCount != null ? (
@@ -73,11 +74,9 @@ export default async function OpportunityPage({
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="rounded-full bg-[var(--brand-wash)] px-3.5 py-1.5 text-sm font-medium text-[var(--brand)]">
-            {OPPORTUNITY_TYPE_LABELS[opportunity.type]}
-          </span>
+          <Chip tone="brand">{OPPORTUNITY_TYPE_LABELS[opportunity.type]}</Chip>
           <span
-            className="tabular grid size-12 place-items-center rounded-xl font-mono text-sm font-medium text-white"
+            className="tabular grid size-11 place-items-center rounded-lg font-mono text-sm font-medium text-white"
             style={{ backgroundColor: 'var(--brand)' }}
             title="Score d’opportunité calculé pour vous"
           >
@@ -86,7 +85,18 @@ export default async function OpportunityPage({
         </div>
       </header>
 
-      <Exclusivity hoursLeft={opportunity.hoursLeft} />
+      {/* Les faits qui font décider, alignés sous le titre : ce qu'on peut
+          faire, ce qui reste, ce que le site vaut. */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <Chip tone={company.phone ? 'success' : 'outline'} mono>{company.phone ? '● téléphone' : '○ pas de téléphone'}</Chip>
+        <Chip tone={company.email ? 'success' : 'outline'} mono>{company.email ? '● e-mail' : '○ pas d’e-mail'}</Chip>
+        <Chip tone={company.contactFormUrl ? 'success' : 'outline'} mono>{company.contactFormUrl ? '● formulaire' : '○ pas de formulaire'}</Chip>
+        {opportunity.audit ? <Chip tone={opportunity.audit.score < 40 ? 'finding' : opportunity.audit.score < 70 ? 'warning' : 'neutral'} mono>site {opportunity.audit.score}/100</Chip> : null}
+        <Chip tone={opportunity.hoursLeft < 12 ? 'finding' : 'neutral'} mono title="Passé ce délai, l’entreprise est proposée à un autre freelance">
+          {opportunity.hoursLeft <= 0 ? 'exclusivité expirée' : `à vous seul encore ${formatHoursLeft(opportunity.hoursLeft)}`}
+        </Chip>
+        {opportunity.contactedAt ? <Chip tone="success" mono>appelée</Chip> : null}
+      </div>
 
       {/* ── Agir : les gestes, sans chercher ── */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -140,8 +150,8 @@ export default async function OpportunityPage({
       </div>
 
       {/* ── Comprendre : le dossier en dix secondes ── */}
-      <div className="mt-10 grid gap-x-12 gap-y-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-7">
+      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-6">
           <section>
             <h2 className="field-label" style={{ color: 'var(--finding)' }}>Le problème</h2>
             <p className="reasoning mt-2.5">{explanation.why}</p>
@@ -193,7 +203,7 @@ export default async function OpportunityPage({
           {opportunity.matchExplanation ? <WhyForYou explanation={opportunity.matchExplanation} /> : null}
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           {opportunity.audit ? <SiteAudit audit={opportunity.audit} /> : null}
 
           {explanation.signals.length > 0 ? (
@@ -229,7 +239,7 @@ export default async function OpportunityPage({
             </section>
           ) : null}
 
-          <section className="rounded-2xl border bg-card p-5">
+          <section className="panel rounded-xl border bg-card p-5">
             <h2 className="field-label">L’entreprise</h2>
             <dl className="mt-3 space-y-2.5 text-sm">
               {company.address ? <Row label="Adresse">{company.address}</Row> : null}
@@ -265,7 +275,7 @@ export default async function OpportunityPage({
       </div>
 
       {/* ── Envoyer : l'audit d'une page, au nom du freelance ── */}
-      <section className="mt-10 rounded-2xl border bg-card px-5 py-4 sm:px-6">
+      <section className="panel mt-6 rounded-xl border bg-card px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h2 className="field-label">Audit à envoyer</h2>
@@ -312,40 +322,19 @@ export default async function OpportunityPage({
 
       {/* ── Vérifier : le site tel que ses clients le voient ── */}
       {company.websiteUrl ? (
-        <div className="mt-10">
+        <div className="mt-6">
           <SitePreview url={company.websiteUrl} screenshotUrl={company.screenshotUrl} />
         </div>
       ) : null}
 
       {/* ── Rendre compte ── */}
-      <div className="mt-10 rounded-2xl border bg-card px-5 py-4 sm:px-6">
+      <div className="panel mt-6 rounded-xl border bg-card px-5 py-4 sm:px-6">
         <OutcomeForm
           assignmentId={opportunity.assignmentId}
           contactedAt={opportunity.contactedAt}
         />
       </div>
     </main>
-  );
-}
-
-/** Le temps d'exclusivité, en toutes lettres — corail quand il presse. */
-function Exclusivity({ hoursLeft }: { hoursLeft: number }) {
-  if (hoursLeft <= 0) {
-    return <p className="mt-3 font-mono text-xs text-muted-foreground">Exclusivité expirée</p>;
-  }
-  const urgent = hoursLeft < 12;
-  const label = hoursLeft >= 24
-    ? `${Math.floor(hoursLeft / 24)} j ${hoursLeft % 24} h`
-    : `${hoursLeft} h`;
-
-  return (
-    <p
-      className="mt-3 font-mono text-xs"
-      style={{ color: urgent ? 'var(--finding)' : 'var(--ink-2)' }}
-    >
-      Ce dossier est à vous seul encore {label}
-      {urgent ? ' — il repartira dans le circuit ensuite' : ''}
-    </p>
   );
 }
 
@@ -404,7 +393,7 @@ function SiteAudit({ audit }: { audit: NonNullable<DailyOpportunity['audit']> })
     : null;
 
   return (
-    <section className="rounded-2xl border bg-card px-5 py-4">
+    <section className="panel rounded-xl border bg-card px-5 py-4">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="field-label">Note du site</h2>
         <span className="tabular font-mono text-2xl font-semibold" style={{ color: tone(audit.score) }}>
@@ -452,7 +441,7 @@ function WhyForYou({ explanation }: { explanation: NonNullable<DailyOpportunity[
     { label: 'Solidité du dossier', value: explanation.quality, weight: explanation.weights.quality },
   ];
   return (
-    <section className="rounded-2xl border bg-card p-5">
+    <section className="panel rounded-xl border bg-card p-5">
       <h2 className="field-label">Pourquoi pour vous</h2>
       <p className="mt-1 text-xs text-muted-foreground">
         Qualité du dossier {Math.round(explanation.base)} × 0,7 + adéquation {Math.round(explanation.fit)} × 0,3 = {Math.round(explanation.match)}.

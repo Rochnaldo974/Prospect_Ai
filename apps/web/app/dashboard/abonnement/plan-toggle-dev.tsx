@@ -25,7 +25,7 @@ export function PlanToggleDev({ current }: { current: 'free' | 'premium' }) {
   }
 
   return (
-    <form action={toggle} className="mt-10 border-t pt-5">
+    <form action={toggle} className="pt-1">
       <button
         type="submit"
         className="rounded-full border border-dashed px-4 py-2 font-mono text-xs text-muted-foreground transition-colors hover:bg-[var(--mist)]"
