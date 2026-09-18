@@ -20,6 +20,7 @@ export const PILL = 'inline-flex h-10 items-center gap-2 rounded-full px-4 text-
 export const PILL_PRIMARY = `${PILL} bg-[var(--brand)] text-white shadow-[0_8px_24px_-10px_rgba(44,75,255,.55)] hover:-translate-y-px`;
 export const PILL_OUTLINE = `${PILL} border border-[var(--line)] bg-card text-foreground hover:border-foreground/25 hover:bg-[var(--mist)]`;
 export const PILL_DISABLED = `${PILL} cursor-not-allowed border border-[var(--line)] bg-card text-muted-foreground/60`;
+export const PILL_INK = `${PILL} bg-[var(--ink)] text-white hover:-translate-y-px`;
 export const PILL_DANGER = `${PILL} cursor-pointer select-none border border-[var(--line)] bg-card text-muted-foreground hover:border-[var(--finding)]/50 hover:bg-[var(--finding-wash)] hover:text-[var(--finding)]`;
 
 const I = {

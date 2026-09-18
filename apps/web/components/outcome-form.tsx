@@ -1,5 +1,5 @@
 import { declareContacted, declareOutcome } from '@/app/dashboard/actions';
-import { Icon, PILL, PILL_OUTLINE, PILL_PRIMARY } from '@/components/dashboard/dossier-actions';
+import { Icon, PILL, PILL_INK, PILL_OUTLINE } from '@/components/dashboard/dossier-actions';
 
 /**
  * Ce qui se passe après l'appel.
@@ -34,7 +34,7 @@ export function OutcomeForm({
     return (
       <form action={declareContacted} className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <input type="hidden" name="assignmentId" value={assignmentId} />
-        <button type="submit" className={PILL_PRIMARY}><Icon name="check" />J&apos;ai contacté</button>
+        <button type="submit" className={PILL_INK}><Icon name="check" />J&apos;ai contacté</button>
         <p className="text-[13px] text-muted-foreground">
           Après l’appel ou l’e-mail. Vous direz ce que ça a donné juste après.
         </p>

@@ -169,30 +169,16 @@ function EmailPageBody({
     );
   }
 
-  if (!email) {
-    return (
-      <div className="rounded-2xl border bg-card px-6 py-12 text-center">
-        <p className="text-lg font-semibold">Pas d’adresse e-mail relevée</p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Le site de cette entreprise ne publie aucune adresse générique. Le téléphone reste
-          la meilleure voie{contactFormUrl ? ', ou son formulaire de contact' : ''}.
-        </p>
-        {contactFormUrl ? (
-          <a
-            href={contactFormUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex rounded-full border px-6 py-3 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
-          >
-            Ouvrir le formulaire de contact
-          </a>
-        ) : null}
-      </div>
-    );
-  }
-
   return (
     <>
+      {!email ? (
+        <p className="mb-6 rounded-xl border bg-card px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+          Le site de cette entreprise ne publie aucune adresse. Indiquez celle que la personne vous a donnée au téléphone
+          {contactFormUrl ? (
+            <>, ou passez par <a href={contactFormUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline-offset-4 hover:underline">son formulaire de contact</a></>
+          ) : null}.
+        </p>
+      ) : null}
       {sentBefore ? (
         <p className="mb-6 rounded-xl border border-[var(--warning)]/30 bg-[color-mix(in_srgb,var(--warning)_8%,transparent)] px-4 py-3 text-sm" style={{ color: 'var(--warning)' }}>
           Un e-mail a déjà été envoyé à cette entreprise le{' '}
@@ -203,6 +189,7 @@ function EmailPageBody({
       <EmailSendForm
         assignmentId={assignmentId}
         to={email}
+        auditPdfUrl={`/dashboard/opportunite/${assignmentId}/audit`}
         drafts={drafts}
         identity={identity}
         smtpReady={smtpReady}

@@ -21,14 +21,18 @@ import { recordExternalSend, sendProspectingEmail, type SendState } from './acti
  */
 export function EmailSendForm({
   assignmentId,
-  to,
+  to: published,
+  auditPdfUrl,
   drafts,
   identity,
   smtpReady,
   initialIntent = 'call',
 }: {
   assignmentId: string;
-  to: string;
+  /** L'adresse publiée par le site ; null quand il faut la saisir. */
+  to: string | null;
+  /** Le PDF de l'audit, à joindre ou à télécharger. */
+  auditPdfUrl: string;
   drafts: Record<EmailIntent, { subject: string; body: string }>;
   identity: EmailIdentity;
   smtpReady: boolean;
@@ -44,13 +48,18 @@ export function EmailSendForm({
   const [subject, setSubject] = useState(drafts[initialIntent].subject);
   const [body, setBody] = useState(drafts[initialIntent].body);
   const [attachCv, setAttachCv] = useState(false);
+  const [attachAudit, setAttachAudit] = useState(initialIntent === 'audit');
+  const [typedTo, setTypedTo] = useState('');
   const [gmail, setGmail] = useState<'idle' | 'opened'>('idle');
+  const to = published ?? typedTo.trim();
+  const toValid = published !== null || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(to);
 
   const pick = (next: EmailIntent) => {
     setIntent(next);
     setSubject(drafts[next].subject);
     setBody(drafts[next].body);
     if (next === 'intro' && identity.cvUrl) setAttachCv(true);
+    if (next === 'audit') setAttachAudit(true);
   };
 
   /**
@@ -90,6 +99,21 @@ export function EmailSendForm({
       <input type="hidden" name="assignmentId" value={assignmentId} />
 
       <div className="space-y-4">
+        {published === null ? (
+          <label className="block">
+            <span className="field-label">À</span>
+            <input
+              type="email"
+              name="to"
+              value={typedTo}
+              onChange={(event) => setTypedTo(event.target.value)}
+              placeholder="l’adresse donnée au téléphone"
+              required
+              className="mt-2 w-full rounded-lg border bg-card px-3.5 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+            />
+          </label>
+        ) : null}
+
         {/* L'intention d'abord : que voulez-vous obtenir de cet e-mail ? */}
         <div>
           <span className="field-label">Que proposez-vous ?</span>
@@ -137,23 +161,29 @@ export function EmailSendForm({
           />
         </label>
 
-        {identity.cvUrl ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Pour joindre votre CV dans Gmail, glissez-le dans le message :{' '}
-            <a href={identity.cvUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline-offset-4 hover:underline">
-              télécharger mon CV
-            </a>.
+        {/* Les fichiers : le PDF de l'audit, et le CV. Gmail ne prend pas
+            de pièce jointe par l'adresse — on les télécharge et on les
+            glisse dans le message ; l'envoi direct les joint tout seul. */}
+        <div className="rounded-lg border bg-[var(--mist)]/60 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+          <p className="font-medium text-foreground">Pièces jointes</p>
+          <p className="mt-1">
+            L’audit en PDF : <a href={auditPdfUrl} className="text-[var(--brand)] underline-offset-4 hover:underline">télécharger le fichier</a>, puis glissez-le dans Gmail
+            {intent === 'audit' ? ' — le message le mentionne déjà' : ''}.
+            {identity.cvUrl ? (
+              <> Votre CV : <a href={identity.cvUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] underline-offset-4 hover:underline">télécharger</a>.</>
+            ) : null}
           </p>
-        ) : null}
+        </div>
 
         {/* ── Gmail : tout est rempli, il reste « Envoyer » ── */}
         {gmail === 'idle' ? (
           <button
             type="button"
             onClick={openGmail}
-            className="rounded-full bg-[var(--brand)] px-6 py-3 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-transform duration-200 hover:-translate-y-px"
+            disabled={!toValid}
+            className="rounded-full bg-[var(--brand)] px-6 py-3 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-transform duration-200 hover:-translate-y-px disabled:opacity-50 disabled:shadow-none"
           >
-            Envoyer avec Gmail à {to}
+            {toValid ? `Envoyer avec Gmail à ${to}` : 'Envoyer avec Gmail'}
           </button>
         ) : (
           <div className="rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-wash)] px-4 py-4 text-sm leading-relaxed">
@@ -165,6 +195,7 @@ export function EmailSendForm({
                 onClick={() => {
                   const data = new FormData();
                   data.set('assignmentId', assignmentId);
+                  data.set('to', to);
                   data.set('subject', subject);
                   data.set('body', body);
                   startTransition(() => confirmExternal(data));
@@ -189,6 +220,17 @@ export function EmailSendForm({
 
         {smtpReady ? (
           <>
+            <label className="flex items-center gap-2.5 text-sm">
+              <input
+                type="checkbox"
+                name="attachAudit"
+                value="true"
+                checked={attachAudit}
+                onChange={(event) => setAttachAudit(event.target.checked)}
+                className="size-4 accent-[var(--brand)]"
+              />
+              Joindre l’audit (PDF) à l’envoi direct
+            </label>
             {identity.cvUrl ? (
               <label className="flex items-center gap-2.5 text-sm">
                 <input
@@ -204,10 +246,10 @@ export function EmailSendForm({
             ) : null}
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || !toValid}
               className="rounded-full border px-6 py-3 text-sm font-medium transition-colors hover:bg-[var(--mist)] disabled:opacity-60"
             >
-              {pending ? 'Envoi…' : `Envoyer directement à ${to}`}
+              {pending ? 'Envoi…' : toValid ? `Envoyer directement à ${to}` : 'Envoyer directement'}
             </button>
           </>
         ) : null}
@@ -219,15 +261,15 @@ export function EmailSendForm({
         ) : null}
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          L’e-mail part de votre boîte Gmail, sous votre nom : les réponses y arrivent directement. L’adresse du
-          destinataire est celle que l’entreprise publie sur son site.
+          L’e-mail part de votre boîte Gmail, sous votre nom : les réponses y arrivent directement.
+          {published ? ' L’adresse du destinataire est celle que l’entreprise publie sur son site.' : ' L’adresse est celle que l’entreprise vous a donnée ; elle est enregistrée avec l’envoi.'}
         </p>
       </div>
 
       {/* ── L'e-mail tel qu'il partira ── */}
       <div>
         <p className="field-label">Ce que le prospect recevra</p>
-        <LivePreview identity={identity} body={body} attachCv={attachCv && smtpReady} />
+        <LivePreview identity={identity} body={body} attachCv={attachCv && smtpReady} attachAudit={attachAudit && smtpReady} />
       </div>
     </form>
   );
@@ -235,11 +277,12 @@ export function EmailSendForm({
 
 /** L'aperçu suit l'état du formulaire : ce qu'on relit est ce qui part. */
 function LivePreview({
-  identity, body, attachCv,
+  identity, body, attachCv, attachAudit,
 }: {
   identity: EmailIdentity;
   body: string;
   attachCv: boolean;
+  attachAudit: boolean;
 }) {
   return (
     <div className="mt-3 rounded-2xl border bg-card p-6">
@@ -261,9 +304,10 @@ function LivePreview({
           </p>
         ) : null}
       </div>
-      {attachCv ? (
-        <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--mist)] px-3 py-2 font-mono text-[11px] text-muted-foreground">
-          <span aria-hidden>📎</span> CV.pdf joint
+      {attachAudit || attachCv ? (
+        <p className="mt-4 flex flex-wrap gap-2">
+          {attachAudit ? <span className="inline-flex items-center gap-2 rounded-lg bg-[var(--mist)] px-3 py-2 font-mono text-[11px] text-muted-foreground"><span aria-hidden>📎</span> Audit.pdf joint</span> : null}
+          {attachCv ? <span className="inline-flex items-center gap-2 rounded-lg bg-[var(--mist)] px-3 py-2 font-mono text-[11px] text-muted-foreground"><span aria-hidden>📎</span> CV.pdf joint</span> : null}
         </p>
       ) : null}
     </div>

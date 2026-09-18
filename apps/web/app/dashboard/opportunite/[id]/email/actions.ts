@@ -7,6 +7,8 @@ import { getMyOpportunity } from '@/lib/opportunities/mine';
 import { getIdentity, identityReady } from '@/lib/email/identity';
 import { renderEmailHtml, renderEmailText } from '@/lib/email/render';
 import { sendEmail, type EmailAttachment } from '@/lib/email/send';
+import { ensureAuditShare } from '@prospect/core';
+import { auditFilename, renderAuditPdf } from '@/lib/audit/pdf';
 
 export interface SendState {
   sent?: boolean;
@@ -16,11 +18,12 @@ export interface SendState {
 /**
  * L'envoi de l'e-mail de prospection.
  *
- * Le DESTINATAIRE ne vient jamais du formulaire : il est relu depuis
- * l'attribution, côté serveur. Un champ caché se modifie dans l'inspecteur
- * en trois secondes, et ce serveur enverrait alors n'importe quoi à
- * n'importe qui sous notre adresse. Objet et corps, eux, appartiennent à
- * l'utilisateur — c'est son message.
+ * Le DESTINATAIRE est relu depuis l'attribution, côté serveur, quand le
+ * site de l'entreprise publie une adresse. Quand il n'en publie aucune,
+ * c'est l'adresse que le commerçant a donnée au téléphone, saisie par le
+ * freelance — vérifiée, comptée dans son quota du jour, et enregistrée
+ * avec l'envoi. Objet et corps appartiennent à l'utilisateur : c'est son
+ * message.
  *
  * L'envoi marque l'entreprise comme contactée : écrire EST un contact, et
  * la boucle de suivi démarre là.
@@ -42,8 +45,8 @@ export async function sendProspectingEmail(
 
   const found = await getMyOpportunity(assignmentId);
   if (!found) return { problem: 'Dossier introuvable.' };
-  const to = found.opportunity.company.email;
-  if (!to) return { problem: 'Aucune adresse générique n’a été relevée pour cette entreprise.' };
+  const to = recipientFor(found.opportunity.company.email, formData);
+  if (!to) return { problem: 'Indiquez l’adresse e-mail que l’entreprise vous a donnée.' };
 
   const identity = await getIdentity(profile.id);
   if (!identityReady(identity)) {
@@ -65,6 +68,25 @@ export async function sendProspectingEmail(
     } else {
       return { problem: 'Votre CV n’a pas pu être récupéré — vérifiez-le dans Signature e-mail.' };
     }
+  }
+
+  // L'audit en pièce jointe : le même instantané que la page en ligne,
+  // rendu en PDF à l'envoi. Le formulaire ne transporte qu'un booléen.
+  if (formData.get('attachAudit') === 'true') {
+    const share = await ensureAuditShare(getServiceClient(), {
+      assignmentId,
+      userId: profile.id,
+      opportunity: found.opportunity,
+      author: {
+        name: identity.fromName, title: identity.title, company: identity.company,
+        phone: identity.phone, website: identity.website, email: profile.email, logoUrl: identity.logoUrl,
+      },
+    });
+    attachments = [...attachments, {
+      filename: auditFilename(found.opportunity.company.name),
+      content: await renderAuditPdf(share.snapshot),
+      contentType: 'application/pdf',
+    }];
   }
 
   try {
@@ -120,8 +142,8 @@ export async function recordExternalSend(
 
   const found = await getMyOpportunity(assignmentId);
   if (!found) return { problem: 'Dossier introuvable.' };
-  const to = found.opportunity.company.email;
-  if (!to) return { problem: 'Aucune adresse générique n’a été relevée pour cette entreprise.' };
+  const to = recipientFor(found.opportunity.company.email, formData);
+  if (!to) return { problem: 'Indiquez l’adresse e-mail que l’entreprise vous a donnée.' };
 
   const db = getServiceClient();
   await db.from('assignment_emails').insert({ assignment_id: assignmentId, user_id: profile.id, to_email: to, subject, body });
@@ -149,4 +171,15 @@ async function overDailyQuota(userId: string): Promise<boolean> {
     .eq('user_id', userId)
     .gte('sent_at', since.toISOString());
   return (count ?? 0) >= DAILY_EMAIL_QUOTA;
+}
+
+/**
+ * Le destinataire : l'adresse publiée par le site quand il y en a une,
+ * sinon celle saisie dans le formulaire — un e-mail bien formé, sans quoi
+ * rien ne part.
+ */
+function recipientFor(published: string | null, formData: FormData): string | null {
+  if (published) return published;
+  const typed = String(formData.get('to') ?? '').trim().toLowerCase().slice(0, 254);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(typed) ? typed : null;
 }
