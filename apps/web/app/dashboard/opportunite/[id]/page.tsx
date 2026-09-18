@@ -98,56 +98,62 @@ export default async function OpportunityPage({
         {opportunity.contactedAt ? <Chip tone="success" mono>appelée</Chip> : null}
       </div>
 
-      {/* ── Agir : les gestes, sans chercher ── */}
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        {company.phone ? (
-          <a
-            href={`tel:${company.phone}`}
-            className="rounded-full bg-[var(--brand)] px-6 py-3 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-all duration-200 hover:-translate-y-0.5"
-          >
-            Appeler · {formatPhone(company.phone)}
-          </a>
-        ) : null}
-        {/* L'e-mail vit sur sa propre page : brouillon, signature, aperçu
-            fidèle et envoi direct. Sans adresse relevée, le bouton reste
-            VISIBLE mais éteint, la raison écrite dessus : le cacher ferait
-            croire à un bug d'un dossier à l'autre, le laisser actif ferait
-            payer un clic pour une impasse. */}
-        {company.email ? (
-          <Link
-            href={`/dashboard/opportunite/${opportunity.assignmentId}/email`}
-            className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-6 py-3 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5"
-          >
-            E-mail personnalisé
-          </Link>
-        ) : (
-          <span
-            className="cursor-not-allowed rounded-full border border-dashed px-6 py-3 text-sm text-muted-foreground"
-            title="Le site de cette entreprise ne publie aucune adresse e-mail générique. Le téléphone reste la meilleure voie."
-          >
-            E-mail — aucune adresse publiée
-          </span>
-        )}
-        {company.contactFormUrl ? (
-          <ActionLink href={company.contactFormUrl} external>Formulaire de contact</ActionLink>
-        ) : null}
-        {company.websiteUrl ? (
-          <ActionLink href={company.websiteUrl} external>Voir le site</ActionLink>
-        ) : null}
+      {/* ── Agir : les gestes, sans chercher ──
+          Un seul panneau, deux temps. En haut, joindre : appeler, écrire,
+          ouvrir. En dessous, rendre compte : « j'ai contacté », puis l'issue.
+          Tout ce que le freelance fait sur ce dossier tient ici, sous le
+          titre — il n'a pas à descendre en bas de page pour finir son geste. */}
+      <section className="panel mt-5 rounded-xl border bg-card">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 px-5 py-4">
+          <span className="eyebrow mr-1 w-full sm:w-auto">Joindre</span>
+          {company.phone ? (
+            <a
+              href={`tel:${company.phone}`}
+              className="rounded-full bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-all duration-200 hover:-translate-y-0.5"
+            >
+              Appeler · {formatPhone(company.phone)}
+            </a>
+          ) : (
+            <span className="cursor-not-allowed rounded-full border border-dashed px-5 py-2.5 text-sm text-muted-foreground" title="Aucun numéro relevé pour cette entreprise.">
+              Appeler — aucun numéro
+            </span>
+          )}
+          {company.email ? (
+            <Link
+              href={`/dashboard/opportunite/${opportunity.assignmentId}/email`}
+              className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-5 py-2.5 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5"
+            >
+              E-mail personnalisé
+            </Link>
+          ) : (
+            <span
+              className="cursor-not-allowed rounded-full border border-dashed px-5 py-2.5 text-sm text-muted-foreground"
+              title="Le site de cette entreprise ne publie aucune adresse e-mail générique. Le téléphone reste la meilleure voie."
+            >
+              E-mail — aucune adresse publiée
+            </span>
+          )}
+          {company.contactFormUrl ? <ActionLink href={company.contactFormUrl} external>Formulaire de contact</ActionLink> : null}
+          {company.websiteUrl ? <ActionLink href={company.websiteUrl} external>Voir le site</ActionLink> : null}
 
-        {/* Le marque-page. À l'écart des gestes de contact : il ne parle pas
-            au prospect, il parle à votre journée. */}
-        <form action={toggleSnooze} className="ml-auto">
-          <input type="hidden" name="assignmentId" value={opportunity.assignmentId} />
-          <input type="hidden" name="snoozed" value={snoozed ? 'false' : 'true'} />
-          <button
-            type="submit"
-            className="rounded-full border px-5 py-3 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
-          >
-            {snoozed ? 'Remettre dans ma journée' : 'Plus tard'}
-          </button>
-        </form>
-      </div>
+          {/* Le marque-page. À l'écart des gestes de contact : il ne parle pas
+              au prospect, il parle à votre journée. */}
+          <form action={toggleSnooze} className="sm:ml-auto">
+            <input type="hidden" name="assignmentId" value={opportunity.assignmentId} />
+            <input type="hidden" name="snoozed" value={snoozed ? 'false' : 'true'} />
+            <button type="submit" className="rounded-full border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]">
+              {snoozed ? 'Remettre dans ma journée' : 'Plus tard'}
+            </button>
+          </form>
+        </div>
+
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2.5 border-t bg-[var(--mist)]/50 px-5 py-4">
+          <span className="eyebrow mr-1 w-full pt-2 sm:w-auto">Rendre compte</span>
+          <div className="min-w-0 flex-1">
+            <OutcomeForm assignmentId={opportunity.assignmentId} contactedAt={opportunity.contactedAt} />
+          </div>
+        </div>
+      </section>
 
       {/* ── Comprendre : le dossier en dix secondes ── */}
       <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -327,13 +333,6 @@ export default async function OpportunityPage({
         </div>
       ) : null}
 
-      {/* ── Rendre compte ── */}
-      <div className="panel mt-6 rounded-xl border bg-card px-5 py-4 sm:px-6">
-        <OutcomeForm
-          assignmentId={opportunity.assignmentId}
-          contactedAt={opportunity.contactedAt}
-        />
-      </div>
     </main>
   );
 }
@@ -349,7 +348,7 @@ function ActionLink({
     <a
       href={href}
       {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      className="rounded-full border bg-card px-5 py-3 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
+      className="rounded-full border bg-card px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
     >
       {children}
     </a>

@@ -1,5 +1,4 @@
 import { declareContacted, declareOptOut, declareOutcome } from '@/app/dashboard/actions';
-import { Button } from '@/components/ui/button';
 
 /**
  * Ce qui se passe après l'appel.
@@ -14,13 +13,13 @@ import { Button } from '@/components/ui/button';
  * définitivement du service.
  */
 
-const ISSUES: { value: string; label: string; hint: string }[] = [
-  { value: 'no_response', label: 'Pas de réponse', hint: 'Personne au bout du fil' },
-  { value: 'not_interested', label: 'Pas intéressé', hint: 'La proposition ne l’intéresse pas' },
-  { value: 'interested', label: 'Intéressé', hint: 'À rappeler, la discussion est ouverte' },
-  { value: 'meeting', label: 'Rendez-vous', hint: 'Un échange est calé' },
-  { value: 'proposal', label: 'Devis envoyé', hint: 'Une proposition chiffrée est partie' },
-  { value: 'client', label: 'Client signé', hint: 'C’est gagné' },
+const ISSUES: { value: string; label: string; hint: string; tone: 'neutral' | 'positive' | 'won' }[] = [
+  { value: 'no_response', label: 'Pas de réponse', hint: 'Personne au bout du fil', tone: 'neutral' },
+  { value: 'not_interested', label: 'Pas intéressé', hint: 'La proposition ne l’intéresse pas', tone: 'neutral' },
+  { value: 'interested', label: 'Intéressé', hint: 'À rappeler, la discussion est ouverte', tone: 'positive' },
+  { value: 'meeting', label: 'Rendez-vous', hint: 'Un échange est calé', tone: 'positive' },
+  { value: 'proposal', label: 'Devis envoyé', hint: 'Une proposition chiffrée est partie', tone: 'positive' },
+  { value: 'client', label: 'Client signé', hint: 'C’est gagné', tone: 'won' },
 ];
 
 export function OutcomeForm({
@@ -32,22 +31,27 @@ export function OutcomeForm({
 }) {
   if (contactedAt === null) {
     return (
-      <form action={declareContacted} className="border-t pt-4">
+      <form action={declareContacted} className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <input type="hidden" name="assignmentId" value={assignmentId} />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm">J&apos;ai contacté</Button>
-          <p className="text-xs text-muted-foreground">
-            Vous pourrez dire ce que ça a donné juste après.
-          </p>
-        </div>
+        <button
+          type="submit"
+          className="rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-medium text-white transition-transform duration-200 hover:-translate-y-px"
+        >
+          J&apos;ai contacté
+        </button>
+        <p className="text-[13px] text-muted-foreground">
+          Après l’appel ou l’e-mail : vous direz ce que ça a donné juste après, en un clic.
+        </p>
       </form>
     );
   }
 
+  const contacted = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(contactedAt));
+
   return (
-    <div className="space-y-3 border-t pt-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Qu&apos;est-ce que ça a donné ?
+    <div className="space-y-3">
+      <p className="text-[13px] text-muted-foreground">
+        Contactée le <span className="font-medium text-foreground">{contacted}</span>. Qu&apos;est-ce que ça a donné ?
       </p>
 
       {/* Un seul formulaire pour les six issues : la note doit partir avec
@@ -58,40 +62,37 @@ export function OutcomeForm({
 
         <div className="flex flex-wrap gap-2">
           {ISSUES.map((issue) => (
-            <Button
+            <button
               key={issue.value}
               type="submit"
               name="outcome"
               value={issue.value}
-              variant="outline"
-              size="sm"
               title={issue.hint}
+              className={`rounded-full border px-4 py-2 text-[13px] font-medium transition-all duration-150 hover:-translate-y-px ${
+                issue.tone === 'won'
+                  ? 'border-[var(--success)]/40 bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)] hover:bg-[color-mix(in_srgb,var(--success)_16%,transparent)]'
+                  : issue.tone === 'positive'
+                    ? 'border-[var(--brand)]/35 bg-[var(--brand-wash)] text-[var(--brand)] hover:bg-[var(--brand)]/15'
+                    : 'border-[var(--line)] bg-card text-foreground hover:bg-[var(--mist)]'
+              }`}
             >
               {issue.label}
-            </Button>
+            </button>
           ))}
         </div>
 
-        {/* La mémoire du freelance : relue telle quelle dans À relancer.
-            Facultative — un champ requis ferait mentir. */}
         <input
           type="text"
           name="notes"
           maxLength={500}
           placeholder="Une note pour vous, facultative — ex. rappeler jeudi, demander le gérant"
-          className="w-full rounded-lg border bg-card px-3.5 py-2.5 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+          className="w-full rounded-lg border bg-[var(--mist)] px-3.5 py-2.5 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
         />
       </form>
 
-      {/* À l'écart du reste : ce n'est pas une issue commerciale de plus, et
-          la confondre avec « pas intéressé » retirerait du service une
-          entreprise qui n'a rien demandé. */}
       <form action={declareOptOut}>
         <input type="hidden" name="assignmentId" value={assignmentId} />
-        <button
-          type="submit"
-          className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-        >
+        <button type="submit" className="text-xs text-muted-foreground underline-offset-4 hover:underline">
           L&apos;entreprise demande à ne plus être contactée
         </button>
       </form>
