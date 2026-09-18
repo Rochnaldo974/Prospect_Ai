@@ -1,4 +1,4 @@
-import { declareContacted, declareOptOut, declareOutcome } from '@/app/dashboard/actions';
+import { declareContacted, declareOutcome } from '@/app/dashboard/actions';
 
 /**
  * Ce qui se passe après l'appel.
@@ -7,10 +7,9 @@ import { declareContacted, declareOptOut, declareOutcome } from '@/app/dashboard
  * seule action lui est proposée ; lui présenter d'emblée six issues possibles
  * lui demanderait de choisir avant d'avoir quoi que ce soit à déclarer.
  *
- * L'ordre des issues suit le tunnel réel, du plus fréquent au plus rare. « Ne
- * plus contacter » est à l'écart et formulé sans ambiguïté : ce n'est pas un
- * refus commercial de plus, c'est une demande de l'entreprise qui la retire
- * définitivement du service.
+ * L'ordre des issues suit le tunnel réel, du plus fréquent au plus rare.
+ * L'opposition de l'entreprise (« ne pas prospecter ») n'est pas une issue :
+ * elle a son propre bouton, à côté, en deux temps.
  */
 
 const ISSUES: { value: string; label: string; hint: string; tone: 'neutral' | 'positive' | 'won' }[] = [
@@ -90,12 +89,6 @@ export function OutcomeForm({
         />
       </form>
 
-      <form action={declareOptOut}>
-        <input type="hidden" name="assignmentId" value={assignmentId} />
-        <button type="submit" className="text-xs text-muted-foreground underline-offset-4 hover:underline">
-          L&apos;entreprise demande à ne plus être contactée
-        </button>
-      </form>
     </div>
   );
 }

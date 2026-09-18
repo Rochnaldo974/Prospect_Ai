@@ -3,10 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { OPPORTUNITY_TYPE_LABELS, getAuditShareForAssignment, getServiceClient } from '@prospect/core';
 import { getMyOpportunity } from '@/lib/opportunities/mine';
-import { shareAudit, toggleSnooze } from '@/app/dashboard/actions';
+import { shareAudit } from '@/app/dashboard/actions';
 import { requireUser } from '@/lib/auth/session';
 import { siteOrigin } from '@/lib/site-url';
-import { OutcomeForm } from '@/components/outcome-form';
+import { DossierActions } from '@/components/dashboard/dossier-actions';
 import { SitePreview } from '@/components/dashboard/site-preview';
 import type { DailyOpportunity } from '@/lib/opportunities/mine';
 import { Chip, formatHoursLeft } from '@/components/dashboard/ui';
@@ -98,67 +98,20 @@ export default async function OpportunityPage({
         {opportunity.contactedAt ? <Chip tone="success" mono>appelée</Chip> : null}
       </div>
 
-      {/* ── Agir : les gestes, sans chercher ──
-          Un seul panneau, deux temps. En haut, joindre : appeler, écrire,
-          ouvrir. En dessous, rendre compte : « j'ai contacté », puis l'issue.
-          Tout ce que le freelance fait sur ce dossier tient ici, sous le
-          titre — il n'a pas à descendre en bas de page pour finir son geste. */}
-      <section className="panel mt-5 rounded-xl border bg-card">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 px-5 py-4">
-          <span className="eyebrow mr-1 w-full sm:w-auto">Joindre</span>
-          {company.phone ? (
-            <a
-              href={`tel:${company.phone}`}
-              className="rounded-full bg-[var(--brand)] px-5 py-2.5 text-sm font-medium text-white shadow-[0_10px_28px_-10px_rgba(44,75,255,.55)] transition-all duration-200 hover:-translate-y-0.5"
-            >
-              Appeler · {formatPhone(company.phone)}
-            </a>
-          ) : (
-            <span className="cursor-not-allowed rounded-full border border-dashed px-5 py-2.5 text-sm text-muted-foreground" title="Aucun numéro relevé pour cette entreprise.">
-              Appeler — aucun numéro
-            </span>
-          )}
-          {company.email ? (
-            <Link
-              href={`/dashboard/opportunite/${opportunity.assignmentId}/email`}
-              className="rounded-full border border-[var(--brand)]/40 bg-[var(--brand-wash)] px-5 py-2.5 text-sm font-medium text-[var(--brand)] transition-all duration-200 hover:-translate-y-0.5"
-            >
-              E-mail personnalisé
-            </Link>
-          ) : (
-            <span
-              className="cursor-not-allowed rounded-full border border-dashed px-5 py-2.5 text-sm text-muted-foreground"
-              title="Le site de cette entreprise ne publie aucune adresse e-mail générique. Le téléphone reste la meilleure voie."
-            >
-              E-mail — aucune adresse publiée
-            </span>
-          )}
-          {company.contactFormUrl ? <ActionLink href={company.contactFormUrl} external>Formulaire de contact</ActionLink> : null}
-          {company.websiteUrl ? <ActionLink href={company.websiteUrl} external>Voir le site</ActionLink> : null}
-
-          {/* Le marque-page. À l'écart des gestes de contact : il ne parle pas
-              au prospect, il parle à votre journée. */}
-          <form action={toggleSnooze} className="sm:ml-auto">
-            <input type="hidden" name="assignmentId" value={opportunity.assignmentId} />
-            <input type="hidden" name="snoozed" value={snoozed ? 'false' : 'true'} />
-            <button type="submit" className="rounded-full border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]">
-              {snoozed ? 'Remettre dans ma journée' : 'Plus tard'}
-            </button>
-          </form>
-        </div>
-
-        <div className="flex flex-wrap items-start gap-x-3 gap-y-2.5 border-t bg-[var(--mist)]/50 px-5 py-4">
-          <span className="eyebrow mr-1 w-full pt-2 sm:w-auto">Rendre compte</span>
-          <div className="min-w-0 flex-1">
-            <OutcomeForm assignmentId={opportunity.assignmentId} contactedAt={opportunity.contactedAt} />
-          </div>
-        </div>
-      </section>
+      <DossierActions
+        assignmentId={opportunity.assignmentId}
+        contactedAt={opportunity.contactedAt}
+        snoozed={snoozed}
+        phone={company.phone}
+        email={company.email}
+        contactFormUrl={company.contactFormUrl}
+        websiteUrl={company.websiteUrl}
+      />
 
       {/* ── Comprendre : le dossier en dix secondes ── */}
-      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
-          <section>
+          <section className="panel rounded-xl border bg-card px-6 py-5">
             <h2 className="field-label" style={{ color: 'var(--finding)' }}>Le problème</h2>
             <p className="reasoning mt-2.5">{explanation.why}</p>
             {/* La phrase à dire au téléphone, quand une fiche a été rédigée :
@@ -169,25 +122,26 @@ export default async function OpportunityPage({
                 {explanation.opener}
               </p>
             ) : null}
-          </section>
 
-          {explanation.whyNow ? (
-            <section>
-              <h2 className="field-label">Pourquoi maintenant</h2>
-              <p className="reasoning mt-2.5">{explanation.whyNow}</p>
-            </section>
-          ) : null}
+            {explanation.whyNow ? (
+              <div className="mt-6 border-t pt-5">
+                <h2 className="field-label">Pourquoi maintenant</h2>
+                <p className="reasoning mt-2.5">{explanation.whyNow}</p>
+              </div>
+            ) : null}
 
-          <section className="rounded-xl bg-[var(--brand-wash)] px-5 py-4">
-            <h2 className="field-label" style={{ color: 'var(--brand)' }}>Par quoi commencer</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--brand)]">{explanation.angle}</p>
+            <div className="mt-6 rounded-xl bg-[var(--brand-wash)] px-5 py-4">
+              <h2 className="field-label" style={{ color: 'var(--brand)' }}>Par quoi commencer</h2>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--brand)]">{explanation.angle}</p>
+            </div>
           </section>
 
           {/* Les faits bruts : une valeur, une date, une adresse. Ce que le
               freelance peut ouvrir devant son interlocuteur. */}
           {explanation.evidence.length > 0 ? (
-            <section>
+            <section className="panel rounded-xl border bg-card px-6 py-5">
               <h2 className="field-label">Mesuré sur le site</h2>
+              <p className="mt-1 text-[12px] text-muted-foreground">Chaque ligne s’ouvre devant le commerçant : une valeur, une date, une adresse.</p>
               <dl className="mt-3 divide-y rounded-xl border text-sm">
                 {explanation.evidence.map((e) => (
                   <div key={`${e.fact}-${e.value}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5">
@@ -277,12 +231,10 @@ export default async function OpportunityPage({
               ) : null}
             </dl>
           </section>
-        </div>
-      </div>
 
       {/* ── Envoyer : l'audit d'une page, au nom du freelance ── */}
-      <section className="panel mt-6 rounded-xl border bg-card px-5 py-4 sm:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+          <section className="panel rounded-xl border bg-card px-5 py-4">
+        <div className="flex flex-col gap-3">
           <div className="min-w-0">
             <h2 className="field-label">Audit à envoyer</h2>
             <p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
@@ -326,6 +278,9 @@ export default async function OpportunityPage({
         </div>
       </section>
 
+        </div>
+      </div>
+
       {/* ── Vérifier : le site tel que ses clients le voient ── */}
       {company.websiteUrl ? (
         <div className="mt-6">
@@ -334,24 +289,6 @@ export default async function OpportunityPage({
       ) : null}
 
     </main>
-  );
-}
-
-function ActionLink({
-  href, external = false, children,
-}: {
-  href: string;
-  external?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <a
-      href={href}
-      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      className="rounded-full border bg-card px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--mist)]"
-    >
-      {children}
-    </a>
   );
 }
 
