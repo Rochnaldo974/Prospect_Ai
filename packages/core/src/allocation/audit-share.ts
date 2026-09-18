@@ -212,3 +212,43 @@ export async function recordAuditOpen(db: Db, id: string): Promise<void> {
     })
     .eq('id', id);
 }
+
+/** Ce que le freelance peut réécrire dans l'audit : le titre, les constats, la proposition. */
+export interface AuditEdits {
+  headline?: string;
+  findings?: string[];
+  proposal?: string;
+}
+
+/**
+ * Modifie l'instantané d'un audit, pour son propriétaire seulement.
+ *
+ * Le freelance relit avant d'envoyer : un constat trop dur, une proposition
+ * à mettre dans ses mots. Il touche au texte, jamais aux mesures — la note,
+ * la capture, la date restent celles du moteur. Cinq constats au plus, et
+ * aucun vide : la page comme le PDF lisent le même instantané.
+ */
+export async function updateAuditSnapshot(
+  db: Db,
+  input: { assignmentId: string; userId: string; edits: AuditEdits },
+): Promise<AuditShare | null> {
+  const current = await getAuditShareForAssignment(db, input.assignmentId, input.userId);
+  if (!current) return null;
+
+  const findings = (input.edits.findings ?? current.snapshot.findings)
+    .map((f) => f.trim()).filter(Boolean).slice(0, 5);
+  const next: AuditSnapshot = AuditSnapshotSchema.parse({
+    ...current.snapshot,
+    headline: (input.edits.headline ?? current.snapshot.headline).trim().slice(0, 160) || current.snapshot.headline,
+    findings: findings.length > 0 ? findings : current.snapshot.findings,
+    proposal: (input.edits.proposal ?? current.snapshot.proposal).trim().slice(0, 1000) || current.snapshot.proposal,
+  });
+
+  const { error } = await db
+    .from('audit_shares')
+    .update({ snapshot: next as unknown as Json })
+    .eq('id', current.id)
+    .eq('user_id', input.userId);
+  if (error) throw new Error(`updateAuditSnapshot : ${error.message}`);
+  return { ...current, snapshot: next };
+}

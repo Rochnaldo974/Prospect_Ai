@@ -41,7 +41,6 @@ export function OpportunityRow({ opportunity }: { opportunity: DailyOpportunity 
       <span className="hidden shrink-0 flex-col items-end gap-1.5 sm:flex">
         <span className="flex items-center gap-1.5">
           <TierBadge tier={opportunity.tier} />
-          {opportunity.audit ? <SiteScore value={opportunity.audit.score} /> : null}
           <Chip tone="brand">{OPPORTUNITY_TYPE_LABELS[opportunity.type]}</Chip>
         </span>
         <span className="flex items-center gap-2.5 font-mono text-[11px] text-muted-foreground">
@@ -87,15 +86,6 @@ function Tile({
   return (
     <span role="img" aria-label={industry ?? 'Commerce'} title={industry ?? undefined} className="grid size-11 shrink-0 place-items-center rounded-lg bg-[var(--mist)] text-xl leading-none">
       {icon}
-    </span>
-  );
-}
-
-function SiteScore({ value }: { value: number }) {
-  const color = value < 40 ? 'var(--finding)' : value < 70 ? 'var(--warning)' : 'var(--ink-2)';
-  return (
-    <span className="tabular rounded-full border px-2 py-1 font-mono text-[11px] font-medium leading-none" style={{ color, borderColor: `color-mix(in srgb, ${color} 40%, transparent)` }} title="Note du site mesurée par le moteur : vitesse, mobile, bases SEO, confiance">
-      site {value}
     </span>
   );
 }

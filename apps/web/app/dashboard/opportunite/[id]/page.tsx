@@ -90,7 +90,6 @@ export default async function OpportunityPage({
         <Chip tone={company.phone ? 'success' : 'outline'} mono>{company.phone ? '● téléphone' : '○ pas de téléphone'}</Chip>
         <Chip tone={company.email ? 'success' : 'outline'} mono>{company.email ? '● e-mail' : '○ pas d’e-mail'}</Chip>
         <Chip tone={company.contactFormUrl ? 'success' : 'outline'} mono>{company.contactFormUrl ? '● formulaire' : '○ pas de formulaire'}</Chip>
-        {opportunity.audit ? <Chip tone={opportunity.audit.score < 40 ? 'finding' : opportunity.audit.score < 70 ? 'warning' : 'neutral'} mono>site {opportunity.audit.score}/100</Chip> : null}
         <Chip tone={opportunity.hoursLeft < 12 ? 'finding' : 'neutral'} mono title="Passé ce délai, l’entreprise est proposée à un autre freelance">
           {opportunity.hoursLeft <= 0 ? 'exclusivité expirée' : `à vous seul encore ${formatHoursLeft(opportunity.hoursLeft)}`}
         </Chip>
@@ -260,8 +259,11 @@ export default async function OpportunityPage({
                   <Link href={`/dashboard/opportunite/${opportunity.assignmentId}/email?intent=audit`} className={PILL_PRIMARY}>
                     <Icon name="mail" />{company.email ? 'L’envoyer par e-mail' : 'L’envoyer à une adresse'}
                   </Link>
+                  <Link href={`/dashboard/opportunite/${opportunity.assignmentId}/audit/modifier`} className={PILL_OUTLINE} title="Relire le titre, les constats et la proposition avant d’envoyer">
+                    Modifier
+                  </Link>
                   <a href={`/dashboard/opportunite/${opportunity.assignmentId}/audit`} className={PILL_OUTLINE} title="Le fichier PDF, à garder ou à joindre vous-même">
-                    <Icon name="form" />Télécharger le PDF
+                    <Icon name="form" />PDF
                   </a>
                 </>
               )}
