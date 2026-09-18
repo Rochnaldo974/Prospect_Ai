@@ -28,7 +28,7 @@ export function DossierActions({
   websiteUrl: string | null;
 }) {
   return (
-    <section className="panel mt-5 overflow-hidden rounded-xl border bg-card" aria-label="Actions sur le dossier">
+    <section className="panel mt-5 rounded-xl border bg-card" aria-label="Actions sur le dossier">
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2.5 px-5 py-4">
         <span className="eyebrow mr-1.5 w-full sm:w-auto">Joindre</span>
         {phone ? (
