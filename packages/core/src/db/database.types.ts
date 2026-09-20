@@ -2451,7 +2451,7 @@ export type Database = {
           created_at: string
         }[]
       }
-      heartbeat_jobs: { Args: { worker: string }; Returns: number }
+      heartbeat_jobs: { Args: { worker: string; ids: number[] }; Returns: number }
       reclaim_stalled_jobs: {
         Args: { stalled_after?: string }
         Returns: number

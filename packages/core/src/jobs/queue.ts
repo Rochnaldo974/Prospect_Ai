@@ -51,8 +51,12 @@ export async function enqueueJob(
  * que le balayage des jobs abandonnés ne les reprenne pas. Renvoie le
  * nombre de jobs touchés.
  */
-export async function heartbeatJobs(db: Db, worker: string): Promise<number> {
-  const { data, error } = await db.rpc('heartbeat_jobs', { worker });
+export async function heartbeatJobs(db: Db, worker: string, ids: number[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  // Les identifiants, pas seulement le nom du worker : après un redémarrage,
+  // le même nom porte encore les verrous de l'ancien processus, et les
+  // rafraîchir garderait vivants des jobs que plus personne n'exécute.
+  const { data, error } = await db.rpc('heartbeat_jobs', { worker, ids });
   if (error) throw new Error(`heartbeatJobs : ${error.message}`);
   return typeof data === 'number' ? data : 0;
 }

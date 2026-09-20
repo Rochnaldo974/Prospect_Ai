@@ -46,12 +46,13 @@ async function runLoop(
   let idleSince: number | null = null;
   const allTypes = registeredJobTypes();
   const inFlightByType = new Map<string, number>();
+  const inFlightIds = new Set<number>();
 
   while (!shutdown.isShuttingDown) {
     if (pool.inFlight > 0 && Date.now() - lastHeartbeat > HEARTBEAT_INTERVAL_MS) {
       lastHeartbeat = Date.now();
       try {
-        await heartbeatJobs(db, workerId);
+        await heartbeatJobs(db, workerId, [...inFlightIds]);
       } catch (error: unknown) {
         log.warn('Signe de vie non enregistré', { error });
       }
@@ -112,6 +113,7 @@ async function runLoop(
 
     for (const job of batch) {
       inFlightByType.set(job.job_type, (inFlightByType.get(job.job_type) ?? 0) + 1);
+      inFlightIds.add(job.id);
       await pool.spawn(async () => {
         try {
           const outcome = await executeJob(job, {
@@ -124,6 +126,7 @@ async function runLoop(
           else if (outcome.status === 'retrying') stats.retried += 1;
           else stats.abandoned += 1;
         } finally {
+          inFlightIds.delete(job.id);
           inFlightByType.set(job.job_type, Math.max(0, (inFlightByType.get(job.job_type) ?? 1) - 1));
         }
       });
