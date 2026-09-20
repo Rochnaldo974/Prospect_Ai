@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { runOpportunityEngine } from '../../opportunities/engine';
+import { fanOut } from '../fan-out';
 import type { JobHandler } from '../types';
 
 const payload = z.object({
@@ -9,7 +10,15 @@ const payload = z.object({
   /** Abaisser le seuil pour mesurer ce qu'un gate plus permissif produirait. */
   minBaseScore: z.number().min(0).max(100).optional(),
   dryRun: z.boolean().default(false),
+  /**
+   * Toute la base : compte les entreprises signalées et enfile une tranche
+   * par job. Sans cela, une seule passe ne voit que les vingt mille
+   * premières — les mêmes chaque nuit.
+   */
+  all: z.boolean().default(false),
 });
+
+const SLICE = 20_000;
 
 /**
  * Moteur d'opportunités.
@@ -30,6 +39,22 @@ export const generateOpportunitiesHandler: JobHandler<z.infer<typeof payload>> =
   maxAttempts: 2,
 
   async run(input, { db, logger, signal }) {
+    if (input.all) {
+      const { count, error } = await db
+        .from('companies')
+        .select('id', { count: 'exact', head: true })
+        .eq('prospecting_allowed', true)
+        .eq('suppression_global', false)
+        .or('trigger_signal_count.gt.0,active_signal_count.gt.0');
+      if (error) throw new Error(error.message);
+      const out = await fanOut(db, {
+        type: 'generate_opportunities', total: count ?? 0, chunk: SLICE, priority: 78,
+        payload: { dryRun: input.dryRun }, prefix: 'generate-opportunities',
+      });
+      logger.info('Passe complète du moteur d’opportunités planifiée', { entreprises: count ?? 0, tranches: out.slices, jobs: out.enqueued });
+      return { processed: count ?? 0, succeeded: out.enqueued, failed: 0, metadata: { fan_out: true, slices: out.slices, enqueued: out.enqueued } };
+    }
+
     const report = await runOpportunityEngine(db, {
       limit: input.limit,
       ...(input.offset !== undefined ? { offset: input.offset } : {}),

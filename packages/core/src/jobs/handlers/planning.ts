@@ -55,6 +55,16 @@ export const PLANNING = {
   JOB_SIZE: 2_000,
 } as const;
 
+/**
+ * Ce que le propriétaire règle sans redéployer, dans engine_settings :
+ * le stock visé, le plancher et le plafond d'une nuit.
+ */
+export interface PlanningOverrides {
+  stockFloor?: number;
+  minDailyScan?: number;
+  maxDailyScan?: number;
+}
+
 export interface ScanPlan {
   dailyDemand: number;
   stock: number;
@@ -75,9 +85,12 @@ export function planScan(input: {
   measuredYield: number | null;
   /** Domaines jamais visités — déclenche l'amorçage au-delà du seuil. */
   unscanned?: number;
-}): ScanPlan {
+}, overrides: PlanningOverrides = {}): ScanPlan {
+  const stockFloor = overrides.stockFloor ?? PLANNING.STOCK_FLOOR;
+  const minDailyScan = overrides.minDailyScan ?? PLANNING.MIN_DAILY_SCAN;
+  const maxDailyScan = Math.max(minDailyScan, overrides.maxDailyScan ?? PLANNING.MAX_DAILY_SCAN);
   const dailyDemand = input.premiumSlots + input.freeUsers / 7;
-  const target = Math.max(PLANNING.STOCK_FLOOR, Math.ceil(dailyDemand * PLANNING.RUNWAY_DAYS));
+  const target = Math.max(stockFloor, Math.ceil(dailyDemand * PLANNING.RUNWAY_DAYS));
 
   // Le déficit couvre l'écart à l'objectif ET la consommation du jour :
   // un stock pile à l'objectif fond dès le matin sinon.
@@ -95,8 +108,8 @@ export function planScan(input: {
   const scanQuota = bootstrap
     ? PLANNING.BOOTSTRAP_DAILY_SCAN
     : Math.min(
-      PLANNING.MAX_DAILY_SCAN,
-      Math.max(PLANNING.MIN_DAILY_SCAN, Math.ceil(deficit / yieldRate)),
+      maxDailyScan,
+      Math.max(minDailyScan, Math.ceil(deficit / yieldRate)),
     );
 
   return {
@@ -162,13 +175,25 @@ export const planScanningHandler: JobHandler<z.infer<typeof planPayload>> = {
       .select('domain', { count: 'exact', head: true })
       .is('last_checked_at', null);
 
+    // ── Les réglages du propriétaire : le stock visé avant le lancement,
+    //    le plancher et le plafond d'une nuit, sans redéployer. ───────────
+    const setting = async (key: string, fallback: number): Promise<number> => {
+      const { data } = await db.rpc('engine_setting_int', { p_key: key, p_default: fallback });
+      return typeof data === 'number' && data > 0 ? data : fallback;
+    };
+    const overrides: PlanningOverrides = {
+      stockFloor: await setting('scan_stock_target', PLANNING.STOCK_FLOOR),
+      minDailyScan: await setting('scan_floor_per_night', PLANNING.MIN_DAILY_SCAN),
+      maxDailyScan: await setting('scan_max_per_night', PLANNING.MAX_DAILY_SCAN),
+    };
+
     const plan = planScan({
       premiumSlots,
       freeUsers,
       stock: stock ?? 0,
       measuredYield,
       unscanned: unscanned ?? 0,
-    });
+    }, overrides);
 
     // ── La mission, en jobs ─────────────────────────────────────────────
     const today = new Date().toISOString().slice(0, 10);

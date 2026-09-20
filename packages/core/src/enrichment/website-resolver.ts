@@ -112,6 +112,8 @@ export interface ResolveReport {
 
 export interface ResolveOptions {
   limit?: number;
+  /** Tranche d'une passe découpée en plusieurs jobs. */
+  offset?: number;
   fetcher?: WebsiteFetcher;
   logger?: Logger;
   signal?: AbortSignal;
@@ -135,14 +137,23 @@ export async function resolveWebsites(
   const fetcher = options.fetcher ?? new WebsiteFetcher();
   const log = options.logger;
 
+  // Les entreprises qui passeraient le gate d'abord : joignables, identité
+  // établie. Une recherche infructueuse sur elles devient une preuve
+  // d'absence de site, donc une opportunité de création ; sur les autres,
+  // elle ne produit rien tant que le contact ou l'identité manquent.
+  const limit = options.limit ?? 100;
+  const offset = options.offset ?? 0;
   const { data: targets, error } = await db
     .from('companies')
     .select('id, legal_name, commercial_name, siren, phone, city, website_resolution_attempts')
     .is('domain', null)
     .eq('prospecting_allowed', true)
     .lt('website_resolution_attempts', 3)
+    .order('has_contact', { ascending: false })
+    .order('identity_confidence', { ascending: false, nullsFirst: false })
     .order('website_resolution_attempts', { ascending: true })
-    .limit(options.limit ?? 100);
+    .order('id', { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (error) throw new Error(`resolveWebsites : ${error.message}`);
 

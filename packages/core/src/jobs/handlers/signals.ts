@@ -3,6 +3,7 @@ import { runSignalEngine } from '../../signals/engine';
 import { enrichFromSirene } from '../../sources/sirene/enricher';
 import { resolveIdentityByName } from '../../sources/sirene/identity';
 import { fillPostalCodesFromCoordinates } from '../../sources/ban/reverse';
+import { fanOut } from '../fan-out';
 import type { JobHandler } from '../types';
 
 const signalsPayload = z.object({
@@ -11,7 +12,11 @@ const signalsPayload = z.object({
   sinceHours: z.number().int().min(1).max(720).optional(),
   /** Tranche d'une passe découpée en plusieurs jobs. */
   offset: z.number().int().min(0).optional(),
+  /** Toute la base, une tranche par job : voir generate_opportunities. */
+  all: z.boolean().default(false),
 });
+
+const SLICE = 20_000;
 
 /**
  * Moteur de signaux.
@@ -28,6 +33,22 @@ export const detectSignalsHandler: JobHandler<z.infer<typeof signalsPayload>> = 
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
+    if (payload.all) {
+      const { count, error } = await db
+        .from('companies')
+        .select('id', { count: 'exact', head: true })
+        .eq('prospecting_allowed', true)
+        .eq('suppression_global', false)
+        .neq('company_status', 'closed');
+      if (error) throw new Error(error.message);
+      const out = await fanOut(db, {
+        type: 'detect_signals', total: count ?? 0, chunk: SLICE, priority: 75,
+        ...(payload.sinceHours ? { payload: { sinceHours: payload.sinceHours } } : {}), prefix: 'detect-signals',
+      });
+      logger.info('Passe complète du moteur de signaux planifiée', { entreprises: count ?? 0, tranches: out.slices, jobs: out.enqueued });
+      return { processed: count ?? 0, succeeded: out.enqueued, failed: 0, metadata: { fan_out: true, slices: out.slices, enqueued: out.enqueued } };
+    }
+
     const report = await runSignalEngine(db, {
       limit: payload.limit,
       ...(payload.offset !== undefined ? { offset: payload.offset } : {}),

@@ -15,6 +15,10 @@ const backfillPayload = z.object({
   dryRun: z.boolean().default(false),
   /** Enfile automatiquement la page suivante tant qu'il en reste. */
   chain: z.boolean().default(false),
+  /** Les entreprises encore en attente seulement : reprise sans curseur. */
+  pendingOnly: z.boolean().default(false),
+  /** Rang de la page dans la chaîne de la nuit (clé d'idempotence). */
+  page: z.number().int().min(0).default(0),
 });
 
 export const backfillContactsHandler: JobHandler<z.infer<typeof backfillPayload>> = {
@@ -28,16 +32,25 @@ export const backfillContactsHandler: JobHandler<z.infer<typeof backfillPayload>
       limit: payload.limit,
       cursor: payload.cursor,
       dryRun: payload.dryRun,
+      pendingOnly: payload.pendingOnly,
       logger,
       signal,
     });
 
-    if (payload.chain && !report.done && !signal.aborted && report.nextCursor) {
+    if (payload.chain && !report.done && !signal.aborted && (payload.pendingOnly || report.nextCursor)) {
+      // En mode « en attente », la page suivante se sert toute seule : pas
+      // de curseur, une clé par nuit et par rang. Sinon, le curseur reste
+      // la clé — reprendre au même endroit ne double rien.
+      const today = new Date().toISOString().slice(0, 10);
       await db.rpc('enqueue_job', {
         p_job_type: 'backfill_contacts',
-        p_payload: { ...payload, cursor: report.nextCursor },
+        p_payload: payload.pendingOnly
+          ? { ...payload, cursor: null, page: payload.page + 1 }
+          : { ...payload, cursor: report.nextCursor },
         p_priority: 20,
-        p_dedupe_key: `backfill-contacts:${report.nextCursor}`,
+        p_dedupe_key: payload.pendingOnly
+          ? `backfill-contacts:${today}:${payload.page + 1}`
+          : `backfill-contacts:${report.nextCursor}`,
       });
     }
 
@@ -50,6 +63,7 @@ export const backfillContactsHandler: JobHandler<z.infer<typeof backfillPayload>
         contacts_written: report.contactsWritten,
         newly_contactable: report.newlyContactable,
         newly_with_email: report.newlyWithEmail,
+        no_candidates: report.noCandidates,
         next_cursor: report.nextCursor,
         done: report.done,
         dry_run: payload.dryRun,

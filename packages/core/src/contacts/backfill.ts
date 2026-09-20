@@ -20,6 +20,13 @@ export interface BackfillOptions {
   limit?: number;
   /** Identifiant d'entreprise après lequel reprendre (exclu). */
   cursor?: string | null;
+  /**
+   * Ne servir que les entreprises dont la résolution est encore `pending`.
+   * Chaque page traitée sort de l'attente : la passe reprend d'elle-même
+   * après une interruption, sans curseur à conserver, et une entreprise
+   * découverte plus tard entre dans la file sans commande.
+   */
+  pendingOnly?: boolean;
   dryRun?: boolean;
   logger?: Logger;
   signal?: AbortSignal;
@@ -34,6 +41,8 @@ export interface BackfillReport {
   newlyContactable: number;
   newlyWithEmail: number;
   errors: number;
+  /** Sans aucun candidat : datées comme telles, pour ne pas repasser dessus. */
+  noCandidates: number;
   nextCursor: string | null;
   done: boolean;
 }
@@ -54,7 +63,7 @@ export async function backfillContacts(db: Db, options: BackfillOptions = {}): P
   const log = options.logger;
   const report: BackfillReport = {
     examined: 0, withCandidates: 0, contactsWritten: 0, resolved: 0,
-    newlyContactable: 0, newlyWithEmail: 0, errors: 0, nextCursor: options.cursor ?? null, done: false,
+    newlyContactable: 0, newlyWithEmail: 0, errors: 0, noCandidates: 0, nextCursor: options.cursor ?? null, done: false,
   };
 
   let query = db
@@ -62,6 +71,7 @@ export async function backfillContacts(db: Db, options: BackfillOptions = {}): P
     .select('id, domain, phone, contact_form_url, social_links, best_email, has_contact')
     .order('id', { ascending: true })
     .limit(limit);
+  if (options.pendingOnly) query = query.eq('contact_resolution_status', 'pending');
   if (options.cursor) query = query.gt('id', options.cursor);
   const { data, error } = await query;
   if (error) throw new Error(`backfillContacts : ${error.message}`);
@@ -129,7 +139,17 @@ export async function backfillContacts(db: Db, options: BackfillOptions = {}): P
       if (site.form) candidates.push({ type: 'contact_form', value: site.form, source: 'contact_page', sourceUrl: site.form });
     }
 
-    if (candidates.length === 0) continue;
+    if (candidates.length === 0) {
+      // Rien à examiner : l'entreprise sort de l'attente, sinon la passe
+      // « en attente » la resservirait chaque nuit.
+      report.noCandidates += 1;
+      if (options.pendingOnly && !options.dryRun) {
+        await db.from('companies')
+          .update({ contact_resolution_status: 'failed', last_contact_resolution_at: new Date().toISOString() })
+          .eq('id', company.id).eq('contact_resolution_status', 'pending');
+      }
+      continue;
+    }
     report.withCandidates += 1;
 
     try {
@@ -149,7 +169,10 @@ export async function backfillContacts(db: Db, options: BackfillOptions = {}): P
     }
   }
 
-  report.done = companies.length < limit;
+  // Fini quand la page n'est pas pleine — ou, en mode « en attente », quand
+  // plus rien n'y change : une page entière d'échecs ne doit pas boucler.
+  report.done = companies.length < limit
+    || (options.pendingOnly === true && report.resolved + report.noCandidates === 0);
   log?.info('Backfill de contacts', {
     examined: report.examined, with_candidates: report.withCandidates, contacts_written: report.contactsWritten,
     newly_contactable: report.newlyContactable, newly_with_email: report.newlyWithEmail, errors: report.errors,

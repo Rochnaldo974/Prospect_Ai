@@ -211,13 +211,16 @@ export async function runOpportunityEngine(
         .select('id, company_id, opportunity_type, base_score, status')
         .in('company_id', ids)
         .in('status', ['available', 'assigned']),
-      // Les empreintes consommées récemment : la même anomalie ne redevient
-      // pas une nouveauté le lendemain de son expiration.
+      // Les empreintes consommées récemment : une anomalie écartée par le
+      // gate ou par un administrateur ne redevient pas une nouveauté le
+      // lendemain. Une opportunité PÉRIMÉE sans avoir été distribuée n'a
+      // été consommée par personne : la bloquer quatre-vingt-dix jours de
+      // plus vidait le stock à chaque échéance de trente jours.
       db
         .from('opportunities')
         .select('company_id, fingerprint')
         .in('company_id', ids)
-        .not('status', 'in', '(available,assigned)')
+        .eq('status', 'rejected')
         .not('fingerprint', 'is', null)
         .gte('updated_at', new Date(Date.now() - 90 * 86_400_000).toISOString()),
     ]);

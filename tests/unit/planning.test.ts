@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLANNING, planScan } from '../../packages/core/src/jobs/handlers/planning';
+import { planSlices } from '../../packages/core/src/jobs/fan-out';
 
 /**
  * La mission de scan : la demande dicte le volume.
@@ -77,5 +78,51 @@ describe('mission de scan', () => {
     const plan = planScan({ premiumSlots: 300, freeUsers: 0, stock: 0, measuredYield: 0.005 });
     expect(plan.jobs).toBe(Math.ceil(plan.scanQuota / PLANNING.JOB_SIZE));
     expect(plan.jobs * PLANNING.JOB_SIZE).toBeGreaterThanOrEqual(plan.scanQuota);
+  });
+
+  it('les réglages du propriétaire relèvent le stock visé et le plancher, sans abonné', () => {
+    // Avant le lancement : 2 477 en stock, zéro abonné. Sans réglage, la
+    // mission retombait au plancher de 500. Avec un stock visé de 20 000
+    // et un plancher de 3 000, elle repart — bornée par le plafond réglé.
+    const before = planScan({ premiumSlots: 0, freeUsers: 0, stock: 2_477, measuredYield: 0.0577 });
+    expect(before.scanQuota).toBe(PLANNING.MIN_DAILY_SCAN);
+
+    const after = planScan(
+      { premiumSlots: 0, freeUsers: 0, stock: 2_477, measuredYield: 0.0577 },
+      { stockFloor: 20_000, minDailyScan: 3_000, maxDailyScan: 15_000 },
+    );
+    expect(after.target).toBe(20_000);
+    expect(after.deficit).toBe(20_000 - 2_477);
+    expect(after.scanQuota).toBe(15_000);
+
+    // Stock atteint : le plancher réglé tient, pas l'ancien.
+    const full = planScan(
+      { premiumSlots: 0, freeUsers: 0, stock: 25_000, measuredYield: 0.05 },
+      { stockFloor: 20_000, minDailyScan: 3_000, maxDailyScan: 15_000 },
+    );
+    expect(full.scanQuota).toBe(3_000);
+  });
+
+  it('un plafond réglé sous le plancher ne peut pas inverser les bornes', () => {
+    const plan = planScan(
+      { premiumSlots: 0, freeUsers: 0, stock: 0, measuredYield: 0.01 },
+      { stockFloor: 20_000, minDailyScan: 3_000, maxDailyScan: 100 },
+    );
+    expect(plan.scanQuota).toBe(3_000);
+  });
+});
+
+describe('une passe complète, en tranches', () => {
+  it('couvre toute la base, la dernière tranche plus courte', () => {
+    const slices = planSlices(236_145, 20_000);
+    expect(slices).toHaveLength(12);
+    expect(slices[0]).toEqual({ offset: 0, limit: 20_000 });
+    expect(slices[11]).toEqual({ offset: 220_000, limit: 16_145 });
+    expect(slices.reduce((sum, s) => sum + s.limit, 0)).toBe(236_145);
+  });
+
+  it('ne planifie rien pour une base vide ou une tranche invalide', () => {
+    expect(planSlices(0, 20_000)).toEqual([]);
+    expect(planSlices(10, 0)).toEqual([]);
   });
 });

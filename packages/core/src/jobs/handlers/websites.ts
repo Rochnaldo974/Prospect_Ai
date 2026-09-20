@@ -5,6 +5,7 @@ import { auditPerformance } from '../../enrichment/performance-audit';
 import { isEnabled, SKIPPED_BY_FLAG } from '../../ops/flags';
 import { resolveWebsites } from '../../enrichment/website-resolver';
 import { WebsiteFetcher } from '../../enrichment/fetcher';
+import { fanOut } from '../fan-out';
 import type { JobHandler } from '../types';
 
 const scanPayload = z.object({
@@ -59,8 +60,20 @@ export const scanDomainsHandler: JobHandler<z.infer<typeof scanPayload>> = {
 };
 
 const resolvePayload = z.object({
-  limit: z.number().int().min(1).max(1000).default(100),
+  limit: z.number().int().min(1).max(2000).default(100),
+  /** Tranche d'une passe découpée en plusieurs jobs. */
+  offset: z.number().int().min(0).optional(),
+  /**
+   * La passe de la nuit : `website_resolution_per_night` entreprises
+   * (réglage), en tranches de mille qui tournent en parallèle. Chaque
+   * recherche infructueuse sur une entreprise joignable et identifiée est
+   * une preuve d'absence de site — la matière première des créations.
+   */
+  fanOut: z.boolean().default(false),
 });
+
+const RESOLVE_SLICE = 1000;
+const RESOLVE_PER_NIGHT_DEFAULT = 3000;
 
 /**
  * Recherche de site pour les entreprises qui n'en déclarent aucun.
@@ -76,8 +89,17 @@ export const resolveWebsitesHandler: JobHandler<z.infer<typeof resolvePayload>> 
   maxAttempts: 2,
 
   async run(payload, { db, logger, signal }) {
+    if (payload.fanOut) {
+      const { data: perNight } = await db.rpc('engine_setting_int', { p_key: 'website_resolution_per_night', p_default: RESOLVE_PER_NIGHT_DEFAULT });
+      const total = typeof perNight === 'number' && perNight > 0 ? perNight : RESOLVE_PER_NIGHT_DEFAULT;
+      const out = await fanOut(db, { type: 'resolve_websites', total, chunk: RESOLVE_SLICE, priority: 60, prefix: 'resolve-websites' });
+      logger.info('Recherche de sites planifiée', { entreprises: total, tranches: out.slices, jobs: out.enqueued });
+      return { processed: total, succeeded: out.enqueued, failed: 0, metadata: { fan_out: true, slices: out.slices, enqueued: out.enqueued } };
+    }
+
     const report = await resolveWebsites(db, {
       limit: payload.limit,
+      ...(payload.offset !== undefined ? { offset: payload.offset } : {}),
       // Plus patient que le scan : on interroge des hôtes inconnus, parfois
       // inexistants, et rien ne presse.
       fetcher: new WebsiteFetcher({ timeoutMs: 10_000, perHostDelayMs: 1500 }),

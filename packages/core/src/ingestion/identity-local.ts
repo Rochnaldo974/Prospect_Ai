@@ -32,18 +32,32 @@ export async function resolveIdentityLocally(
 
   // Sans SIREN, avec un code postal et un nom : ce que le référentiel peut
   // reconnaître. Les plus anciennes tentatives d'abord.
-  const { data: targets, error } = await db
-    .from('companies')
-    .select('id, legal_name, postal_code')
-    .is('siren', null)
-    .not('postal_code', 'is', null)
-    .eq('prospecting_allowed', true)
-    .order('identity_lookup_at', { ascending: true, nullsFirst: true })
-    .limit(Math.min(limit, 1000));
-  if (error) throw new Error(`resolveIdentityLocally : ${error.message}`);
+  //
+  // Servi par pages de mille — l'API tronque au-delà — jusqu'à la limite
+  // demandée. Chaque entreprise traitée reçoit une date de tentative, donc
+  // la page suivante ne la rend plus ; les identifiants déjà vus tiennent
+  // lieu de garde-fou si une écriture a échoué ou en lecture seule.
+  const pageSize = 1000;
+  const seen = new Set<string>();
+  const page = async (): Promise<{ id: string; legal_name: string; postal_code: string | null }[]> => {
+    const { data: targets, error } = await db
+      .from('companies')
+      .select('id, legal_name, postal_code')
+      .is('siren', null)
+      .not('postal_code', 'is', null)
+      .eq('prospecting_allowed', true)
+      .order('identity_lookup_at', { ascending: true, nullsFirst: true })
+      .order('id', { ascending: true })
+      .limit(Math.min(pageSize, limit - report.examined));
+    if (error) throw new Error(`resolveIdentityLocally : ${error.message}`);
+    return (targets ?? []).filter((t) => !seen.has(t.id));
+  };
 
-  for (const target of targets ?? []) {
+  let targets = await page();
+  while (targets.length > 0) {
+  for (const target of targets) {
     if (options.signal?.aborted) break;
+    seen.add(target.id);
     report.examined += 1;
     try {
       const { data: found, error: matchError } = await db.rpc('match_company_to_sirene', { p_company_id: target.id });
@@ -86,6 +100,10 @@ export async function resolveIdentityLocally(
       report.errors += 1;
       log?.warn('Identité locale en échec', { company_id: target.id, error: cause instanceof Error ? cause.message : String(cause) });
     }
+  }
+  // En lecture seule rien n'est daté : une seule page, sinon la même revient.
+  if (options.dryRun || options.signal?.aborted || report.examined >= limit) break;
+  targets = await page();
   }
 
   log?.info('Identité par le référentiel local', { ...report, dry_run: options.dryRun ?? false });
