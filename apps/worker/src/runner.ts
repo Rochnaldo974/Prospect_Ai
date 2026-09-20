@@ -3,6 +3,7 @@ import {
   executeJob,
   getServerEnv,
   getServiceClient,
+  heartbeatJobs,
   logger,
   registeredJobTypes,
   reclaimStalledJobs,
@@ -11,9 +12,17 @@ import {
 } from '@prospect/core';
 import { installShutdownHandlers, sleep, type ShutdownController } from './shutdown';
 import { TaskPool } from './pool';
+import { claimableTypes } from './caps';
 
 /** Périodicité du balayage des jobs abandonnés par un worker mort. */
 const RECLAIM_INTERVAL_MS = 5 * 60_000;
+/**
+ * Périodicité du signe de vie : un job en cours voit son verrou rafraîchi,
+ * pour que le balayage ne le prenne pas pour abandonné. Sans cela, tout job
+ * de plus de quinze minutes — un scan de deux mille domaines, une passe
+ * d'identité — était repris et exécuté une seconde fois en parallèle.
+ */
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 interface LoopStats {
   [key: string]: number;
@@ -33,9 +42,21 @@ async function runLoop(
 ): Promise<LoopStats> {
   const stats: LoopStats = { claimed: 0, succeeded: 0, retried: 0, abandoned: 0 };
   let lastReclaim = 0;
+  let lastHeartbeat = Date.now();
   let idleSince: number | null = null;
+  const allTypes = registeredJobTypes();
+  const inFlightByType = new Map<string, number>();
 
   while (!shutdown.isShuttingDown) {
+    if (pool.inFlight > 0 && Date.now() - lastHeartbeat > HEARTBEAT_INTERVAL_MS) {
+      lastHeartbeat = Date.now();
+      try {
+        await heartbeatJobs(db, workerId);
+      } catch (error: unknown) {
+        log.warn('Signe de vie non enregistré', { error });
+      }
+    }
+
     // Balayage périodique : un worker tué net laisse ses jobs verrouillés.
     if (Date.now() - lastReclaim > RECLAIM_INTERVAL_MS) {
       lastReclaim = Date.now();
@@ -55,9 +76,18 @@ async function runLoop(
       continue;
     }
 
+    // Les types à une seule place (découverte OSM…) déjà occupés ne sont
+    // pas réclamés : les autres jobs passent devant au lieu d'attendre
+    // derrière eux dans le pool.
+    const types = claimableTypes(allTypes, inFlightByType);
+    if (types.length === 0) {
+      await sleep(pollIntervalMs, shutdown.signal);
+      continue;
+    }
+
     let batch;
     try {
-      batch = await claimJobs(db, workerId, capacity);
+      batch = await claimJobs(db, workerId, capacity, types);
     } catch (error: unknown) {
       log.error('Échec de réclamation, nouvelle tentative après attente', { error });
       await sleep(pollIntervalMs, shutdown.signal);
@@ -81,16 +111,21 @@ async function runLoop(
     stats.claimed += batch.length;
 
     for (const job of batch) {
+      inFlightByType.set(job.job_type, (inFlightByType.get(job.job_type) ?? 0) + 1);
       await pool.spawn(async () => {
-        const outcome = await executeJob(job, {
-          db,
-          logger: log,
-          workerId,
-          signal: shutdown.signal,
-        });
-        if (outcome.status === 'succeeded') stats.succeeded += 1;
-        else if (outcome.status === 'retrying') stats.retried += 1;
-        else stats.abandoned += 1;
+        try {
+          const outcome = await executeJob(job, {
+            db,
+            logger: log,
+            workerId,
+            signal: shutdown.signal,
+          });
+          if (outcome.status === 'succeeded') stats.succeeded += 1;
+          else if (outcome.status === 'retrying') stats.retried += 1;
+          else stats.abandoned += 1;
+        } finally {
+          inFlightByType.set(job.job_type, Math.max(0, (inFlightByType.get(job.job_type) ?? 1) - 1));
+        }
       });
     }
   }

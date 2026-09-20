@@ -46,6 +46,17 @@ export async function enqueueJob(
   return typeof data === 'number' ? data : null;
 }
 
+/**
+ * Signe de vie : rafraîchit le verrou des jobs que ce worker exécute, pour
+ * que le balayage des jobs abandonnés ne les reprenne pas. Renvoie le
+ * nombre de jobs touchés.
+ */
+export async function heartbeatJobs(db: Db, worker: string): Promise<number> {
+  const { data, error } = await db.rpc('heartbeat_jobs', { worker });
+  if (error) throw new Error(`heartbeatJobs : ${error.message}`);
+  return typeof data === 'number' ? data : 0;
+}
+
 /** Réclame un lot de jobs, rendus par priorité décroissante. */
 export async function claimJobs(
   db: Db,
