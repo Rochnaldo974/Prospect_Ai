@@ -12,7 +12,7 @@ import {
 } from '@prospect/core';
 import { installShutdownHandlers, sleep, type ShutdownController } from './shutdown';
 import { TaskPool } from './pool';
-import { claimableTypes } from './caps';
+import { claimPlan } from './caps';
 
 /** Périodicité du balayage des jobs abandonnés par un worker mort. */
 const RECLAIM_INTERVAL_MS = 5 * 60_000;
@@ -77,18 +77,22 @@ async function runLoop(
       continue;
     }
 
-    // Les types à une seule place (découverte OSM…) déjà occupés ne sont
-    // pas réclamés : les autres jobs passent devant au lieu d'attendre
-    // derrière eux dans le pool.
-    const types = claimableTypes(allTypes, inFlightByType);
-    if (types.length === 0) {
+    // Les types à une seule place (découverte OSM…) sont réclamés un par
+    // un, puis le reste de la capacité va aux autres : les jobs plafonnés
+    // n'attendent plus dans le pool, les autres passent devant.
+    const steps = claimPlan(capacity, allTypes, inFlightByType);
+    if (steps.length === 0) {
       await sleep(pollIntervalMs, shutdown.signal);
       continue;
     }
 
     let batch;
     try {
-      batch = await claimJobs(db, workerId, capacity, types);
+      batch = [];
+      for (const step of steps) {
+        const claimed = await claimJobs(db, workerId, step.size, step.types);
+        batch.push(...claimed);
+      }
     } catch (error: unknown) {
       log.error('Échec de réclamation, nouvelle tentative après attente', { error });
       await sleep(pollIntervalMs, shutdown.signal);

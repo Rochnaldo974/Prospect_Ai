@@ -33,3 +33,38 @@ export function claimableTypes(
     return (inFlight.get(type) ?? 0) < cap;
   });
 }
+
+export interface ClaimStep {
+  types: string[];
+  size: number;
+}
+
+/**
+ * Le plan de réclamation d'un tour de boucle : une réclamation d'un seul
+ * job par type plafonné encore libre, puis une réclamation du reste de la
+ * capacité pour les types sans plafond. Réclamer les six d'un coup laissait
+ * passer six jobs de découverte dans le même lot, le plafond n'étant lu
+ * qu'avant la réclamation. Pur.
+ */
+export function claimPlan(
+  capacity: number,
+  all: readonly string[],
+  inFlight: ReadonlyMap<string, number>,
+  caps: Readonly<Record<string, number>> = TYPE_CAPS,
+): ClaimStep[] {
+  if (capacity <= 0) return [];
+  const steps: ClaimStep[] = [];
+  let remaining = capacity;
+  for (const type of all) {
+    const cap = caps[type];
+    if (cap === undefined) continue;
+    const free = cap - (inFlight.get(type) ?? 0);
+    if (free <= 0 || remaining <= 0) continue;
+    const size = Math.min(free, remaining);
+    steps.push({ types: [type], size });
+    remaining -= size;
+  }
+  const uncapped = all.filter((type) => caps[type] === undefined);
+  if (remaining > 0 && uncapped.length > 0) steps.push({ types: uncapped, size: remaining });
+  return steps;
+}
