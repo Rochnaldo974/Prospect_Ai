@@ -34,37 +34,32 @@ export function claimableTypes(
   });
 }
 
-export interface ClaimStep {
-  types: string[];
-  size: number;
+export interface ClaimPlan {
+  /** Les types plafonnés encore libres : un job chacun, l'un après l'autre. */
+  capped: string[];
+  /** Les types sans plafond : le reste de la capacité, une fois les plafonnés servis. */
+  uncapped: string[];
 }
 
 /**
- * Le plan de réclamation d'un tour de boucle : une réclamation d'un seul
- * job par type plafonné encore libre, puis une réclamation du reste de la
- * capacité pour les types sans plafond. Réclamer les six d'un coup laissait
- * passer six jobs de découverte dans le même lot, le plafond n'étant lu
- * qu'avant la réclamation. Pur.
+ * Le plan de réclamation d'un tour de boucle. Les types plafonnés encore
+ * libres se réclament un par un ; le reste de la capacité — celle qui
+ * reste RÉELLEMENT, après ce que ces réclamations ont rendu — va aux
+ * autres. Compter d'avance une place par type plafonné, même quand la
+ * file n'en a aucun, laissait les autres jobs en attente dès que deux
+ * places se libéraient. Pur.
  */
 export function claimPlan(
-  capacity: number,
   all: readonly string[],
   inFlight: ReadonlyMap<string, number>,
   caps: Readonly<Record<string, number>> = TYPE_CAPS,
-): ClaimStep[] {
-  if (capacity <= 0) return [];
-  const steps: ClaimStep[] = [];
-  let remaining = capacity;
+): ClaimPlan {
+  const capped: string[] = [];
+  const uncapped: string[] = [];
   for (const type of all) {
     const cap = caps[type];
-    if (cap === undefined) continue;
-    const free = cap - (inFlight.get(type) ?? 0);
-    if (free <= 0 || remaining <= 0) continue;
-    const size = Math.min(free, remaining);
-    steps.push({ types: [type], size });
-    remaining -= size;
+    if (cap === undefined) uncapped.push(type);
+    else if ((inFlight.get(type) ?? 0) < cap) capped.push(type);
   }
-  const uncapped = all.filter((type) => caps[type] === undefined);
-  if (remaining > 0 && uncapped.length > 0) steps.push({ types: uncapped, size: remaining });
-  return steps;
+  return { capped, uncapped };
 }

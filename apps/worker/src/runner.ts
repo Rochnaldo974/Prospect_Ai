@@ -80,18 +80,20 @@ async function runLoop(
     // Les types à une seule place (découverte OSM…) sont réclamés un par
     // un, puis le reste de la capacité va aux autres : les jobs plafonnés
     // n'attendent plus dans le pool, les autres passent devant.
-    const steps = claimPlan(capacity, allTypes, inFlightByType);
-    if (steps.length === 0) {
-      await sleep(pollIntervalMs, shutdown.signal);
-      continue;
-    }
+    const plan = claimPlan(allTypes, inFlightByType);
 
     let batch;
     try {
       batch = [];
-      for (const step of steps) {
-        const claimed = await claimJobs(db, workerId, step.size, step.types);
+      let remaining = capacity;
+      for (const type of plan.capped) {
+        if (remaining <= 0) break;
+        const claimed = await claimJobs(db, workerId, 1, [type]);
         batch.push(...claimed);
+        remaining -= claimed.length;
+      }
+      if (remaining > 0 && plan.uncapped.length > 0) {
+        batch.push(...await claimJobs(db, workerId, remaining, plan.uncapped));
       }
     } catch (error: unknown) {
       log.error('Échec de réclamation, nouvelle tentative après attente', { error });

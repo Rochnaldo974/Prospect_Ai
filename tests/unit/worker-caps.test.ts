@@ -29,21 +29,17 @@ describe('plafonds par type de job', () => {
     expect(TYPE_CAPS['backfill_contacts']).toBe(1);
   });
 
-  it('un tour de boucle réclame un seul job par type plafonné, puis le reste', () => {
-    const steps = claimPlan(6, all, new Map());
-    expect(steps).toEqual([
-      { types: ['backfill_contacts'], size: 1 },
-      { types: ['discover_osm'], size: 1 },
-      { types: ['generate_opportunities', 'scan_domains'], size: 4 },
-    ]);
+  it('le plan sépare les types plafonnés encore libres des autres', () => {
+    expect(claimPlan(all, new Map())).toEqual({
+      capped: ['backfill_contacts', 'discover_osm'],
+      uncapped: ['generate_opportunities', 'scan_domains'],
+    });
   });
 
-  it('un type plafonné déjà en vol n’est pas réclamé ; toute la capacité va aux autres', () => {
-    const steps = claimPlan(3, all, new Map([['discover_osm', 1], ['backfill_contacts', 1]]));
-    expect(steps).toEqual([{ types: ['generate_opportunities', 'scan_domains'], size: 3 }]);
-  });
-
-  it('sans capacité, rien n’est réclamé', () => {
-    expect(claimPlan(0, all, new Map())).toEqual([]);
+  it('un type plafonné déjà en vol sort du plan ; les autres restent réclamables', () => {
+    expect(claimPlan(all, new Map([['discover_osm', 1], ['backfill_contacts', 1]]))).toEqual({
+      capped: [],
+      uncapped: ['generate_opportunities', 'scan_domains'],
+    });
   });
 });
