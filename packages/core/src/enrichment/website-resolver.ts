@@ -164,6 +164,9 @@ export async function resolveWebsites(
     const candidates = candidateDomains(company);
     let best: { domain: string; confidence: number; evidence: ResolutionEvidence[] } | null = null;
 
+    // Une page qui fait lever l'analyse (encodage cassé, HTML hostile) ne
+    // doit coûter que sa propre entreprise, pas la tranche entière.
+    try {
     for (const candidate of candidates) {
       if (options.signal?.aborted) break;
 
@@ -195,6 +198,13 @@ export async function resolveWebsites(
       }
       // Une preuve légale ne sera pas dépassée : inutile de continuer.
       if (confidence >= 0.99) break;
+    }
+    } catch (probeError: unknown) {
+      report.errors += 1;
+      log?.warn('Recherche de site en échec sur une entreprise', {
+        company_id: company.id,
+        error: probeError instanceof Error ? probeError.message : String(probeError),
+      });
     }
 
     try {

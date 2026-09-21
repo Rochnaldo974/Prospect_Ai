@@ -217,6 +217,15 @@ const LEGAL_LINK_PATTERN =
 const CONTACT_LINK_PATTERN =
   /href\s*=\s*["']([^"']*(?:\/contact|contactez|nous[-_]contacter|contact\.(?:html?|php))[^"']*)["']/gi;
 
+/**
+ * Un « tel: » ou « mailto: » mal encodé (« %E9 » orphelin, « % » nu) fait
+ * lever « URI malformed » à decodeURIComponent — et faisait tomber le job
+ * entier sur une seule page. On garde alors la valeur brute.
+ */
+function safeDecode(value: string): string {
+  try { return decodeURIComponent(value); } catch { return value; }
+}
+
 export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
   // Bornée : certaines pages font plusieurs mégaoctets, et tout ce qui nous
   // intéresse se trouve dans les premiers 500 Ko.
@@ -246,7 +255,7 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
   // texte libre où un numéro peut être un prix ou une référence.
   const phones = new Set<string>();
   for (const match of source.matchAll(/href\s*=\s*["']tel:([^"']+)["']/gi)) {
-    const phone = normalizePhone(decodeURIComponent(match[1] ?? ''));
+    const phone = normalizePhone(safeDecode(match[1] ?? ''));
     if (phone) phones.add(phone);
   }
   for (const match of text.matchAll(/(?:\+33|0)\s?[1-9](?:[\s.-]?\d{2}){4}/g)) {
@@ -256,7 +265,7 @@ export function analyzePage(html: string, baseUrl?: string): PageAnalysis {
 
   const emails = new Set<string>();
   for (const match of source.matchAll(/href\s*=\s*["']mailto:([^"'?]+)/gi)) {
-    const email = normalizeEmailDetailed(decodeURIComponent(match[1] ?? '')).email;
+    const email = normalizeEmailDetailed(safeDecode(match[1] ?? '')).email;
     if (email) emails.add(email);
   }
   // Les adresses écrites dans le texte, y compris obfusquées — « contact (at)

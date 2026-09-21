@@ -73,10 +73,17 @@ export async function snapshotHealth(db: Db): Promise<HealthSnapshot> {
   const today = new Date();
   const yesterday = new Date(Date.now() - 86_400_000);
   const day = (d: Date) => d.toISOString().slice(0, 10);
-  const [{ data: m0 }, { data: m1 }] = await Promise.all([
+  const [r0, r1] = await Promise.all([
     db.rpc('engine_metrics', { p_day: day(today) }),
     db.rpc('engine_metrics', { p_day: day(yesterday) }),
   ]);
+  // Des métriques absentes ne valent pas zéro : lues comme telles, elles
+  // levaient « aucune découverte » et « production effondrée » pendant que
+  // le moteur tournait à plein. Le job échoue, et c'est ce qui se voit.
+  if (r0.error) throw new Error(`engine_metrics : ${r0.error.message}`);
+  if (r1.error) throw new Error(`engine_metrics : ${r1.error.message}`);
+  const m0 = r0.data;
+  const m1 = r1.data;
   const num = (o: unknown, k: string): number => Number(((o as Record<string, Record<string, unknown>>) ?? {})[k] ?? 0);
   const section = (m: unknown, s: string) => ((m as Record<string, unknown>) ?? {})[s];
 

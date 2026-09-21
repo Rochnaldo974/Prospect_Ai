@@ -268,24 +268,33 @@ export async function scanDueDomains(db: Db, options: ScanOptions = {}): Promise
   const fetcher = options.fetcher ?? new WebsiteFetcher();
   const log = options.logger;
 
-  let query = db
-    .from('domains')
-    .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at, status, cms, title, tech_hash, ecommerce_detected, phones_found, emails_found, performance_audit_status, last_performance_audit_at')
-    .neq('status', 'excluded')
-    // Le parc national compte 4,59 millions de domaines : l'ordre de passage
-    // décide de ce qu'on trouve les premiers jours. La priorité est calculée
-    // avant toute visite, sur le nom et l'âge du domaine — un « boulangerie »
-    // déposé il y a quinze ans passe avant un domaine anonyme de l'an dernier.
-    .order('scan_priority', { ascending: false })
-    .order('next_check_at', { ascending: true })
-    .limit(options.limit ?? 200);
+  // Le parc national compte 4,59 millions de domaines : l'ordre de passage
+  // décide de ce qu'on trouve les premiers jours. La priorité est calculée
+  // avant toute visite, sur le nom et l'âge du domaine — un « boulangerie »
+  // déposé il y a quinze ans passe avant un domaine anonyme de l'an dernier.
+  //
+  // Servi par pages : l'API tronque toute réponse à mille lignes, et un job
+  // de deux mille n'en scannait que mille sans que rien ne le dise.
+  const wanted = options.limit ?? 200;
+  const pageSize = 1000;
+  const dueAt = new Date().toISOString();
+  const queue: DueRow[] = [];
+  while (queue.length < wanted) {
+    let query = db
+      .from('domains')
+      .select('domain, content_hash, check_attempts, tech_year, unchanged_streak, registered_at, status, cms, title, tech_hash, ecommerce_detected, phones_found, emails_found, performance_audit_status, last_performance_audit_at')
+      .neq('status', 'excluded')
+      .order('scan_priority', { ascending: false })
+      .order('next_check_at', { ascending: true })
+      .order('domain', { ascending: true })
+      .range(queue.length, Math.min(queue.length + pageSize, wanted) - 1);
+    if (options.onlyDue !== false) query = query.lte('next_check_at', dueAt);
 
-  if (options.onlyDue !== false) query = query.lte('next_check_at', new Date().toISOString());
-
-  const { data: due, error } = await query;
-  if (error) throw new Error(`scanDueDomains : ${error.message}`);
-
-  const queue = (due ?? []).slice();
+    const { data: page, error } = await query;
+    if (error) throw new Error(`scanDueDomains : ${error.message}`);
+    queue.push(...((page ?? []) as DueRow[]));
+    if (!page || page.length < Math.min(pageSize, wanted - queue.length + page.length)) break;
+  }
   const concurrency = Math.max(1, Math.min(options.concurrency ?? 8, 32));
 
   const worker = async (): Promise<void> => {
